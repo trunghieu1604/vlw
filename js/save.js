@@ -155,13 +155,31 @@ function downloadSaveFile() {
 function parseSaveText(txt) {
   txt = String(txt || '').trim().replace(/^\uFEFF/, '');
   if (!txt) throw new Error('File rỗng');
+
+  // Strip wrapping quotes if user pasted string wrapped in "" or ''
+  if ((txt.startsWith('"') && txt.endsWith('"')) || (txt.startsWith("'") && txt.endsWith("'"))) {
+    txt = txt.slice(1, -1).trim();
+  }
+
   let packed;
   if (txt[0] === '{') {
-    const o = JSON.parse(txt);
+    let o;
+    try { o = JSON.parse(txt); } catch(e) { throw new Error('Cấu trúc file JSON không hợp lệ'); }
     if (o && o.game === 'jxidle' && typeof o.data === 'string') packed = o.data;
     else if (o && typeof o.d === 'string' && typeof o.h === 'string') packed = txt;      // file tho (khoa luu trong may)
     else throw new Error('Không phải file lưu của game');
-  } else packed = decodeURIComponent(escape(atob(txt)));                                  // ma van ban (Xuat ma)
+  } else {
+    const cleanB64 = txt.replace(/\s+/g, '');
+    try {
+      packed = decodeURIComponent(escape(atob(cleanB64)));
+    } catch(e) {
+      try {
+        const decodedStr = decodeURIComponent(txt);
+        if (decodedStr[0] === '{') return parseSaveText(decodedStr);
+      } catch(e2) {}
+      throw new Error('Mã lưu không hợp lệ hoặc không đúng định dạng Base64');
+    }
+  }
   const u = unpack(packed);
   if (!u.ok) throw new Error('File đã bị chỉnh sửa (sai chữ ký)');
   const o = u.state;
@@ -182,7 +200,15 @@ function writeSlot(i, state) {
 }
 function exportSave() { save(); return btoa(unescape(encodeURIComponent(pack(S)))); }
 function importSave(txt) {
-  const u = unpack(decodeURIComponent(escape(atob(txt.trim()))));
+  const cleanStr = String(txt || '').trim();
+  if (!cleanStr) throw new Error('Nội dung nhập rỗng');
+  if (cleanStr.startsWith('{')) {
+    const st = parseSaveText(cleanStr);
+    S = migrate(st); save(); R.dirty = true;
+    return;
+  }
+  const cleanB64 = cleanStr.replace(/\s+/g, '');
+  const u = unpack(decodeURIComponent(escape(atob(cleanB64))));
   if (!u.ok) throw new Error('Mã đã bị chỉnh sửa');
   const o = u.state;
   if (!o || typeof o !== 'object' || !('lvl' in o)) throw new Error('Mã không hợp lệ');

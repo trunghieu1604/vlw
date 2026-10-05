@@ -29,11 +29,14 @@ function jxItemP(it) {
 /* ngua dang cuoi: ngua khong co hinh rieng (Than Ma, ngua hiem...) -> hinh ngua thuong dau tien, de luon thay nhan vat cuoi ngua */
 /* Than Ma: hinh ngua rieng theo mau / ten (0 nau, 1 xam dom, 2 nau tran trang, 3 den, 4 xam, 5 den chan trang, 6 hong, 7 hong nhat, 8 xam xanh, 9 nau dom, 10 vang, 11 trang, 13 do, 15 do tham) */
 const JX_TM_ROW = { ovan: 5, xtho: 13, tanh: 3, dlo: 2, cdsu: 11, pvan: 1, btieu: 6, xlc: 9, duhuy: 4, tdia: 0, dvu: 8, squang: 10, pvu: 7, hhlc: 15, bhv: 11, pvtm: 10 };   // moi Than Ma 1 hinh theo mau (14 hinh ngua co trong client)
+/* Dong ngua 10 / 11 / 13 / 15 chi co hinh than (ma_hb), khong co dau (ma_hh) + duoi (ma_ht) -> ve ra ngua cut dau.
+   Doi sang dong day du gan mau nhat: vang -> nau dom, trang -> xam, do -> hong, do tham -> nau. */
+const JX_HORSE_FIX = { 10: 9, 11: 4, 13: 6, 15: 0 };
 function jxHorseRow(it) {
-  if (it && it.thanma && JX_TM_ROW[it.thanma] != null && JXL.tabs[R.jx ? R.jx.sx : 'm']) return JX_TM_ROW[it.thanma];
-  const r = jxRow('horse', it); if (r >= 0) return r;
-  const m = JXL.res.horse || {}; for (const k in m) if (m[k] >= 2) return m[k] - 2;
-  return -1;
+  if (!it) return -1;
+  let r = it.thanma && JX_TM_ROW[it.thanma] != null ? JX_TM_ROW[it.thanma] : jxRow('horse', it);
+  if (r < 0) { const m = JXL.res.horse || {}; for (const k in m) if (m[k] >= 2) { r = m[k] - 2; break; } }   // ngua hiem khong co hinh rieng: hinh ngua thuong dau tien
+  return r < 0 ? -1 : (JX_HORSE_FIX[r] ?? r);
 }
 function jxRow(g, it) {
   const m = JXL.res[g]; if (!m) return -1;
