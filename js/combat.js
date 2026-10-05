@@ -272,8 +272,27 @@ function heroAttack() {
   const c = a.around ? H : t, splash = a.around ? a.rad + 40 : 110; // form 7: quanh nguoi danh
   const targets = list.filter(e => e !== t && Math.hypot(e.x - c.x, e.y - c.y) < (a.targets > 1 ? splash : 0) && obsSee(c.x, c.y, e.x, e.y)).slice(0, a.targets - 1);
   targets.unshift(t);
-  for (const e of targets) { recHit(heroHit(a, e), a); skillFx(H, e, a); }
-  if (a.ev) stage2(a, t, list);
+  const hitDelay = (e) => {
+    const dist = Math.hypot(e.x - H.x, e.y - H.y);
+    return (!a.melee && dist > 80) ? Math.min(0.45, Math.max(0.08, dist / 600)) : 0;
+  };
+  for (const e of targets) {
+    skillFx(H, e, a);
+    const dl = hitDelay(e);
+    if (dl > 0) {
+      setTimeout(() => { if (e && e.hp > 0 && !e.dead && R.enemies.includes(e)) recHit(heroHit(a, e), a); }, dl * 1000);
+    } else {
+      recHit(heroHit(a, e), a);
+    }
+  }
+  if (a.ev) {
+    const dl = hitDelay(t);
+    if (dl > 0) {
+      setTimeout(() => { if (t && !t.dead && R.enemies.includes(t)) stage2(a, t, list); }, dl * 1000);
+    } else {
+      stage2(a, t, list);
+    }
+  }
   H.face = t.x >= H.x ? 1 : -1; H.dir = dirOf(t.x - H.x, t.y - H.y); H.act = 'at'; H.actT = 0;
   if (a.id) skillSfx(a.id); else npcSfx(heroGfx() && heroGfx().anim, 'at', 0.4);
   return 1 / a.rate;
@@ -292,7 +311,17 @@ function enemyAI(e, dt) {
   if (e.moving) obsChase(e, H.x, H.y, e.spd * sl * dt);
   if (e.home) fieldLeash(e);
   e.atkCd -= dt * sl;
-  if (d <= reach + 4 && e.see && e.atkCd <= 0) { e.atkCd = e.cd * (e.curse && typeof curseMod === 'function' ? 1 + ((curseMod(e) || {}).slow || 0) / 100 : 1); enemyHit(e); e.act = 'at'; e.actT = 0; npcSfx(e.animKey || MON[e.tid].anim, 'at', 0.35); if (e.ranged) fxLine(e, H, { parts: { phys: 1 } }); }
+  if (d <= reach + 4 && e.see && e.atkCd <= 0) {
+    e.atkCd = e.cd * (e.curse && typeof curseMod === 'function' ? 1 + ((curseMod(e) || {}).slow || 0) / 100 : 1);
+    e.act = 'at'; e.actT = 0; npcSfx(e.animKey || MON[e.tid].anim, 'at', 0.35);
+    if (e.ranged) {
+      fxLine(e, H, { parts: { phys: 1 } });
+      const dl = Math.min(0.35, Math.max(0.1, d / 650));
+      setTimeout(() => { if (e && e.hp > 0 && !e.dead && R.enemies.includes(e)) enemyHit(e); }, dl * 1000);
+    } else {
+      enemyHit(e);
+    }
+  }
 }
 function tick(dt) {
   obsFrame(); recTick(dt);

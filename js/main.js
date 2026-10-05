@@ -85,6 +85,18 @@ function fitApp() {
 }
 /* Che do thu gon: an bang thong tin + thanh tab, san dau chiem ca man hinh; nho theo trinh duyet */
 function setCompact(on) { setUiPref({ compact: on }); if (!on && S.fac) refresh(); }
+
+/* Giu sang man hinh khi treo may (Screen Wake Lock API) */
+let wakeLockObj = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLockObj && document.visibilityState === 'visible') {
+      wakeLockObj = await navigator.wakeLock.request('screen');
+      wakeLockObj.addEventListener('release', () => { wakeLockObj = null; });
+    }
+  } catch (err) {}
+}
+
 function init() {
   const pk = pickSlot(); SLOT = pk.slot;
   if (pk.menu) { S = newSave(); }          // man hinh chon nhan vat: chua nap nhan vat nao
@@ -97,17 +109,6 @@ function init() {
   $('#modal').onclick = e => { if (e.target.id === 'modal') closeModal(); };
   window.addEventListener('resize', fitApp); window.addEventListener('orientationchange', fitApp);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitApp);
-/* Giu sang man hinh khi treo may (Screen Wake Lock API) */
-let wakeLockObj = null;
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator && !wakeLockObj && document.visibilityState === 'visible') {
-      wakeLockObj = await navigator.wakeLock.request('screen');
-      wakeLockObj.addEventListener('release', () => { wakeLockObj = null; });
-    }
-  } catch (err) {}
-}
-function init() {
   $('#compactBtn').onclick = () => setCompact(!document.body.classList.contains('compact'));
   applyUiPrefs();
   fitApp();
