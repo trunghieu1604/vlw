@@ -455,7 +455,7 @@ function refresh() {
 function updateDots() { $('#dotChar').classList.toggle('on', S.attrPts > 0); const df = $('#dotForge'), dq = $('#dotQuest'); if (df) df.classList.toggle('on', forgeDot()); if (dq) dq.classList.toggle('on', questDot()); $('#dotSkill').classList.toggle('on', S.skPts > 0 && FAC[S.fac] && FAC[S.fac].skills.some(id => canLearn(SK[id])) || (isNovice() && S.lvl >= NOVICE_LV)); }
 function updateTop() {
   const P = R.P; if (!P) return;
-  { const hw = heroGfx(), lb = $('.lvbox'); if (hw && lb) lb.style.setProperty('--pl', `url('${hw.img}')`); }
+  { const hw = heroGfx(), lb = $('.lvbox'); if (hw && lb) lb.style.setProperty('--pl', `url('../${hw.img}')`); }
   $('#lv').textContent = S.lvl; $('#gold').textContent = fmt(S.gold); { const k = $('#knbTop'); if (k) k.textContent = fmt(S.knb || 0); } $('#heroName').textContent = FAC[S.fac] ? FAC[S.fac].n : '';
   { let bb = $('#skBuffs'); if (!bb) { bb = document.createElement('div'); bb.id = 'skBuffs'; $('#battle').appendChild(bb); }
     const l = typeof stateIcons === 'function' ? stateIcons() : []; const h = l.map(x => `<div class="sti" title="${esc(x.n)}"><img src="${esc(x.ic || '')}" alt=""><b>${fmtLeft(x.t)}</b></div>`).join(''); if (bb.innerHTML !== h) bb.innerHTML = h; }

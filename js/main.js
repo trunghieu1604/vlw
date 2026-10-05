@@ -97,11 +97,22 @@ function init() {
   $('#modal').onclick = e => { if (e.target.id === 'modal') closeModal(); };
   window.addEventListener('resize', fitApp); window.addEventListener('orientationchange', fitApp);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitApp);
+/* Giu sang man hinh khi treo may (Screen Wake Lock API) */
+let wakeLockObj = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLockObj && document.visibilityState === 'visible') {
+      wakeLockObj = await navigator.wakeLock.request('screen');
+      wakeLockObj.addEventListener('release', () => { wakeLockObj = null; });
+    }
+  } catch (err) {}
+}
+function init() {
   $('#compactBtn').onclick = () => setCompact(!document.body.classList.contains('compact'));
   applyUiPrefs();
   fitApp();
   bindControls();
-  const unlock = () => { audInit(); const z = zoneOf(Math.min(S.stage, STAGES)); preloadZoneSounds(z); if (AUD.music && sndCfg().music && AUD.music.paused) AUD.music.play().catch(() => {}); else if (!AUD.music && S.fac) playMusic(R.town ? W.town.id : z.id); };
+  const unlock = () => { requestWakeLock(); audInit(); const z = zoneOf(Math.min(S.stage, STAGES)); preloadZoneSounds(z); if (AUD.music && sndCfg().music && AUD.music.paused) AUD.music.play().catch(() => {}); else if (!AUD.music && S.fac) playMusic(R.town ? W.town.id : z.id); };
   document.addEventListener('pointerdown', unlock, true); document.addEventListener('keydown', unlock, true);
   resizeArena(); [H.x, H.y] = inWorld(WORLD.w / 2, WORLD.h / 2); snapCamera(); restoreGround();
   if (pk.menu) { slotMenu(); }
@@ -118,7 +129,10 @@ function init() {
   }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { if (S.fac) save(); }
-    else if (S.fac && Date.now() - S.last > 60000) { R.dirty = true; recalc(); showOffline(offlineGains()); refresh(); }
+    else {
+      requestWakeLock();
+      if (S.fac && Date.now() - S.last > 60000) { R.dirty = true; recalc(); showOffline(offlineGains()); refresh(); }
+    }
     lastT = performance.now();
   });
   window.addEventListener('pagehide', () => { if (S.fac) save(); });
@@ -126,6 +140,7 @@ function init() {
   if (typeof chatInit === 'function') try { chatInit(); } catch (e) { /* chat loi khong anh huong game */ }
   if (typeof netInit === 'function') try { netInit(); } catch (e) { /* bo qua */ }
   requestAnimationFrame(frame);
+  requestWakeLock();
 }
 init();
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});

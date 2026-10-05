@@ -3,7 +3,7 @@
 let CV, CX, DPR = 1;
 const MON_SCALE = 1.35, HERO_SCALE = 1.35; // bang hoat anh xuat o 0.6 kich thuoc goc; quai cung ti le voi nhan vat nhu JX1
 const IMG = {};
-function img(src) { if (!src) return null; let i = IMG[src]; if (!i) { i = new Image(); i.src = src; IMG[src] = i; } return i; }
+function img(src) { if (!src) return null; let i = IMG[src]; if (!i) { i = new Image(); i.onerror = () => { i.failed = true; }; i.src = src; IMG[src] = i; } return i; }
 function addText(x, y, t, color, size = 12) { const max = S.lowFx ? 20 : 60; if (R.quiet || R.txt.length > max) return; R.txt.push({ x, y, t, color, size, life: S.lowFx ? 0.6 : 0.9 }); }
 function burst(x, y, color) { if (R.quiet) return; R.fx.push({ k: 'ring', x, y, color, life: 0.45, max: 0.45 }); }
 function fxLine(a, b, atk) {

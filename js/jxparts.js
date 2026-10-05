@@ -66,11 +66,11 @@ function drawJxHero(act, dir, t, x, y, sc, alpha, oldKey, Jo) {
   let ref = null;
   for (const pi of jxOrder(J.sx, jact, (dir % 8) * 2, 0)) {
     const part = JX_IDX_PART[pi]; if (!part) continue;
-    const row = J.rows[JX_GROUP[part]]; if (row < 0) continue;
-    const nm = ((tabs[part] || {})[row] || {})[jact]; if (!nm) continue;
+    const row = J.rows[JX_GROUP[part]]; if (row < 0 || row == null) continue;
+    let nm = ((tabs[part] || {})[row] || {})[jact]; if (!nm) continue;
     const sk = jxSheetKey(J.sx, nm), m = JXL.sheets[sk]; if (!m) continue;
     const im = img('img/jx/' + sk + '.webp');
-    if (!im.complete || !im.naturalWidth) { if (part === '躯体') return false; continue; }   // than chua tai: dung hinh cu
+    if (!im.complete || !im.naturalWidth || im.failed) { if (part === '躯体') return false; continue; }   // than chua tai: dung hinh cu
     list.push([im, m, part]); if (part === '躯体' || !ref) ref = m;
   }
   if (!ref) return false;
