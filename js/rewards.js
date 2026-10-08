@@ -348,7 +348,11 @@ function giftBody(r) {
   if (giftTab === 'login') {
     const L = r.login, day = ((L.streak - 1) % 7 + 7) % 7;
     return `<p class="desc">Chuỗi ${L.streak} ngày · tổng ${L.total} ngày. Mốc 10 / 20 / 30 ngày có quà lớn.</p>
-      <div class="days">${LOGIN7.map((g, i) => `<div class="day${i < day || (i === day && L.claimed) ? ' got' : ''}${i === day ? ' cur' : ''}"><b>Ngày ${i + 1}</b><small>${giftText(g)}</small></div>`).join('')}</div>
+      <div class="days">${LOGIN7.map((g, i) => {
+        const isGot = i < day || (i === day && L.claimed);
+        const isCur = i === day;
+        return `<div class="day${isGot ? ' got' : ''}${isCur ? ' cur' : ''}"><b>${isGot ? '✓ ' : ''}Ngày ${i + 1}</b><small>${giftText(g)}</small>${isGot ? '<span class="got-tag">✓ Đã nhận</span>' : ''}</div>`;
+      }).join('')}</div>
       <div class="btnrow"><button class="btn" id="gLogin" ${L.claimed ? 'disabled' : ''}>${L.claimed ? 'Đã nhận hôm nay' : 'Nhận quà hôm nay'}</button></div>`;
   }
   if (giftTab === 'lvms') {

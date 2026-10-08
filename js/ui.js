@@ -395,7 +395,7 @@ function renderMore() {
       <div class="row">Độ khó <select id="sDiff">${DIFFS.map((d, i) => `<option value="${i}" ${diffOf() === d ? 'selected' : ''}>${d.n}</option>`).join('')}</select> <small class="dim">${esc(diffOf().d)}</small></div>
       <label><input type="checkbox" id="cForge" ${S.autoForge ? 'checked' : ''}> Tự động rèn đồ (ghép mảnh Hoàng Kim, khảm Tím, hợp và thăng cấp Huyền Tinh; mỗi 30 giây)</label>
       <label><input type="checkbox" id="cBuy" ${S.autoBuy === false ? '' : 'checked'}> Tự mua vũ khí đúng loại ở Biện Kinh khi mạnh hơn ≥ 25% (tối đa 60% ngân lượng)</label>
-      <div class="btnrow"><button class="btn" id="bKtc">🏮 Kỳ Trân Các</button><button class="btn" id="bStashM">Kho chung</button><button class="btn" id="bTut">Hướng dẫn</button><button class="btn" id="bCodex">Bách khoa</button><button class="btn" id="bSug">Gợi ý cộng điểm</button></div></div>
+      <div class="btnrow"><button class="btn" id="bKtc">🏮 Kỳ Trân Các</button><button class="btn" id="bStashM">Kho chung</button><button class="btn" id="bTut">Hướng dẫn</button><button class="btn" id="bCodex">Bách khoa</button><button class="btn" id="bSug">Gợi ý cộng điểm</button><button class="btn" id="bAdminBtn" style="background:#8b0000; color:#fff; font-weight:bold;">⚙️ Menu Admin</button></div></div>
     <h3>Trợ năng</h3><div class="card lootf">
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((v, i) => `<option value="${i}" ${uiPrefs().fs === i ? 'selected' : ''}>${UI_FS_NAME[i]}</option>`).join('')}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
       <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? 'checked' : ''}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label>
@@ -407,6 +407,7 @@ function renderMore() {
     <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (bản fan chơi offline, phi thương mại).</div>
     <div class="btnrow"><button class="btn" id="bSwitch">Đổi nhân vật / slot</button><button class="btn red" id="bReset">Xóa nhân vật</button></div>`;
   const onc = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
+  onc('#bAdminBtn', e => { if (typeof openAdminWithPass === 'function') openAdminWithPass(e); });
   onc('#bCloud', () => netModal('acc'));
   onc('#bDl', () => { if (downloadSaveFile()) toast('Đã tải file lưu: ' + saveFileName()); });
   onc('#bFile', () => pickSaveFile(null));

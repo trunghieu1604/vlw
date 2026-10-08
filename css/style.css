@@ -35,8 +35,12 @@ button[disabled]{opacity:.4;cursor:default}
 #giftBtn.on::after{content:"";position:absolute;top:0;right:0;width:9px;height:9px;border-radius:50%;background:#e0402a;box-shadow:0 0 0 2px #0f1613;animation:gpulse 1.2s infinite}
 @keyframes gpulse{50%{transform:scale(1.3)}}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
-.day{padding:6px 3px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);text-align:center;font-size:11px}
+.day{padding:6px 3px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);text-align:center;font-size:11px;position:relative;transition:all .2s ease}
 .day b{display:block;color:var(--gold);font-size:11px} .day small{display:block;color:var(--dim);font-size:9.5px;line-height:1.2}
+.day.cur{border-color:var(--gold);box-shadow:0 0 6px rgba(255,201,60,0.35)}
+.day.got{background:rgba(25,60,38,0.55);border-color:#4fd04f;opacity:0.9}
+.day.got b{color:#6fd46a}
+.got-tag{display:inline-block;margin-top:4px;padding:1px 4px;border-radius:3px;background:rgba(79,208,79,0.2);color:#4fd04f;font-size:9px;font-weight:700;line-height:1}
 .qrow{display:flex;align-items:center;gap:8px;padding:6px 8px;margin:4px 0;border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
 .qrow > span{flex:1;min-width:0;text-align:left} .qrow > span > b{display:inline-block;text-align:left}
 .qrow small{color:var(--dim);font-size:11px} .qrow span small{display:block} .qrow.lock{opacity:.5}

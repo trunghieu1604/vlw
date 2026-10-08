@@ -114,6 +114,49 @@ function adminAddFullSet(kind) {
   save();
 }
 
+function adminAddFd() {
+  if (!S || !S.fac) return;
+  const r = typeof RW === 'function' ? RW() : (S.rw || (S.rw = {}));
+  r.fd = (r.fd || 0) + 1000;
+  R.dirty = true;
+  refresh();
+  toast('⚡ Hack +1.000 Điểm Phúc Duyên thành công!');
+  log('⚡ <b class="gold">ADMIN: Hack +1.000 Điểm Phúc Duyên!</b>');
+  save();
+}
+
+function adminAddBtt() {
+  if (!S || !S.fac) return;
+  const r = typeof RW === 'function' ? RW() : (S.rw || (S.rw = {}));
+  r.stat = r.stat || {};
+  r.stat.tokens = (r.stat.tokens || 0) + 1000;
+  R.dirty = true;
+  refresh();
+  toast('⚡ Hack +1.000 Bánh Trung Thu (Vật phẩm sự kiện) thành công!');
+  log('⚡ <b class="gold">ADMIN: Hack +1.000 Bánh Trung Thu!</b>');
+  save();
+}
+
+let adminUnlocked = false;
+
+function openAdminWithPass(e) {
+  if (e) e.preventDefault();
+  if (!S || !S.fac) {
+    toast('Hãy vào game / tạo nhân vật trước!');
+    return;
+  }
+  if (!adminUnlocked) {
+    const pass = prompt('Nhập mật khẩu Admin (4 chữ số):');
+    if (pass !== '8686') {
+      toast('❌ Sai mật khẩu!');
+      return;
+    }
+    adminUnlocked = true;
+    toast('🔓 Mở khóa Menu Admin thành công!');
+  }
+  showAdminMenu();
+}
+
 function showAdminMenu(e) {
   if (e) e.preventDefault();
   if (!S || !S.fac) {
@@ -130,6 +173,8 @@ function showAdminMenu(e) {
         <button class="btn" style="background:#2e8b57; color:#fff; font-weight:bold; padding:10px;" id="bAdmLvl">👑 Max Level 200</button>
         <button class="btn" style="background:#d2691e; color:#fff; font-weight:bold; padding:10px;" id="bAdmSetGold">🏆 Full Bộ Hoàng Kim +10</button>
         <button class="btn" style="background:#4682b4; color:#fff; font-weight:bold; padding:10px;" id="bAdmSetPlat">💎 Full Bộ Bạch Kim +10</button>
+        <button class="btn" style="background:#cc6600; color:#fff; font-weight:bold; padding:10px;" id="bAdmFd">🧧 Hack +1.000 Phúc Duyên</button>
+        <button class="btn" style="background:#d4a017; color:#fff; font-weight:bold; padding:10px;" id="bAdmBtt">🥮 Hack +1.000 Bánh Trung Thu</button>
       </div>
     </div>
   `;
@@ -147,11 +192,9 @@ function showAdminMenu(e) {
     if (elGoldSet) elGoldSet.onclick = () => { adminAddFullSet('gold'); closeModal(); };
     const elPlatSet = document.querySelector('#bAdmSetPlat');
     if (elPlatSet) elPlatSet.onclick = () => { adminAddFullSet('platina'); closeModal(); };
-  });
-}
-
-if (typeof window !== 'undefined') {
-  document.addEventListener('contextmenu', e => {
-    showAdminMenu(e);
+    const elFd = document.querySelector('#bAdmFd');
+    if (elFd) elFd.onclick = () => { adminAddFd(); closeModal(); };
+    const elBtt = document.querySelector('#bAdmBtt');
+    if (elBtt) elBtt.onclick = () => { adminAddBtt(); closeModal(); };
   });
 }

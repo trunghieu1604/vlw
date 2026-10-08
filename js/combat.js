@@ -273,8 +273,19 @@ function heroAttack() {
   const targets = list.filter(e => e !== t && Math.hypot(e.x - c.x, e.y - c.y) < (a.targets > 1 ? splash : 0) && obsSee(c.x, c.y, e.x, e.y)).slice(0, a.targets - 1);
   targets.unshift(t);
   const hitDelay = (e) => {
+    if (R.quiet || R.batch) return 0;
     const dist = Math.hypot(e.x - H.x, e.y - H.y);
-    return (!a.melee && dist > 80) ? Math.min(0.45, Math.max(0.08, dist / 600)) : 0;
+    const f = (a && a.id && typeof JFX !== 'undefined' && JFX.f && JFX.f[a.id]) || {};
+    const mid = f.c || (typeof JFX !== 'undefined' && JFX.s && JFX.s[a.id]);
+    const m = a && a.id && typeof JFX !== 'undefined' && JFX.m && JFX.m[mid];
+    if (m && m.fly) {
+      const spd = Math.max(180, m.spd || 360);
+      return clamp(dist / spd, 0.08, 1.2);
+    }
+    if (dist > 40) {
+      return clamp(dist / 900, 0.06, 0.22);
+    }
+    return 0.05;
   };
   for (const e of targets) {
     skillFx(H, e, a);
