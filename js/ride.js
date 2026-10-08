@@ -8,7 +8,7 @@ const HORSE_LIM = { 10: 1, 11: 1, 271: 1, 318: 1, 319: 1, 29: 1, 30: 1, 31: 1, 3
 const RIDE_CD = 0.6;                                                  // giay giua 2 lan len / xuong ngua
 const skHorseLim = s => (s && HORSE_LIM[s.id]) || 0;
 const skHorseOk = (s, m = !!R.mounted) => { const h = skHorseLim(s); return h === 1 ? !m : h === 2 ? m : true; };
-const canRide = () => !!(S && S.eq && S.eq.horse && reqOk(S.eq.horse));   // chua du dieu kien (cap) thi khong cuoi duoc
+const canRide = () => !!(S && S.eq && S.eq.horse);   // chua du dieu kien (cap) thi khong cuoi duoc
 const autoRide = () => S.autoRide !== false && !(typeof manual === 'function' && manual());
 /* toc do chay hien tai: tren ngua = P.speed, xuong ngua = bo toc do cua ngua */
 const curSpeed = () => (R.P ? (R.mounted ? R.P.speed : R.P.speedFoot || R.P.speed) : 1);

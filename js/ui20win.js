@@ -179,7 +179,7 @@ function u20TrkDraw() {
 }
 
 /* ---------- Ky Tran Cac: danh muc trai + the san pham ---------- */
-const KTC_CAT = [['Tiện ích', ['knb', 'tt', 'qht', 'ldt']], ['Quý hiếm', ['rht', 'rda', 'mt90', 'dtbk']], ['Đặc biệt', ['ldp', 'dgt']], ['Thú cưỡi', 'tm']];
+const KTC_CAT = [['Tiện ích', ['knb', 'tt', 'qht', 'ldt']], ['Quý hiếm', ['rht', 'rda', 'mt90', 'dtbk']], ['Đặc biệt', ['ldp', 'dgt']]];
 let u2KtcCat = 0;
 function ktcModal20() {
   const have = k => (k === 'mt90' ? matHave('misc', 'bk90') : ['dtbk', 'ldp', 'ldt', 'dgt'].includes(k) ? matHave('misc', k) : null);

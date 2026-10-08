@@ -65,7 +65,7 @@ function setRowOf(it) {
   return rows.find(r => r.n === n || r.n === it.n) || rows.find(r => r.grp === it.set.grp && r.d === it.d) || null;
 }
 /* Mon thuoc bo khong co du lieu JX1 (hoac Phi phong) -> xoa khoi file luu (theo yeu cau) */
-function setNoData(it) { if (!it || !it.set) return false; const r = setRowOf(it); return !!r && (!!r.fixed || r.d > 10); }
+function setNoData(it) { if (!it || !it.set) return false; const r = setRowOf(it); return !r || r.d > 10; }
 function setRepair(it) {
   if (!it || !it.set) return false;
   const row = setRowOf(it);

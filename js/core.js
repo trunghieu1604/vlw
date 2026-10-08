@@ -7,6 +7,7 @@ const irnd = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = n => { n = Math.round(n); const a = Math.abs(n); return a < 1e4 ? '' + n : a < 1e6 ? (n / 1e3).toFixed(a < 1e5 ? 1 : 0) + 'k' : a < 1e9 ? (n / 1e6).toFixed(2) + 'M' : (n / 1e9).toFixed(2) + 'B'; };
+const fmtL = n => fmt(n) + ' lượng';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 function wpick(list, w) { let t = 0; for (const x of list) t += w(x); let r = Math.random() * t; for (const x of list) { r -= w(x); if (r <= 0) return x; } return list[list.length - 1]; }
 

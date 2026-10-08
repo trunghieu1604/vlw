@@ -3,7 +3,7 @@
 let CV, CX, DPR = 1;
 const MON_SCALE = 1.35, HERO_SCALE = 1.35; // bang hoat anh xuat o 0.6 kich thuoc goc; quai cung ti le voi nhan vat nhu JX1
 const IMG = {};
-function img(src) { if (!src) return null; let i = IMG[src]; if (!i) { i = new Image(); i.onerror = () => { i.failed = true; }; i.src = src; IMG[src] = i; } return i; }
+function img(src) { if (!src) return null; let i = IMG[src]; if (!i) { i = new Image(); i.onerror = () => { i.failed = true; }; i.onload = () => { if (typeof R !== 'undefined') R.dirty = true; }; i.src = src; IMG[src] = i; } return i; }
 function addText(x, y, t, color, size = 12) { const max = S.lowFx ? 20 : 60; if (R.quiet || R.txt.length > max) return; R.txt.push({ x, y, t, color, size, life: S.lowFx ? 0.6 : 0.9 }); }
 function burst(x, y, color) { if (R.quiet) return; R.fx.push({ k: 'ring', x, y, color, life: 0.45, max: 0.45 }); }
 function fxLine(a, b, atk) {
@@ -276,7 +276,7 @@ function draw(dt) {
       drawAura(c);                                                          // hao quang do bo / cuong hoa (look.js)
       drawHeroStates(c, 'under', 0);                                        // trang thai vo cong duoi chan (skillfx.js)
       const hTint = entTint(R.slowT > 0, R.hpDotT > 0);
-      const drawn = hw && hw.anim && drawTinted(hTint, H.x - 120, H.y - 220, 240, 245, () => drawHeroAnim(hw.anim, H.act || 'st', H.dir || 0, H.actT || 0, H.x, H.y, HERO_SCALE));   // nhuom mau theo ao / mu
+      const drawn = hw && hw.anim && drawTinted(hTint, H.x - 160, H.y - 250, 320, 290, () => drawHeroAnim(hw.anim, H.act || 'st', H.dir || 0, H.actT || 0, H.x, H.y, HERO_SCALE));   // nhuom mau theo ao / mu
       drawHeroStates(c, 'over', drawn ? Math.min(drawn, 90) : 60);
       drawLookFx(c, dt);
       const ny = H.y - (drawn ? Math.min(drawn, 90) * 0.9 : 52) - 6, tw = typeof titleWorn === 'function' && titleWorn();

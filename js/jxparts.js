@@ -7,7 +7,6 @@
    Thieu hinh (chua tai xong) -> ve hinh mon phai cu. */
 'use strict';
 let JXL = window.JXLOOK || null;
-/* jxlook.js (~0,6 MB) tai sau khi game da chay: nhan vat dung hinh cu cho toi khi xong */
 if (!JXL && typeof document !== 'undefined') {
   const s = document.createElement('script'); s.src = 'js/jxlook.js?v=' + ((document.querySelector('script[src*="js/core.js"]') || {}).src || '').split('v=')[1];
   s.onload = () => { JXL = window.JXLOOK || null; if (JXL && typeof R !== 'undefined' && S && S.fac) { R.jx = jxOn() ? jxSetup() : null; if (R.jx) jxPreload(); } };
@@ -16,34 +15,58 @@ if (!JXL && typeof document !== 'undefined') {
 const JX_PART_IDX = { '头部': 0, '发型': 1, '肩膀': 4, '躯体': 5, '左手': 6, '右手': 7, '左手武器': 8, '右手武器': 9, '马前': 12, '马中': 13, '马后': 14 };
 const JX_IDX_PART = Object.fromEntries(Object.entries(JX_PART_IDX).map(([k, v]) => [v, k]));
 const JX_GROUP = { '头部': 'helm', '发型': 'helm', '肩膀': 'armor', '躯体': 'armor', '左手': 'armor', '右手': 'armor', '左手武器': 'weapon', '右手武器': 'weapon', '马前': 'horse', '马中': 'horse', '马后': 'horse' };
-/* 'm:ten' = hinh dung chung cua nam (vd ngua cua nhan vat nu) */
-const jxSheetKey = (sx, nm) => (nm.startsWith('m:') ? 'm/' + nm.slice(2) : sx + '/' + nm);
+const jxSheetKey = (sx, nm) => nm.startsWith('m:') ? 'm/' + nm.slice(2) : (nm.startsWith('ma_') ? 'm/' + nm : sx + '/' + nm);
 const jxOn = () => !!JXL && S && S.jxLook !== false;
-/* Dong (index du lieu, tinh tu 0) cua mot trang bi trong bang bo phan */
 function jxItemP(it) {
   if (!it) return -1;
   if (Number.isInteger(it.p)) return it.p;
-  const b = typeof baseRow === 'function' ? baseRow(it.d, it.k, it.lvl || 1) : null;   // do bo / Bach Kim: dung hinh mon thuong cung loai, cap gan nhat
+  const b = typeof baseRow === 'function' ? baseRow(it.d, it.k, it.lvl || 1) : null;
   return b && Number.isInteger(b.p) ? b.p : -1;
 }
-/* ngua dang cuoi: ngua khong co hinh rieng (Than Ma, ngua hiem...) -> hinh ngua thuong dau tien, de luon thay nhan vat cuoi ngua */
-/* Than Ma: hinh ngua rieng theo mau / ten (0 nau, 1 xam dom, 2 nau tran trang, 3 den, 4 xam, 5 den chan trang, 6 hong, 7 hong nhat, 8 xam xanh, 9 nau dom, 10 vang, 11 trang, 13 do, 15 do tham) */
-const JX_TM_ROW = { ovan: 5, xtho: 13, tanh: 3, dlo: 2, cdsu: 11, pvan: 1, btieu: 6, xlc: 9, duhuy: 4, tdia: 0, dvu: 8, squang: 10, pvu: 7, hhlc: 15, bhv: 11, pvtm: 10 };   // moi Than Ma 1 hinh theo mau (14 hinh ngua co trong client)
-/* Dong ngua 10 / 11 / 13 / 15 chi co hinh than (ma_hb), khong co dau (ma_hh) + duoi (ma_ht) -> ve ra ngua cut dau.
-   Doi sang dong day du gan mau nhat: vang -> nau dom, trang -> xam, do -> hong, do tham -> nau. */
-const JX_HORSE_FIX = { 10: 9, 11: 4, 13: 6, 15: 0 };
+const HORSE_NAME_TO_ROW = [
+  ['Ô Vân', 5], ['Xích Thố', 0], ['Tuyệt Ảnh', 9], ['Tuyệt ảnh', 9], ['Đích Lô', 2], ['Chiếu Dạ', 1],
+  ['Bôn Tiêu', 6], ['Phiên Vũ', 7], ['Phi Vân', 1], ['Xích Long', 9], ['Tuyệt Địa', 0], ['Du Huy', 4],
+  ['Đằng Vụ', 8], ['Siêu Quang', 10], ['Hãn Huyết', 15], ['Bạch Hổ', 11], ['Thần Mã', 10], ['Hổ Vương', 10],
+  ['Sư tử', 10], ['Lạc đà', 9], ['Dương Đà', 0], ['Hươu', 9], ['Dương Sa', 7], ['Ngự Phong', 8],
+  ['Truy điện', 4], ['Lưu Tinh', 1], ['Bạch Mã', 11], ['Chiến Mã', 2], ['Thông', 1], ['Lưu', 1], ['Hoàng', 0], ['Mã', 0]
+];
+
 function jxHorseRow(it) {
-  if (!it) return -1;
-  let r = it.thanma && JX_TM_ROW[it.thanma] != null ? JX_TM_ROW[it.thanma] : jxRow('horse', it);
-  if (r < 0) { const m = JXL.res.horse || {}; for (const k in m) if (m[k] >= 2) { r = m[k] - 2; break; } }   // ngua hiem khong co hinh rieng: hinh ngua thuong dau tien
-  return r < 0 ? -1 : (JX_HORSE_FIX[r] ?? r);
+  if (!it || !JXL || !JXL.tabs) return -1;
+  const sx = R.jx ? R.jx.sx : (S && S.sex ? 'f' : 'm');
+  const tab = (JXL.tabs[sx] || {})['马中'] || {};
+  if (!tab) return -1;
+  if (it.thanma && JX_TM_ROW[it.thanma] != null && tab[JX_TM_ROW[it.thanma]] != null) return JX_TM_ROW[it.thanma];
+  const name = it.n || '';
+  for (const [kw, row] of HORSE_NAME_TO_ROW) {
+    if (name.includes(kw) && tab[row] != null) return row;
+  }
+  const r = jxRow('horse', it);
+  if (r >= 0 && tab[r] != null) return r;
+  const m = JXL.res ? (JXL.res.horse || {}) : {};
+  for (const k in m) if (m[k] >= 2 && tab[m[k] - 2] != null) return m[k] - 2;
+  return 0;
 }
+
+const JX_SET_PART = { helm: '头部', armor: '躯体', melee: '右手武器', range: '右手武器' };
+function jxSetRow(g, it) {
+  const s = it && it.set, tab = s && JXL.set && JXL.set[s.kind];
+  if (!tab) return -1;
+  const key = s.grp + '.' + s.sid + '.' + it.d + '.' + it.k;
+  const r = tab[key];
+  if (r == null) return -1;
+  const sx = S && S.sex ? 'f' : 'm';
+  const c = ((JXL.tabs[sx] || {})[JX_SET_PART[g]] || {})[r];
+  return c && Object.keys(c).length ? r : -1;
+}
+
 function jxRow(g, it) {
   const m = JXL.res[g]; if (!m) return -1;
+  if (it && it.set && g !== 'horse' && reqOk(it)) { const r = jxSetRow(g, it); if (r >= 0) return r; }
   const id = it && (reqOk(it) || g === 'horse') && jxItemP(it) >= 0 ? jxItemP(it) + 2 : 1;
   const v = m[id] ?? m[1]; return v == null ? -1 : v - 2;
 }
-/* Tinh lai khi doi do (recalc) */
+
 function jxSetup() {
   if (!JXL || !S || !S.fac) return null;
   const sx = S.sex ? 'f' : 'm', eq = S.eq, w = eq.weapon;
@@ -54,51 +77,65 @@ function jxSetup() {
   const ride = rows.horse >= 0 && asc && asc[1] ? 1 : 0;
   return { sx, rows, asc: asc ? asc[ride] || asc[0] : {}, ride, key: JSON.stringify([sx, rows, ride]) };
 }
+
 function jxOrder(sx, act, dir16, frame) {
   const S2 = JXL.sort[sx], sec = S2[act] || {}, D = S2.DEFAULT;
   for (const k in sec) if (k[0] === 'L' && sec[k][0] === frame) return sec[k].slice(1);
   const v = sec['Dir' + (dir16 + 1)] || D['Dir' + (dir16 + 1)] || D.Dir1; return v.slice(1);
 }
+
 const JX_MS = { st: 120, run: 85 };
-/* Ve nhan vat; tra ve chieu cao (nhu drawAnim) hoac false neu chua du hinh */
-function drawJxHero(act, dir, t, x, y, sc, alpha, oldKey, Jo) {
-  const J = Jo || R.jx; if (!J) return false;                              // Jo: bo hinh cua nguoi choi khac (others.js)
-  const useMg = !Jo && act === 'at' && R.P && R.P.main && !R.P.main.useAR && J.asc.mg;   // chieu noi cong: tu the thi trien
-  const jact = J.asc[useMg ? 'mg' : act] || J.asc.st; if (!jact) return false;
-  const tabs = JXL.tabs[J.sx], list = [];
-  let ref = null;
-  for (const pi of jxOrder(J.sx, jact, (dir % 8) * 2, 0)) {
-    const part = JX_IDX_PART[pi]; if (!part) continue;
-    const row = J.rows[JX_GROUP[part]]; if (row < 0 || row == null) continue;
-    let nm = ((tabs[part] || {})[row] || {})[jact]; if (!nm) continue;
-    const sk = jxSheetKey(J.sx, nm), m = JXL.sheets[sk]; if (!m) continue;
-    const im = img('img/jx/' + sk + '.webp');
-    if (!im.complete || !im.naturalWidth || im.failed) { if (part === '躯体') return false; continue; }   // than chua tai: dung hinh cu
-    list.push([im, m, part]); if (part === '躯体' || !ref) ref = m;
+function drawJxHero(act, dir8, time, x, y, sc, alpha, mainSk, overrideJx) {
+  const jx = overrideJx || R.jx; if (!jx) return false;
+  const castMg = !overrideJx && act === 'at' && R.P && R.P.main && !R.P.main.phys && jx.asc.mg;
+  const g = jx.asc[castMg ? 'mg' : act] || jx.asc.st; if (!g) return false;
+  const tab = JXL.tabs[jx.sx], loaded = []; let masterP = null;
+  const rawOrder = jxOrder(jx.sx, g, dir8 % 8 * 2, 0);
+  for (const rawP of rawOrder) {
+    const pName = typeof rawP === 'number' ? (JX_IDX_PART[rawP] || rawP) : rawP;
+    const pIdx = typeof rawP === 'number' ? rawP : JX_PART_IDX[rawP];
+    if (pIdx == null) continue;
+    const groupName = JX_GROUP[pName]; if (!groupName) continue;
+    const row = jx.rows[groupName]; if (row < 0) continue;
+    const keyStr = ((tab[pName] || {})[row] || {})[g]; if (!keyStr) continue;
+    const fullKey = jxSheetKey(jx.sx, keyStr), meta = JXL.sheets[fullKey]; if (!meta) continue;
+    const im = img('img/jx/' + fullKey + '.webp');
+    if (!im.complete || !im.naturalWidth) { if (pName === '躯体' || (pName === '马中' && jx.rows.horse >= 0)) return false; continue; }
+    loaded.push([im, meta, pName, pIdx]);
+    if (pName === '躯体' || !masterP) masterP = meta;
   }
-  if (!ref) return false;
-  // khung hinh: lap (dung / chay) hoac chay 1 lan theo thoi luong hanh dong cu (danh / trung don / nga)
-  const n = ref[4]; let f;
-  if (act === 'st' || act === 'run') f = Math.floor(t * 1000 / (JX_MS[act] || 110)) % n;
-  else { const dur = (typeof animLen === 'function' && animLen(oldKey, act)) || n * 0.09; f = Math.min(n - 1, Math.floor(clamp(t / Math.max(0.1, dur), 0, 0.999) * n)); }
-  // thu tu ve dac biet theo khung (Line) dung khung goc (truoc khi bo bot khung)
-  const ord = jxOrder(J.sx, jact, (dir % 8) * 2, f * (ref[6] || 1));
-  list.sort((a, b) => ord.indexOf(JX_PART_IDX[a[2]]) - ord.indexOf(JX_PART_IDX[b[2]]));
-  const fx = JXL.foot[0], fy = JXL.foot[1]; let top = 0;
+  if (!masterP) return false;
+  const framesN = masterP[4]; let fr;
+  if (act === 'st' || act === 'run') fr = Math.floor(time * 1000 / (JX_MS[act] || 110)) % framesN;
+  else {
+    const dur = typeof animLen === 'function' && animLen(mainSk, act) || framesN * 0.09;
+    fr = Math.min(framesN - 1, Math.floor(clamp(time / Math.max(0.1, dur), 0, 0.999) * framesN));
+  }
+  const rawSort = jxOrder(jx.sx, g, dir8 % 8 * 2, fr * (masterP[6] || 1));
+  const sortLst = rawSort.map(p => typeof p === 'number' ? p : JX_PART_IDX[p]);
+  loaded.sort((a, b) => sortLst.indexOf(a[3]) - sortLst.indexOf(b[3]));
+  const footX = JXL.foot[0], footY = JXL.foot[1]; let maxH = 0;
   CX.globalAlpha = alpha;
-  for (const [im, m] of list) {
-    const [w, h, x0, y0, nn, dirs] = m, fi = Math.min(nn - 1, Math.floor(f * nn / n)), d = dirs >= 8 ? dir % 8 : Math.floor((dir % 8) * dirs / 8);
-    CX.drawImage(im, fi * w, d * h, w, h, x + (x0 - fx) * sc, y + (y0 - fy) * sc, w * sc, h * sc);
-    top = Math.max(top, (fy - y0) * sc);
+  for (const [im, m, pName, pIdx] of loaded) {
+    const [w, h, ox, oy, n, dDirs] = m;
+    const colFr = Math.min(n - 1, Math.floor(fr * n / framesN));
+    const rowDir = dDirs >= 8 ? dir8 % 8 : Math.floor(dir8 % 8 * dDirs / 8);
+    const dx = x + (ox - footX) * sc;
+    const dy = y + (oy - footY) * sc;
+    const dw = w * sc;
+    const dh = h * sc;
+    CX.drawImage(im, colFr * w, rowDir * h, w, h, dx, dy, dw, dh);
+    maxH = Math.max(maxH, (footY - oy) * sc);
   }
   CX.globalAlpha = 1;
-  return top;
+  return maxH;
 }
-/* Tai truoc hinh cua bo do dang mac (moi tu the) de doi tu the khong bi nhay ve hinh cu */
+
 function jxPreload() {
-  const J = R.jx; if (!J) return;
-  for (const jact of Object.values(J.asc)) for (const part in JX_PART_IDX) {
-    const row = J.rows[JX_GROUP[part]]; if (row < 0) continue;
-    const nm = (((JXL.tabs[J.sx] || {})[part] || {})[row] || {})[jact]; if (nm && JXL.sheets[jxSheetKey(J.sx, nm)]) img('img/jx/' + jxSheetKey(J.sx, nm) + '.webp');
+  const jx = R.jx;
+  if (jx) for (const act of Object.values(jx.asc)) for (const pName in JX_PART_IDX) {
+    const row = jx.rows[JX_GROUP[pName]]; if (row < 0) continue;
+    const keyStr = (((JXL.tabs[jx.sx] || {})[pName] || {})[row] || {})[act];
+    if (keyStr && JXL.sheets[jxSheetKey(jx.sx, keyStr)]) img('img/jx/' + jxSheetKey(jx.sx, keyStr) + '.webp');
   }
 }
