@@ -410,7 +410,7 @@ const onScreen = (i, t, n = 120) => i > CAM.x - n && i < CAM.x + AR.w + n && t >
   ST_STUN = { f: "fx/st_stun.webp", n: 10, w: 54, h: 47, ax: 25, ay: 72, ms: 110 };
 let tintCv = null;
 function drawTinted(i, t, n, o, e, l) {
-  if (!i || S.lowFx) return l();
+  if (!i || S.lowFx || (R.enemies && R.enemies.length > 5)) return l();
   // whole-pixel box: the tinted copy is blitted back 1:1 (no resampling blur)
   ((t = Math.round(t)), (n = Math.round(n)));
   const r = DPR || 1,
@@ -580,7 +580,8 @@ function flushLabels() {
       (t.w = Math.max(t.tw + (t.dot ? 12 : 0), t.sub ? CX.measureText(t.sub).width : 0, 44)),
       (t.h = t.size + 4 + (t.hp >= 0 ? 11 : 0) + (t.sub ? t.size + 2 : 0)));
     let n = t.y;
-    for (let o = 0; o < 8; o++) {
+    const maxL = LABELS.length > 15 ? 2 : 6;
+    for (let o = 0; o < maxL; o++) {
       const e = i.find((l) => Math.abs(l.x - t.x) < (l.w + t.w) / 2 && n > l.top && n - t.h < l.y);
       if (!e) break;
       n = e.top - 1;

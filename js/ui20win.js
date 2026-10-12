@@ -122,7 +122,7 @@ function renderChar20() {
         : "";
   (($("#t-char").innerHTML = `<div class="u2char">
     <div class="u2dollw"><div class="u2nm">${esc(hasRealName() ? S.name : a.n)}</div><div class="u2doll"><canvas id="u2doll" width="252" height="300"></canvas>${t}</div>
-      <div class="u2btns"><button class="btn sm" id="bTitle">Danh hiệu</button><button class="btn sm${hasRealName() ? "" : " on"}" id="bName">Đặt tên</button><button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button>${matHave("misc", "ldp") > 0 ? '<button class="btn sm on" id="bDoiPhai">Đổi phái</button>' : ""}</div></div>
+      <div class="u2btns"><button class="btn sm" id="bTitle">Danh hiệu</button><button class="btn sm${hasRealName() ? "" : " on"}" id="bName">Đặt tên</button><button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">Dự Bị</button>${matHave("misc", "ldp") > 0 ? '<button class="btn sm on" id="bDoiPhai">Đổi phái</button>' : ""}</div></div>
     <div class="u2info"><div class="u2box"><b style="color:${SERIES_COL[a.series]}">${esc(a.n)}</b> · hệ ${SERIES[a.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">CS ${rebornN()}</small>` : ""}
       <div class="small">Chiêu chính: <b class="gold">${esc(n.main.n)}</b></div><div class="small">Lực tay trái <b class="gold">${lucTay(n.basic)}</b></div><div class="small">Lực tay phải <b class="gold">${lucTay(n.main)}</b></div></div>
       <div class="u2h">Tiềm năng <b class="gold">${S.attrPts}</b><span class="sp"></span><button class="btn sm" id="bSugAt">Gợi ý</button><button class="btn sm" id="bTTa">Tẩy Tủy</button></div>
@@ -134,7 +134,8 @@ function renderChar20() {
     document.querySelectorAll("#t-char .minus").forEach((e) => (e.onclick = () => unspendAttr(e.dataset.a))),
     ($("#bTitle").onclick = () => titleModal()),
     ($("#bName").onclick = () => nameModal()),
-    ($("#bReb").onclick = rebornModal));
+    ($("#bReb").onclick = rebornModal),
+    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))));
   const m = $("#bDoiPhai");
   (m && (m.onclick = doiPhaiModal),
     ($("#bSugAt").onclick = suggestModal),

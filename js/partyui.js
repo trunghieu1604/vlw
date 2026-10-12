@@ -24,12 +24,13 @@ function pTabsHTML(tab) {
   return `<div class="dtabs ptabs">${partyIdx()
     .map((k) => {
       const f = FAC[charGet(k, "fac")],
-        ko = k && pAct(k).r.deadT > 0;
-      return `<button data-pk="${k}" class="${k === sel ? "on" : ""}${ko ? " ko" : ""}" title="${esc(charGet(k, "name") || "")}${k ? " (đồ đệ)" : " (nhân vật chính)"} · ${f ? esc(f.n) : ""} · cấp ${charGet(k, "lvl")}"><b class="pn">${k + 1}</b>${pFacIcon(k)}<span class="pnm" style="color:${f ? SERIES_COL[f.series] : "#ddd"}">${esc(charGet(k, "name") || "")}</span><small>${charGet(k, "lvl")}</small>${pDot(k) ? '<i class="gdot"></i>' : ""}</button>`;
+        ko = k && pAct(k).r.deadT > 0,
+        bn = k && typeof pBenched == "function" && pBenched(k);
+      return `<button data-pk="${k}" class="${k === sel ? "on" : ""}${ko ? " ko" : ""}${bn ? " bad" : ""}" title="${esc(charGet(k, "name") || "")}${k ? (bn ? " (Dự bị)" : " (Xuất chiến)") : " (nhân vật chính)"} · ${f ? esc(f.n) : ""} · cấp ${charGet(k, "lvl")}"><b class="pn">${k + 1}</b>${pFacIcon(k)}<span class="pnm" style="color:${bn ? "#ff9060" : f ? SERIES_COL[f.series] : "#ddd"}">${esc(charGet(k, "name") || "")}${bn ? " (Dự bị)" : ""}</span><small>${charGet(k, "lvl")}</small>${pDot(k) ? '<i class="gdot"></i>' : ""}</button>`;
     })
     .join(
       "",
-    )}${sel ? `<button class="pmain" id="pMakeMain" title="Đổi đồ đệ này lên làm nhân vật chính (nhân vật chính hiện tại xuống làm đồ đệ)">Lên làm chính</button>` : ""}</div>`;
+    )}${sel ? `<button class="pmain" id="pMakeMain" title="Đổi đồ đệ này lên làm nhân vật chính (nhân vật chính hiện tại xuống làm đồ đệ)">Lên chính</button><button class="btn sm${typeof pBenched == "function" && pBenched(sel) ? " bad" : " on"}" id="pToggleBench" style="margin-left:4px;padding:1px 6px;font-size:11px" title="Bật/tắt dự bị cho đồ đệ này">${typeof pBenched == "function" && pBenched(sel) ? "Ra trận" : "Dự bị"}</button>` : ""}</div>`;
 }
 function pSelect(k, tab) {
   const v = clamp(k | 0, 0, partyN());
@@ -82,6 +83,17 @@ function pRender(tab, fn) {
             ($("#pMmNo").onclick = () => closeModal(!0)));
         },
       ));
+  const tb = root.querySelector("#pToggleBench");
+  tb &&
+    (tb.onclick = () => {
+      const sh = pSheet(k);
+      if (sh) {
+        sh.bench = !sh.bench;
+        typeof toast == "function" && toast(sh.bench ? `${charGet(k, "name")} vào hàng Dự Bị (nghỉ ngơi)` : `${charGet(k, "name")} tham gia xuất chiến!`);
+        typeof save == "function" && save();
+        refresh();
+      }
+    });
   if (!k) return;
   // disciple-specific bits inside its context
   root.querySelectorAll("[data-psl]").forEach(
@@ -221,3 +233,94 @@ for (const f of ["shopModal", "openNpcShop"])
       return withMain(() => o.apply(this, a));
     };
   }
+
+function duBiModal() {
+  if (!partyOk() || !partyN()) {
+    typeof toast == "function" && toast("Chưa có đồ đệ trong tổ đội");
+    return;
+  }
+  const rows = partyIdx()
+    .slice(1)
+    .map((k) => {
+      const d = pSheet(k);
+      if (!d) return "";
+      const isB = typeof pBenched == "function" && pBenched(k);
+      const f = FAC[charGet(k, "fac")];
+      const col = f ? SERIES_COL[f.series] : "#ffd24a";
+      return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin:8px 0;background:#181814;border:1px solid ${isB ? "#4a3328" : "#2a5438"}">
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;flex:1">
+          <input type="checkbox" class="dubi-ck" data-k="${k}" ${isB ? "" : "checked"} style="width:20px;height:20px;accent-color:#ffd24a;cursor:pointer">
+          <div>
+            <div style="font-size:15px;font-weight:bold;color:${col}">${k}. ${esc(charGet(k, "name") || "")}</div>
+            <small class="dim">${f ? esc(f.n) : ""} · Cấp ${charGet(k, "lvl")}</small>
+          </div>
+        </label>
+        <div>
+          <button class="btn sm ${isB ? "bad" : "ok"}" data-toggle="${k}" style="font-weight:bold;min-width:110px">
+            ${isB ? "Dự Bị (Nghỉ)" : "✓ Xuất Chiến"}
+          </button>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  modal(
+    `<h3>👥 Đội Hình Dự Bị <small>Chọn đồ đệ tham gia xuất chiến</small></h3>
+    <p class="desc">Tích chọn <b>[✓]</b> để đồ đệ cùng xuất chiến đánh quái. Bỏ chọn để đưa vào hàng <b>Dự Bị</b> (tạm nghỉ ngơi, không ra trận).</p>
+    <div class="dubilist" style="max-height:340px;overflow-y:auto;padding-right:4px">${rows}</div>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn" id="dubiAll">Tất cả xuất chiến</button>
+      <button class="btn" id="dubiNone">Dự bị tất cả (Chỉ 1 mình)</button>
+      <button class="btn" onclick="closeModal(!0)">Đóng</button>
+    </div>`,
+    () => {
+      const applyBench = (k, val) => {
+        const sh = pSheet(k);
+        if (sh) {
+          sh.bench = val;
+          if (!val) S.partyAway = false;
+          typeof toast == "function" && toast(sh.bench ? `${charGet(k, "name")} vào hàng Dự Bị (nghỉ ngơi)` : `${charGet(k, "name")} tham gia xuất chiến!`);
+          typeof save == "function" && save();
+          refresh();
+          duBiModal();
+        }
+      };
+      document.querySelectorAll(".dubi-ck").forEach((ck) => {
+        ck.onchange = () => applyBench(+ck.dataset.k, !ck.checked);
+      });
+      document.querySelectorAll("[data-toggle]").forEach((btn) => {
+        btn.onclick = () => {
+          const k = +btn.dataset.toggle;
+          const isB = typeof pBenched == "function" && pBenched(k);
+          applyBench(k, !isB);
+        };
+      });
+      const bAll = $("#dubiAll");
+      if (bAll)
+        bAll.onclick = () => {
+          S.partyAway = false;
+          for (let i = 1; i <= partyN(); i++) {
+            const sh = pSheet(i);
+            if (sh) sh.bench = false;
+          }
+          typeof toast == "function" && toast("Tất cả đồ đệ cùng xuất chiến!");
+          typeof save == "function" && save();
+          refresh();
+          duBiModal();
+        };
+      const bNone = $("#dubiNone");
+      if (bNone)
+        bNone.onclick = () => {
+          for (let i = 1; i <= partyN(); i++) {
+            const sh = pSheet(i);
+            if (sh) sh.bench = true;
+          }
+          typeof toast == "function" && toast("Tất cả đồ đệ vào hàng Dự Bị!");
+          typeof save == "function" && save();
+          refresh();
+          duBiModal();
+        };
+    },
+  );
+}
+window.duBiModal = duBiModal;

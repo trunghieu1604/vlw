@@ -502,6 +502,7 @@ function offlineGains() {
   // every disciple gets the full EXP too, at its own level
   if (typeof partyN == "function")
     for (let k = 1; k <= partyN(); k++)
+      (typeof pActive != "function" || pActive(k)) &&
       withChar(k, () => {
         (R.P || recalc(), gainXp(xf() * newbieXp()), l >= sk9MinL() && sk9Cfg("offline", !0) && sk9Gain(r * sk9Cfg("normal", 1), !0, R.P && R.P.main ? { [R.P.main.id]: 1 } : null));
       });

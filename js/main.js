@@ -75,20 +75,30 @@ function onLevelUp() {
       LV_MS.some((n) => n[0] === S.lvl) && toast(`Đạt mốc cấp ${S.lvl}: nhận quà ở nút 🎁`)));
 }
 const STEP = 1 / 60,
-  MAX_STEPS = 10,
+  MAX_STEPS = 4,
   LERP_MAX = 120;
 let simAcc = 0;
 function movers() {
-  return [H].concat(typeof partyN == "function" ? partyIdx().slice(1).map((k) => pAct(k).h) : [], R.enemies).filter(Boolean);
+  return [H]
+    .concat(
+      typeof partyN == "function"
+        ? partyIdx()
+            .slice(1)
+            .filter((k) => typeof pActive != "function" || pActive(k))
+            .map((k) => pAct(k).h)
+        : [],
+      R.enemies || [],
+    )
+    .filter(Boolean);
 }
 function simulateFrame(n) {
-  simAcc += n;
+  simAcc = Math.min(simAcc + n, STEP * 4);
   let e = 0;
   for (; simAcc >= STEP && e < MAX_STEPS;) {
     for (const o of movers()) ((o._px = o.x), (o._py = o.y));
     (tick(STEP), (simAcc -= STEP), e++);
   }
-  e === MAX_STEPS && (simAcc = 0);
+  if (e >= MAX_STEPS) simAcc = 0;
 }
 function drawLerp(n) {
   const e = simAcc / STEP,

@@ -32,6 +32,7 @@ const PARTY_MAX = 4, // total characters (main + disciples); data/UI work for 5�
     "rot",
     "inv", // each character has its own bag (Hành trang); the stash (Kho chung) stays shared
     "invSort",
+    "bench", // in reserve: does not fight or spawn on field
   ],
   // per-actor runtime fields of R (stats, HP/MP, cooldowns, target, mount, states, look…)
   ACT_RKEYS = [
@@ -103,6 +104,16 @@ const partyOk = () => typeof S < "u" && !!S && !!S.fac && Array.isArray(S.party)
 const partyN = () => (partyOk() ? S.party.length : 0); // number of disciples
 const partyIdx = () => [...Array(partyN() + 1).keys()]; // 0 = main, 1..n disciples
 const pSheet = (k) => (k > 0 && partyOk() ? S.party[k - 1] || null : null);
+const pBenched = (k) => {
+  if (k <= 0) return !1;
+  const sh = pSheet(k);
+  return !!(sh && sh.bench);
+};
+const pActive = (k) => {
+  if (k <= 0) return !0;
+  if (partyAway()) return !1;
+  return !pBenched(k);
+};
 function rebGet() {
   return (S.rw && S.rw.stat && S.rw.stat.reborn) | 0;
 }
@@ -332,6 +343,7 @@ function partySanitize(sh, e) {
     (o.skL = isSheet(o.skL) ? o.skL : {}),
     (o.bkOk = isSheet(o.bkOk) ? o.bkOk : {}),
     (o.auraOff = isSheet(o.auraOff) ? o.auraOff : {}),
+    (o.bench = !!sh.bench),
     (o.slots = Array.isArray(o.slots) ? o.slots.slice(0, 4).map((v) => +v || 0) : [0, 0, 0, 0]));
   for (; o.slots.length < 4; ) o.slots.push(0);
   for (const t in o.sk) SK[t] || delete o.sk[t];
@@ -546,12 +558,12 @@ function pSep() {
   const L = [H];
   for (let k = 1; k <= partyN(); k++) L.push(pAct(k).h);
   for (let i = 1; i < L.length; i++) {
-    if (pAct(i).r.deadT > 0) continue;
+    if (pAct(i).r.deadT > 0 || !pActive(i)) continue;
     const a = L[i];
     let px = 0,
       py = 0;
     for (let j = 0; j < L.length; j++) {
-      if (j === i || (j && pAct(j).r.deadT > 0)) continue;
+      if (j === i || (j && (pAct(j).r.deadT > 0 || !pActive(j)))) continue;
       const b = L[j],
         dx = a.x - b.x,
         dy = (a.y - b.y) * 2,
@@ -590,7 +602,7 @@ function partyTick(dt) {
     ((PT.anc = { x: L.x, y: L.y, dir: L.dir }), (PT.slot = []));
     for (let k = 1; k <= partyN(); k++) PT.slot[k] = pFormation(k, L);
   }
-  for (let k = 1; k <= partyN(); k++) withChar(k, () => discTick(L));
+  for (let k = 1; k <= partyN(); k++) pActive(k) && withChar(k, () => discTick(L));
   pSep();
   if ((PT.sw = (PT.sw || 0) + dt) > 31) {
     PT.sw = 0;
@@ -605,11 +617,12 @@ function partyTick(dt) {
 function partyAggro(t, dt) {
   if (!partyOk() || !partyN() || partyAway()) return 0;
   let k = t.ptk | 0;
-  if ((t.ptT = (t.ptT || 0) - dt) <= 0 || (k && (!pSheet(k) || pAct(k).r.deadT > 0))) {
+  if ((t.ptT = (t.ptT || 0) - dt) <= 0 || (k && (!pSheet(k) || pAct(k).r.deadT > 0 || !pActive(k)))) {
     t.ptT = 0.5;
     let best = R.deadT > 0 ? 1e9 : jxdE(t, H) * (k ? 1 : 0.85),
       bk = 0;
     for (let i = 1; i <= partyN(); i++) {
+      if (!pActive(i)) continue;
       const a = pAct(i);
       if (a.r.deadT > 0 || !a.r.P) continue;
       const d = jxdE(t, a.h) * (i === k ? 0.85 : 1);
@@ -623,7 +636,7 @@ function partyAggro(t, dt) {
 function partyOnKill(t) {
   if (!partyOk() || PCTX || partyAway()) return;
   for (let k = 1; k <= partyN(); k++)
-    withChar(k, () => {
+    pActive(k) && withChar(k, () => {
       (gainXp(killXp(t)), typeof sk9OnKill == "function" && sk9OnKill(t));
     });
 }
@@ -632,6 +645,7 @@ function partyEnts() {
   const out = [];
   if (partyAway()) return out;
   for (let k = 1; k <= partyN(); k++) {
+    if (!pActive(k)) continue;
     const a = pAct(k);
     a.r.P && onScreen(a.h.x, a.h.y, 200) && out.push({ disc: k, x: a.h.x, y: a.h.y });
   }
@@ -640,6 +654,7 @@ function partyEnts() {
 function partyEach(fn, vis) {
   if (!partyOk() || PCTX || partyAway()) return;
   for (let k = 1; k <= partyN(); k++) {
+    if (!pActive(k)) continue;
     const a = pAct(k);
     !a.r.P || (vis && !onScreen(a.h.x, a.h.y, 200)) || withChar(k, fn);
   }
@@ -670,7 +685,8 @@ function pAuraTick() {
   const n = pShareOn() ? partyN() : 0,
     src = [],
     t0 = clk();
-  for (let k = 0; k <= n; k++)
+  for (let k = 0; k <= n; k++) {
+    if (!pActive(k)) continue;
     withChar(k, () => {
       if (R.deadT > 0 || !R.P || typeof auraList != "function") return;
       const at = { k, x: H.x, y: H.y };
@@ -683,6 +699,7 @@ function pAuraTick() {
           pTeamBuff(SK[id]) &&
           src.push(Object.assign({ id: +id, lv: Math.max(1, skLv(id)), t: b[id] }, at));
     });
+  }
   const live = new Set(src.map((a) => a.k + ":" + a.id)),
     hold = PT.aus || [],
     aur = [],
@@ -692,7 +709,7 @@ function pAuraTick() {
       h = hold[r] || {},
       w = {},
       m = {};
-    if (!(o.r.deadT > 0) && o.r.P) {
+    if (pActive(r) && !(o.r.deadT > 0) && o.r.P) {
       // a state received earlier stays while its caster still runs it: a buff until it ends (JX1: cast on the
       // ally, range only matters at the cast), an aura for its state's lifetime after leaving the range
       for (const id in h) live.has(h[id].k + ":" + id) && h[id].until > t0 && (w[id] = h[id]);
@@ -836,24 +853,10 @@ function partyAwayToggle(on) {
   partyAwayBtn();
 }
 function partyAwayBtn() {
-  let b = document.getElementById("awayBtn");
-  const tc = document.getElementById("topCtl");
-  if (!tc) return;
-  if (!b) {
-    b = document.createElement("button");
-    ((b.id = "awayBtn"), (b.className = "chip"), (b.onclick = () => partyAwayToggle()));
-    tc.appendChild(b);
-  }
-  const show = partyOk() && partyN() > 0;
-  b.hidden = !show;
-  if (!show) return;
-  const away = partyAway();
-  b.textContent = away ? "Triệu hồi đồ đệ" : "Tạm lánh đồ đệ";
-  b.title = away ? "Gọi các đồ đệ quay lại chiến đấu cùng nhân vật chính" : "Ẩn các đồ đệ, chỉ để lại nhân vật chính";
-  b.classList.toggle("on", away);
+  const b = document.getElementById("awayBtn");
+  if (b) b.remove();
 }
 window.addEventListener("DOMContentLoaded", () => {
   partyAwayBtn();
-  setInterval(partyAwayBtn, 1000);
 });
 
