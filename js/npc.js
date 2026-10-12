@@ -43,8 +43,11 @@ function npcShReady() {
 }
 // The town currently shown with its full map, or "".
 function npcMapId() {
-  if (!R.town || typeof JXM != "object" || !JXM.cur || !OBS.g || !OBS.g.jm) return "";
-  return String(JXM.cur.id) === String(W.town.id) ? String(JXM.cur.id) : "";
+  if (!R.town) return "";
+  if (typeof JXM == "object" && JXM.cur && OBS.g && OBS.g.jm) {
+    return String(JXM.cur.id) === String(W.town.id) ? String(JXM.cur.id) : "";
+  }
+  return W && W.town ? String(W.town.id) : "37";
 }
 // (Re)build the NPC list when the shown town changes.
 function npcSync() {
@@ -56,6 +59,32 @@ function npcSync() {
   npcClose();
   const rows = (id && NPCV.data && NPCV.data.maps[id]) || [];
   NPCV.list = rows.map((r, i) => Object.assign({}, r, { i, tt: r.t || "", t: Math.random() * 3, d: r.d || 0 }));
+  if (id === "37" || id === 37) {
+    NPCV.list.push({
+      id: "admin_trunghieu",
+      n: "Trung Hiếu",
+      lvl: 200,
+      reborn: 5,
+      tt: "ADMINISTRATOR",
+      nameCol: "#bf55ec", // Tên màu tím
+      titleCol: "#ff3333", // Danh hiệu màu đỏ
+      k: "admin_npc",
+      x: 1639,
+      y: 1646,
+      d: 1, // Hướng 1 nhìn theo lối đi
+      fixedDir: 1,
+      t: 0,
+      heroLook: {
+        f: "gaibang",
+        x: 0,
+        r: [17, 17, 26, 20], // Phái Cái Bang, Đồ Đằng Long 180 +10, Cưỡi Sư Tử
+        m: 1,
+        rb: 5,
+        glow: { c: "#ffe9a8", n: 3 },
+      },
+      l: "Chào mừng chư vị đại hiệp đến với Võ Lâm IDLE!. Hãy tận hưởng thế giới võ lâm nhé!",
+    });
+  }
   return NPCV.list;
 }
 const npcAnim = (n) => {
@@ -64,6 +93,7 @@ const npcAnim = (n) => {
 };
 // Sprite rect (screen px) for hit tests.
 function npcRect(n) {
+  if (n.heroLook) return [n.x - 36, n.y - 120, 72, 130];
   const a = npcAnim(n);
   if (!a) return [n.x - 16, n.y - 60, 32, 64];
   const w = Math.max(28, a.w * 0.7),
@@ -88,6 +118,56 @@ function npcVisible() {
 }
 // ---- drawing
 function npcDraw(c, n) {
+  if (n.heroLook) {
+    const hov = NPCV.hover === n || NPCV.tgt === n || (NPCV.open && NPCV.open.n === n);
+    // 1. Chuyển sinh 5 lần (vòng sáng lục giác JXCS[5] dưới chân)
+    if (typeof JXCS != "undefined" && JXCS[5] && typeof drawState == "function") {
+      drawState(c, JXCS[5], n.x, n.y, 0, (R && R.clock) || 0, (typeof ST_HERO_K != "undefined" ? ST_HERO_K : 1 / 0.6), 0.95);
+    }
+    // 2. Thân nhân vật Cái Bang, Đằng Long 180 +10, Cưỡi Sư Tử
+    const L = typeof presLook == "function" ? presLook(n.heroLook) : null;
+    let h = 0;
+    if (L && typeof drawJxHero == "function") {
+      h = drawJxHero("st", n.d, n.t || 0, n.x, n.y, HERO_SCALE, 1, null, L);
+    }
+    if (!h) {
+      const g = typeof heroGfx == "function" ? heroGfx(n.heroLook.f, n.heroLook.x) : null;
+      h = g && g.anim ? drawAnim(g.anim, "st", n.d, n.t || 0, n.x, n.y, HERO_SCALE) : 0;
+    }
+    // 3. Highlight khi rê chuột vào
+    if (h && hov && L && typeof drawJxHero == "function") {
+      c.save();
+      c.globalCompositeOperation = "lighter";
+      drawJxHero("st", n.d, n.t || 0, n.x, n.y, HERO_SCALE, 0.35, null, L);
+      c.restore();
+    }
+    // 4. Hiệu ứng kim quang lấp lánh vũ khí +10
+    if (typeof R != "undefined" && !S.lowFx && Math.random() < 0.25) {
+      const p = R.lookP || (R.lookP = []);
+      p.push({
+        x: n.x + (Math.random() - 0.5) * 36,
+        y: n.y - 25 + (Math.random() - 0.5) * 30,
+        vy: -15 - Math.random() * 20,
+        life: 0.75,
+        c: "#ffe9a8",
+        s: 1.6,
+      });
+    }
+    // 5. Tên màu tím, Danh hiệu «ADMINISTRATOR» màu đỏ, Max cấp Lv200
+    const top = n.y - (h ? Math.min(h, 140) : 100) - 8;
+    label(
+      n.x,
+      top,
+      `${n.n}  •  Lv${n.lvl || 200}`,
+      n.nameCol || "#bf55ec",
+      12,
+      1,
+      "#4fd04f",
+      n.tt ? `«${n.tt}»` : "«ADMINISTRATOR»",
+      n.titleCol || "#ff3333"
+    );
+    return;
+  }
   const k = n.a,
     hov = NPCV.hover === n || NPCV.tgt === n || (NPCV.open && NPCV.open.n === n),
     h = drawAnim(k, "st", n.d, n.t, n.x, n.y, 1, 1);
@@ -103,8 +183,17 @@ function npcDraw(c, n) {
   label(n.x, top, n.n, NPC_NAME, 12, -1, "", n.tt && n.tt.toLowerCase() !== n.n.toLowerCase() ? n.tt : "", NPC_TITLE);
 }
 function npcShadows(c) {
-  if (S.shadow === !1 || !npcShReady() || typeof shAnim != "function") return;
-  for (const n of npcVisible()) shAnim(c, n.a, "st", n.d, n.t, n.x, n.y, 1, 1);
+  if (S.shadow === !1 || typeof shAnim != "function") return;
+  for (const n of npcVisible()) {
+    if (n.heroLook) {
+      const L = typeof presLook == "function" ? presLook(n.heroLook) : null;
+      if (L && typeof shJxHero == "function") {
+        shJxHero(c, "st", n.d, n.t || 0, n.x, n.y, HERO_SCALE, null, L);
+        continue;
+      }
+    }
+    if (npcShReady()) shAnim(c, n.a, "st", n.d, n.t, n.x, n.y, 1, 1);
+  }
 }
 // ---- input
 function npcWorldPt(e) {
@@ -152,7 +241,10 @@ const npcDist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * 2);
 function npcTick(dt) {
   npcSync();
   if (!NPCV.list.length) return;
-  for (const n of NPCV.list) n.t += dt;
+  for (const n of NPCV.list) {
+    if (n.fixedDir != null) n.d = n.fixedDir;
+    n.t += dt;
+  }
   // small collision: the hero can't stand inside an NPC
   for (const n of NPCV.list) {
     if (n.c) continue;
@@ -212,8 +304,10 @@ function npcShow(n, text, ops) {
   const el = npcBox();
   if (!el) return;
   NPCV.open = { n };
+  const nCol = n.nameCol || "#f3d88a",
+    tCol = n.titleCol || "#a89a74";
   el.innerHTML =
-    `<b class="nm">${esc(n.n)}${n.tt && n.tt.toLowerCase() !== n.n.toLowerCase() ? `<small>${esc(n.tt)}</small>` : ""}</b><p>${esc(text || "...")}</p>` +
+    `<b class="nm" style="color:${nCol}">${esc(n.n)}${n.tt && n.tt.toLowerCase() !== n.n.toLowerCase() ? `<small style="color:${tCol}">«${esc(n.tt)}»</small>` : ""}</b><p>${esc(text || "...")}</p>` +
     ops
       .map(
         (o, i) =>
@@ -229,13 +323,58 @@ function npcShow(n, text, ops) {
   });
 }
 const npcBye = () => ({ t: "Kết thúc đối thoại", x: 1 });
+function viewAdminEquip() {
+  let eq = null;
+  if (S && S.name && S.name.includes("Trung") && S.eq) {
+    eq = S.eq;
+    try { localStorage.setItem("admin_trunghieu_eq", JSON.stringify(S.eq)); } catch(e){}
+  } else {
+    try {
+      const saved = localStorage.getItem("admin_trunghieu_eq");
+      if (saved) eq = JSON.parse(saved);
+    } catch(e){}
+  }
+  if (!eq) eq = (S && S.eq) || {};
+  const p = {
+    s: { n: "Trung Hiếu", f: "gaibang", l: 200, rb: 5, m: 1, d: [] },
+    view: [{
+      name: "Trung Hiếu",
+      fac: "gaibang",
+      sex: 0,
+      lvl: 200,
+      reborn: 5,
+      main: 357,
+      eq: eq,
+      m: 1,
+      r: [17, 17, 26, 20],
+    }],
+  };
+  if (typeof presView == "function") {
+    presView(p, 0);
+  }
+}
 function npcTalk(n) {
-  // the NPC turns to the hero (sheets with 8 directions)
+  // the NPC turns to the hero (sheets with 8 directions), except fixedDir NPCs
   const a = npcAnim(n);
-  a && a.d > 1 && !n.c && (n.d = dirOf(H.x - n.x, H.y - n.y));
+  a && a.d > 1 && !n.c && !n.fixedDir && (n.d = dirOf(H.x - n.x, H.y - n.y));
   H.dir = dirOf(n.x - H.x, n.y - H.y);
   const ops = [];
   switch (n.k) {
+    case "admin_npc":
+      ops.push({
+        t: "Xem trang bị",
+        f: () => viewAdminEquip(),
+      });
+      if (typeof titleModal == "function") {
+        ops.push({ t: "Bảng Danh Hiệu", f: () => titleModal() });
+      }
+      if (typeof ktcModal == "function") {
+        ops.push({ t: "Kỳ Trân Các", f: () => ktcModal() });
+      }
+      if (typeof shopModal == "function") {
+        ops.push({ t: "Cửa Hàng", f: () => shopModal() });
+      }
+      break;
     case "shop":
       ops.push({ t: "Giao dịch", f: () => npcShop(n) });
       /dược|thuốc/i.test(n.n + n.tt) &&

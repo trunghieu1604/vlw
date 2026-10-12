@@ -11,6 +11,7 @@ const BM_KIND = {
   xaphu: ["#7dff8a", "Xa phu"],
   guard: ["#b8b8b8", "Vệ binh"],
   talk: ["#e8dcc8", "NPC"],
+  admin_npc: ["#c060ff", "Administrator"],
 };
 const BM_CSS = `
 #bmWrap{display:flex;flex-direction:column;gap:6px}

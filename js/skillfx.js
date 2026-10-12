@@ -89,3 +89,6 @@ function drawEnemyState(s, t, f, c, n) {
     drawState(s, t.stFx, t.x, t.y, f, R.clock || 0, c, clamp(t.stT, 0, 1));
   }
 }
+window.JXCS = JXCS;
+window.drawState = drawState;
+window.ST_HERO_K = ST_HERO_K;
