@@ -56,7 +56,8 @@ function jmGenTime(t, a, n) {
 }
 function jmSpawn(t, a, n, s, l, u, i) {
   const f = JFX.m[t];
-  if (!f || R.quiet || R.fx.length > 160) return null;
+  const maxM = S.lowFx ? 50 : 100;
+  if (!f || R.quiet || R.fx.length > maxM) return null;
   const d = jmK(t) || [f.fly ? 1 : 0, 16, Math.round((f.spd || 360) / 18), 10, 0, 0, 1, 1, 0, 1, 0, 0];
   let [x, y, M, J, g, z, o, m, F, e] = d;
   (f.fly || ((x = 0), (y = 1)),
@@ -302,8 +303,10 @@ function skillFx(t, a, n) {
     fxLine(t, a, n);
     return;
   }
-  const M = l ? l[0] : s.form === void 0 ? 1 : s.form,
-    J = clamp(!d && n.nMis > 1 ? Math.max(n.nMis, 1) : (l && l[6]) || s.num || 1, 1, 16),
+  const isDisc = typeof PCTX !== "undefined" && PCTX > 0,
+    maxJ = isDisc ? (S.lowFx ? 3 : 6) : (S.lowFx ? 4 : 16),
+    M = l ? l[0] : s.form === void 0 ? 1 : s.form,
+    J = clamp(!d && n.nMis > 1 ? Math.min(n.nMis, maxJ) : (l && l[6]) || s.num || 1, 1, maxJ),
     g = SK[n.id],
     z = n.L || 1,
     o = (e) => (g && g.attr && g.attr[e] ? (skVal(g, e, z) || [0])[0] : 0);

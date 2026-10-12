@@ -38,6 +38,7 @@ function audLoad(n) {
 }
 function sfx(n, t = 1, i = 1) {
   if (!n || R.quiet || !AUD.ctx || !sndCfg().on) return;
+  if (typeof PCTX !== "undefined" && PCTX > 0 && Math.random() < 0.65) return;
   const c = AUD.ctx.currentTime;
   if (AUD.last[n] && c - AUD.last[n] < SFX_GAP) return;
   const o = AUD.buf[n];

@@ -25,8 +25,10 @@ function img(i) {
   return (t || ((t = new Image()), (t.src = i), (IMG[i] = t)), t);
 }
 function addText(i, t, n, o, e = 12) {
-  const l = S.lowFx ? 20 : 60;
-  R.quiet || R.txt.length > l || R.txt.push({ x: i, y: t, t: n, color: o, size: e, life: S.lowFx ? 0.6 : 0.9 });
+  const isDisc = typeof PCTX !== "undefined" && PCTX > 0;
+  const l = S.lowFx ? 18 : 36;
+  if (R.quiet || R.txt.length > l || (isDisc && R.txt.length > 20)) return;
+  R.txt.push({ x: i, y: t, t: n, color: o, size: e, life: S.lowFx ? 0.5 : 0.75 });
 }
 function burst(i, t, n) {
   R.quiet || R.fx.push({ k: "ring", x: i, y: t, color: n, life: 0.45, max: 0.45 });
@@ -842,15 +844,21 @@ function draw(i) {
           t.stroke()));
   }
   ((t.globalAlpha = 1), (R.fx = R.fx.filter((e) => e.life > 0)), (t.textAlign = "center"), flushLabels());
-  for (const e of R.txt)
-    ((e.life -= i),
-      (e.y -= 32 * i),
-      (t.globalAlpha = clamp(e.life / 0.5, 0, 1)),
-      (t.font = `${e.size}px "IBM Plex Mono", monospace`),
-      (t.fillStyle = "#000"),
-      t.fillText(e.t, e.x + 1, e.y + 1),
-      (t.fillStyle = e.color),
-      t.fillText(e.t, e.x, e.y));
+  let curFn = "";
+  for (const e of R.txt) {
+    e.life -= i;
+    e.y -= 32 * i;
+    t.globalAlpha = clamp(e.life / 0.5, 0, 1);
+    const fn = `${e.size}px "IBM Plex Mono", monospace`;
+    if (curFn !== fn) {
+      t.font = fn;
+      curFn = fn;
+    }
+    t.fillStyle = "#000";
+    t.fillText(e.t, e.x + 1, e.y + 1);
+    t.fillStyle = e.color;
+    t.fillText(e.t, e.x, e.y);
+  }
   ((t.globalAlpha = 1),
     (R.txt = R.txt.filter((e) => e.life > 0)),
     t.setTransform(DPR, 0, 0, DPR, 0, 0),

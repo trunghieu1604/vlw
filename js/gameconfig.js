@@ -20,7 +20,7 @@
   const G = {
     v: +boot.v || 0,
     sections: boot.sections && typeof boot.sections === "object" ? boot.sections : {},
-    served: !!window.GCFG_BOOT,
+    served: !!window.GCFG_BOOT && !location.hostname.includes("github.io") && location.protocol !== "file:",
     changedAt: 0,
   };
   const split = (p) => (Array.isArray(p) ? p : p == null || p === "" ? [] : String(p).split("."));
@@ -114,7 +114,7 @@
     busy = false,
     last = 0;
   G.check = async () => {
-    if (busy || !G.served || !/^https?:$/.test(location.protocol)) return false;
+    if (busy || !G.served || !/^https?:$/.test(location.protocol) || location.hostname.includes("github.io")) return false;
     busy = true;
     last = Date.now();
     try {

@@ -793,7 +793,8 @@ function heroAttack(pool) {
           .slice(0, o.targets - 1);
   f.unshift(e);
   const u = typeof JFX < "u" && JFX.f[o.id] && JFX.f[o.id].meleeFly;
-  for (const c of f) (recHit(heroHit(o, c), o), (!u || c === e) && skillFx(H, c, o));
+  const singleFx = u || o.nMis > 1 || o.geo || o.around;
+  for (const c of f) (recHit(heroHit(o, c), o), (!singleFx || c === e) && skillFx(H, c, o));
   return (
     o.ev && stage2(o, e, n, f),
     (H.face = e.x >= H.x ? 1 : -1),
