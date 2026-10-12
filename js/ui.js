@@ -342,7 +342,7 @@ function renderChar() {
       .join(""),
     d = ELEM.map((o) => `<span>Kháng ${ELEM_VI[o]}</span><span>${Math.round(n.res[o])}%</span>`).join("");
   (($("#t-char").innerHTML =
-    `<div class="card"><b style="color:${SERIES_COL[t.series]}">${esc(t.n)}</b> · hệ ${SERIES[t.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">chuyển sinh ${rebornN()} · mặc đồ như cấp ${eqLevel()}</small>` : ""}<br><small class="dim">Lực tay trái ${lucTay(n.basic)} · Lực tay phải ${lucTay(n.main)}</small> <button class="btn sm" id="bTitle">🎖 Danh hiệu</button> <button class="btn sm${hasRealName() ? "" : " on"}" id="bName">${hasRealName() ? "✏ " + esc(S.name) : "✏ Đặt tên"}</button> <button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button>${matHave("misc", "ldp") > 0 ? ` <button class="btn sm on" id="bDoiPhai">Đổi phái (${matHave("misc", "ldp")})</button>` : ""}</div>
+    `<div class="card"><b style="color:${SERIES_COL[t.series]}">${esc(t.n)}</b> · hệ ${SERIES[t.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">chuyển sinh ${rebornN()} · mặc đồ như cấp ${eqLevel()}</small>` : ""}<br><small class="dim">Lực tay trái ${lucTay(n.basic)} · Lực tay phải ${lucTay(n.main)}</small> <button class="btn sm" id="bTitle">🎖 Danh hiệu</button> <button class="btn sm${hasRealName() ? "" : " on"}" id="bName">${hasRealName() ? "✏ " + esc(S.name) : "✏ Đặt tên"}</button> <button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">👥 Dự Bị</button>${matHave("misc", "ldp") > 0 ? ` <button class="btn sm on" id="bDoiPhai">Đổi phái (${matHave("misc", "ldp")})</button>` : ""}</div>
     <div class="eqgrid">${c}</div>${e.length ? `<div class="reqbad"><b>⚠ ${e.length} món đang mặc chưa đủ điều kiện, không được cộng chỉ số:</b><br>${e.map((o) => `${esc(o.n)}: ${esc(reqProblems(o).join("; "))}`).join("<br>")}</div>` : ""}
     <p class="dim small">Dòng ẩn (2, 4, 6) của mỗi món mở khi hệ nhân vật hoặc 2 món liên kết <b>tương sinh</b> với hệ món đó (Kim→Thủy→Mộc→Hỏa→Thổ→Kim). Đang mở: ${
       SLOTS.filter(([o]) => S.eq[o] && S.eq[o].mag.length > 1)
@@ -369,7 +369,8 @@ function renderChar() {
     document.querySelectorAll("#t-char .plus").forEach((o) => (o.onclick = () => attrAddModal(o.dataset.a))),
     ($("#bTitle").onclick = () => titleModal()),
     ($("#bName").onclick = () => nameModal()),
-    ($("#bReb").onclick = rebornModal));
+    ($("#bReb").onclick = rebornModal),
+    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))));
   const u = $("#bDoiPhai");
   (u && (u.onclick = doiPhaiModal),
     ($("#bSugAt").onclick = suggestModal),
@@ -1053,7 +1054,8 @@ function renderMore() {
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
       <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label>
       <small class="dim">Tay cầm: cần analog / D-pad để đi, A B X Y dùng chiêu 1–4, LB / RB uống thuốc HP / MP. Phím Esc đóng hộp thoại.<br>Phím tắt (như Võ Lâm 1): F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–5 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
-    <h3>Điều khiển & Hiển thị</h3><div class="card"><label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
+    <h3>Điều khiển & Hiển thị</h3><div class="card"><div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
+      <label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
       <label><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
     <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (bản fan chơi offline, phi thương mại).</div>
 `;
@@ -1105,6 +1107,22 @@ function renderMore() {
     document.querySelectorAll("[data-potsl]").forEach((e) => (e.onclick = () => potSlotModal(+e.dataset.potsl))),
     ($("#cPts").onchange = (e) => {
       ((S.autoPts = e.target.checked), S.autoPts && (autoSpendAttrs(), autoSpendSkills(), recalc()), save());
+    }),
+    t("#bInMouse", () => {
+      S.inputMode = "mouse";
+      INPUT.target = null;
+      typeof refreshInputBtn == "function" && refreshInputBtn();
+      save();
+      toast("Điều khiển bằng chuột: bấm hoặc giữ chuột để đi");
+      renderMore();
+    }),
+    t("#bInJoy", () => {
+      S.inputMode = "joy";
+      INPUT.target = null;
+      typeof refreshInputBtn == "function" && refreshInputBtn();
+      save();
+      toast("Điều khiển bằng joystick: kéo ở góc trái dưới");
+      renderMore();
     }),
     ($("#cJoy").onchange = (e) => {
       ((S.joy = e.target.checked ? "fixed" : "float"), save());

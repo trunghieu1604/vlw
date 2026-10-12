@@ -225,11 +225,11 @@ const CAMP = {
     ["rich", "Phú Giáp Nhất Phương", "Giang hồ", 3, () => S.gold >= 1e7, "Có 10 triệu lượng", ["lucky_v", 12]],
     [
       "admin",
-      "ADMINISTRATOR",
+      "Vô Song Vương Giả",
       "Đặc biệt",
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
-      "Danh hiệu GM · Bất tử khi đeo",
+      "Danh Hiệu Cao Quý",
       ["allres_p", 99],
       true,
     ],

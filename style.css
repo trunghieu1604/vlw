@@ -969,23 +969,7 @@ textarea {
   z-index: 1;
 }
 #townBar {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: 64px;
-  z-index: 5;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 6px 8px;
-  background: #000c;
-  border: 1px solid var(--gold2);
-  border-radius: 6px;
-}
-#townBar b {
-  flex: 1;
-  color: var(--gold);
-  font-family: var(--font);
+  display: none !important;
 }
 .skl .slots {
   display: flex;
@@ -1137,16 +1121,8 @@ th {
   font-weight: 400;
 }
 
-/* nut doi chuot / joystick: chi hien tren may tinh man hinh ngang */
 #inBtn {
-  display: none;
-  position: absolute;
-  right: 8px;
-  top: 70px;
-  z-index: 4;
-}
-body.deskland #inBtn {
-  display: block;
+  display: none !important;
 }
 
 .cmp2 {
@@ -1185,12 +1161,7 @@ body.deskland #inBtn {
   top: auto;
   bottom: 132px;
 }
-#inBtn {
-  right: auto !important;
-  left: 8px;
-  top: auto !important;
-  bottom: 188px;
-}
+
 
 /* giao dien di dong nho di 20%: ung dung rong / cao 1,25 lan roi thu nho 0,8 (uiScale trong render.js) */
 body.mob #app {

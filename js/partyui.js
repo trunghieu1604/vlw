@@ -20,17 +20,18 @@ function pDot(k) {
   return pts > 0 || (f && f.novice && (charGet(k, "lvl") | 0) >= NOVICE_LV);
 }
 function pTabsHTML(tab) {
+  const active = partyIdx().filter((k) => k === 0 || !(typeof pBenched == "function" && pBenched(k)));
+  if (active.length <= 1) return "";
   const sel = pSelOf(tab);
-  return `<div class="dtabs ptabs">${partyIdx()
+  return `<div class="dtabs ptabs">${active
     .map((k) => {
       const f = FAC[charGet(k, "fac")],
-        ko = k && pAct(k).r.deadT > 0,
-        bn = k && typeof pBenched == "function" && pBenched(k);
-      return `<button data-pk="${k}" class="${k === sel ? "on" : ""}${ko ? " ko" : ""}${bn ? " bad" : ""}" title="${esc(charGet(k, "name") || "")}${k ? (bn ? " (Dự bị)" : " (Xuất chiến)") : " (nhân vật chính)"} · ${f ? esc(f.n) : ""} · cấp ${charGet(k, "lvl")}"><b class="pn">${k + 1}</b>${pFacIcon(k)}<span class="pnm" style="color:${bn ? "#ff9060" : f ? SERIES_COL[f.series] : "#ddd"}">${esc(charGet(k, "name") || "")}${bn ? " (Dự bị)" : ""}</span><small>${charGet(k, "lvl")}</small>${pDot(k) ? '<i class="gdot"></i>' : ""}</button>`;
+        ko = k && pAct(k).r.deadT > 0;
+      return `<button data-pk="${k}" class="${k === sel ? "on" : ""}${ko ? " ko" : ""}" title="${esc(charGet(k, "name") || "")}${k ? " (Xuất chiến)" : " (nhân vật chính)"} · ${f ? esc(f.n) : ""} · cấp ${charGet(k, "lvl")}"><b class="pn">${k + 1}</b>${pFacIcon(k)}<span class="pnm" style="color:${f ? SERIES_COL[f.series] : "#ddd"}">${esc(charGet(k, "name") || "")}</span><small>${charGet(k, "lvl")}</small>${pDot(k) ? '<i class="gdot"></i>' : ""}</button>`;
     })
     .join(
       "",
-    )}${sel ? `<button class="pmain" id="pMakeMain" title="Đổi đồ đệ này lên làm nhân vật chính (nhân vật chính hiện tại xuống làm đồ đệ)">Lên chính</button><button class="btn sm${typeof pBenched == "function" && pBenched(sel) ? " bad" : " on"}" id="pToggleBench" style="margin-left:4px;padding:1px 6px;font-size:11px" title="Bật/tắt dự bị cho đồ đệ này">${typeof pBenched == "function" && pBenched(sel) ? "Ra trận" : "Dự bị"}</button>` : ""}</div>`;
+    )}${sel ? `<button class="pmain" id="pMakeMain" title="Đổi đồ đệ này lên làm nhân vật chính (nhân vật chính hiện tại xuống làm đồ đệ)">Lên chính</button><button class="btn sm on" id="pToggleBench" style="margin-left:4px;padding:1px 6px;font-size:11px" title="Cho đồ đệ này vào hàng Dự bị (tạm nghỉ ngơi)">Dự bị</button>` : `<button class="btn sm" id="pOpenDuBi" style="margin-left:auto;padding:1px 6px;font-size:11px" title="Quản lý danh sách Dự bị / Xuất chiến">👥 Dự Bị</button>`}</div>`;
 }
 function pSelect(k, tab) {
   const v = clamp(k | 0, 0, partyN());
@@ -59,7 +60,9 @@ function pRender(tab, fn) {
   // and with handlers NOT bound to that disciple (the next click — e.g. the main skill picker — then acted on
   // the main character). Re-render once back in the main context instead (party.js pFlush).
   if (PCTX) return void pDefer("pr_" + tab, () => ({ char: renderChar, skill: renderSkill, inv: renderInv })[tab]());
-  pSelOf(tab) > partyN() && pSelSet(tab, 0);
+  if (pSelOf(tab) > partyN() || (pSelOf(tab) > 0 && typeof pBenched === "function" && pBenched(pSelOf(tab)))) {
+    pSelSet(tab, 0);
+  }
   const k = pSelOf(tab);
   withChar(k, () => {
     (k && (R.dirty || !R.P) && recalc(), fn());
@@ -71,6 +74,8 @@ function pRender(tab, fn) {
   (root.querySelector(".ptabs") && root.querySelector(".ptabs").remove(),
     root.insertAdjacentHTML("afterbegin", pTabsHTML(tab)),
     root.querySelectorAll(".ptabs [data-pk]").forEach((b) => (b.onclick = () => pSelect(+b.dataset.pk, tab))));
+  const ob = root.querySelector("#pOpenDuBi");
+  ob && (ob.onclick = () => typeof duBiModal == "function" && duBiModal());
   const mm = root.querySelector("#pMakeMain");
   mm &&
     (mm.onclick = () =>
@@ -88,8 +93,10 @@ function pRender(tab, fn) {
     (tb.onclick = () => {
       const sh = pSheet(k);
       if (sh) {
-        sh.bench = !sh.bench;
-        typeof toast == "function" && toast(sh.bench ? `${charGet(k, "name")} vào hàng Dự Bị (nghỉ ngơi)` : `${charGet(k, "name")} tham gia xuất chiến!`);
+        sh.bench = true;
+        pSelSet(tab, 0);
+        if (PSEL === k) PSEL = 0;
+        typeof toast == "function" && toast(`${charGet(k, "name")} vào hàng Dự Bị (nghỉ ngơi)`);
         typeof save == "function" && save();
         refresh();
       }
@@ -279,6 +286,12 @@ function duBiModal() {
         if (sh) {
           sh.bench = val;
           if (!val) S.partyAway = false;
+          if (val) {
+            for (const t in P_WSEL) {
+              if (P_WSEL[t] === k) P_WSEL[t] = 0;
+            }
+            if (PSEL === k) PSEL = 0;
+          }
           typeof toast == "function" && toast(sh.bench ? `${charGet(k, "name")} vào hàng Dự Bị (nghỉ ngơi)` : `${charGet(k, "name")} tham gia xuất chiến!`);
           typeof save == "function" && save();
           refresh();
@@ -315,6 +328,8 @@ function duBiModal() {
             const sh = pSheet(i);
             if (sh) sh.bench = true;
           }
+          for (const t in P_WSEL) P_WSEL[t] = 0;
+          PSEL = 0;
           typeof toast == "function" && toast("Tất cả đồ đệ vào hàng Dự Bị!");
           typeof save == "function" && save();
           refresh();

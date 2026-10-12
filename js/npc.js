@@ -65,7 +65,7 @@ function npcSync() {
       n: "Trung Hiếu",
       lvl: 999,
       reborn: 5,
-      tt: "Quản Trị Viên",
+      tt: "VÕ LÂM MINH CHỦ",
       nameCol: "#bf55ec", // Tên màu tím
       titleCol: "#ff3333", // Danh hiệu màu đỏ
       k: "admin_npc",
@@ -269,7 +269,8 @@ function npcTick(dt) {
 const NPC_CSS = `
 #npcDlg{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);z-index:7;width:min(460px,calc(100% - 24px));
  box-sizing:border-box;padding:10px 14px 8px;border:1px solid #8a6d2e;border-radius:4px;
- background:linear-gradient(#1d150bf2,#110c06f2);box-shadow:0 0 0 1px #000,0 6px 18px #000a;color:#e8dcc0;font-size:13px;line-height:1.45}
+ background:linear-gradient(#1d150bf2,#110c06f2);box-shadow:0 0 0 1px #000,0 6px 18px #000a;color:#e8dcc0;font-size:13px;line-height:1.45;
+ max-height:calc(100vh - 140px);overflow-y:auto}
 #npcDlg[hidden]{display:none}
 #npcDlg b.nm{display:block;color:#f3d88a;font-size:14px;margin-bottom:4px}
 #npcDlg b.nm small{color:#a89a74;font-weight:normal;font-size:11px;margin-left:6px}
@@ -407,7 +408,7 @@ function viewAdminEquip() {
         lvl: 999,
         reborn: 5,
         main: 357,
-        title: "«ADMINISTRATOR»",
+        title: "TRANG BỊ",
         titleCol: "#ff3333",
         nameCol: "#bf55ec",
         eq: adminEq,
@@ -435,12 +436,35 @@ function npcTalk(n) {
       if (typeof titleModal == "function") {
         ops.push({ t: "Bảng Danh Hiệu", f: () => titleModal() });
       }
+      if (typeof shopModal == "function") {
+        ops.push({ t: "Cửa hàng", f: () => shopModal() });
+      }
       if (typeof ktcModal == "function") {
         ops.push({ t: "Kỳ Trân Các", f: () => ktcModal() });
       }
-      if (typeof shopModal == "function") {
-        ops.push({ t: "Cửa Hàng", f: () => shopModal() });
+      if (typeof stashModal == "function") {
+        ops.push({ t: "Kho chung", f: () => stashModal() });
       }
+      ops.push({
+        t: "Bán đồ không khớp lọc",
+        keep: !0,
+        f: () => {
+          const e = typeof sellUnmatched == "function" ? sellUnmatched() : { n: 0, gold: 0 };
+          toast(`Bán ${e.n} món (+${typeof fmtL == "function" ? fmtL(e.gold || 0) : (e.gold || 0)} lượng)`);
+          typeof save == "function" && save();
+          typeof refresh == "function" && refresh();
+        },
+      });
+      if (typeof bmOpen == "function") {
+        ops.push({ t: "Bản đồ", f: () => bmOpen() });
+      }
+      ops.push({
+        t: "Trở lại bãi",
+        f: () => {
+          if (typeof mgTravel == "function") mgTravel("back");
+          else if (typeof backFromTown == "function") backFromTown();
+        },
+      });
       break;
     case "shop":
       ops.push({ t: "Giao dịch", f: () => npcShop(n) });

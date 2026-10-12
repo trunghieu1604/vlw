@@ -164,26 +164,34 @@ function modeCard(t) {
 }
 function modeSwSync() {
   let t = $("#modeSw");
-  (t ||
-    ((t = document.createElement("div")),
-    (t.id = "modeSw"),
-    (t.innerHTML = `<button id="mswBtn"></button><div id="mswMenu" class="hidden">${MODES.map((e) => `<button data-msw="${e[0]}" title="${e[3]}">${e[1]} ${e[2]}</button>`).join("")}</div>`),
-    $("#battle").appendChild(t),
-    ($("#mswBtn").onclick = (e) => {
-      (e.stopPropagation(), $("#mswMenu").classList.toggle("hidden"));
-    }),
-    t.querySelectorAll("[data-msw]").forEach(
-      (e) =>
-        (e.onclick = (o) => {
-          (o.stopPropagation(), $("#mswMenu").classList.add("hidden"), setMode(e.dataset.msw));
-        }),
-    ),
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "modeSw";
+    $("#battle").appendChild(t);
+  }
+  if (!t.querySelector("[data-msw]")) {
+    t.innerHTML = `<button id="mswBtn"></button><div id="mswMenu" class="hidden">${MODES.map((e) => `<button data-msw="${e[0]}" title="${e[3]}">${e[1]} ${e[2]}</button>`).join("")}</div>`;
+  }
+  if (!t._bound) {
+    t._bound = true;
+    $("#mswBtn").onclick = (e) => {
+      e.stopPropagation();
+      $("#mswMenu").classList.toggle("hidden");
+    };
+    t.querySelectorAll("[data-msw]").forEach((e) => {
+      e.onclick = (o) => {
+        o.stopPropagation();
+        $("#mswMenu").classList.add("hidden");
+        setMode(e.dataset.msw);
+      };
+    });
     document.addEventListener("pointerdown", (e) => {
       t.contains(e.target) || $("#mswMenu").classList.add("hidden");
-    })),
-    t.classList.toggle("hidden", !S.fac));
+    });
+  }
+  t.classList.toggle("hidden", !S.fac);
   const n = modeOf();
-  (($("#mswBtn").innerHTML = `Chế Độ: <b>${n[1]} ${n[2]}</b> ▴`),
+  (($("#mswBtn").innerHTML = `<b>${n[1]} ${n[2]}</b> ▴`),
     t.querySelectorAll("[data-msw]").forEach((e) => e.classList.toggle("on", e.dataset.msw === n[0])));
 }
 function bindModeCard() {

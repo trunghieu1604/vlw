@@ -174,14 +174,7 @@
   background: #252320 !important;
 }
 .mbox::after {
-  content: "";
-  position: sticky;
-  display: block;
-  bottom: -14px;
-  height: 20px;
-  margin: 10px -14px -14px;
-  background: url(ui/jx1/ornb2.png) center top/auto 100% no-repeat;
-  pointer-events: none;
+  display: none !important;
 }
 /* ---- o do: o den vien xam nhu luoi Do vat JX1 ---- */
 .it {
@@ -622,8 +615,7 @@ body.nochat #modeSw {
 #pad .pbtn:hover {
   border-color: #9a8a5a !important;
 }
-#chatBox,
-#modeSw {
+#chatBox {
   bottom: 52px !important;
 }
 @media (max-width: 440px) {

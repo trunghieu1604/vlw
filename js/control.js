@@ -12,7 +12,7 @@ const INPUT = { active: !1, id: null, fromJoy: !1, ox: 0, oy: 0, x: 0, y: 0, mov
       window.matchMedia("(orientation: landscape) and (min-width: 900px) and (hover: hover) and (pointer: fine)")
         .matches
     ),
-  inputMode = () => (isDesktopLandscape() ? (S.inputMode === "joy" ? "joy" : "mouse") : "joy"),
+  inputMode = () => (S.inputMode ? S.inputMode : (isDesktopLandscape() ? "mouse" : "joy")),
   mouseMode = () => inputMode() === "mouse";
 function refreshRotBtn() {
   const t = $("#rotBtn");
@@ -306,7 +306,7 @@ function renderPad() {
       (o.title = "Chiêu chính: " + (n ? "Đánh thường" : t && SK[t.id] ? SK[t.id].n : "—")));
   }
   const a = $("#ctrlBtn");
-  ((a.innerHTML = 'Auto: <i class="ck"></i>'),
+  ((a.innerHTML = 'Tự Động Đánh: <i class="ck"></i>'),
     a.classList.toggle("on", !manual()),
     (a.title = manual() ? "Tự điều khiển (F)" : "Tự động đánh (F)"));
 }
