@@ -1,4 +1,5 @@
 "use strict";
+window.J = window.JX;
 const J = window.JX,
   W = window.JW,
   $ = (n) => document.querySelector(n),

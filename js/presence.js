@@ -567,12 +567,14 @@ function presJxRow(n, it) {
 }
 function presViewLook(c) {
   if (!JXL || !c.fac) return null;
-  const q = c.eq,
+  if (c.look) return c.look;
+  if (c.r && Array.isArray(c.r)) return presLook({ f: c.fac, x: c.sex, m: c.m != null ? c.m : (c.eq && c.eq.horse ? 1 : 0), r: c.r });
+  const q = c.eq || {},
     w = q.weapon;
   return presLook({
     f: c.fac,
     x: c.sex,
-    m: 0,
+    m: c.m != null ? c.m : (q.horse ? 1 : 0),
     r: [presJxRow("helm", q.helm), presJxRow("armor", q.armor), presJxRow(w && w.d === 1 ? "range" : "melee", w), -1],
   });
 }
@@ -583,7 +585,7 @@ function presView(p, sel) {
     live = [s].concat(s.d).find((x) => x.n === c.name), // live main skill from the town snapshot
     sk = (live && live.k) || c.main,
     f = FAC[c.fac],
-    col = presCol(s, sel ? null : c.fac, "#ffd76a"),
+    col = (c && c.nameCol) || presCol(s, sel ? null : c.fac, "#ffd76a"),
     tabs = `<div class="dtabs ptabs prtabs">${v
       .map((x, i) => {
         const g = typeof heroGfx == "function" ? heroGfx(x.fac, x.sex) : null,
@@ -598,7 +600,8 @@ function presView(p, sel) {
     }).join(""),
     n = Object.keys(c.eq).length;
   modal(
-    `<h3 style="color:${col}">${esc(c.name || "?")} <small>${sel ? "đồ đệ của " + esc(v[0].name) + " · " : ""}${esc(facName(c.fac))} · cấp ${c.lvl}${c.reborn ? ` · chuyển sinh ${c.reborn}` : ""}</small></h3>
+    `${c.title ? `<div style="text-align:center;color:${c.titleCol || "#ff3333"};font-weight:900;letter-spacing:2px;font-size:14px;margin-bottom:4px;text-shadow:0 0 6px rgba(255,51,51,0.5)">${esc(c.title)}</div>` : ""}
+    <h3 style="color:${col}">${esc(c.name || "?")} <small>${sel ? "đồ đệ của " + esc(v[0].name) + " · " : ""}${esc(facName(c.fac))} · cấp ${c.lvl}${c.reborn ? ` · chuyển sinh ${c.reborn}` : ""}</small></h3>
     ${v.length > 1 ? tabs : ""}
     <div class="prview"><div class="prdollw"><div class="u2doll prdoll"><canvas id="prDoll" width="252" height="300"></canvas>${doll}</div>
       <div class="prsk small">${f ? `<b style="color:${SERIES_COL[f.series]}">${esc(f.n)}</b> · ` : ""}Võ công chính: <b class="gold">${presSkill(sk)}</b></div></div>

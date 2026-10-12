@@ -63,9 +63,9 @@ function npcSync() {
     NPCV.list.push({
       id: "admin_trunghieu",
       n: "Trung Hiếu",
-      lvl: 200,
+      lvl: 999,
       reborn: 5,
-      tt: "ADMINISTRATOR",
+      tt: "Quản Trị Viên",
       nameCol: "#bf55ec", // Tên màu tím
       titleCol: "#ff3333", // Danh hiệu màu đỏ
       k: "admin_npc",
@@ -323,31 +323,98 @@ function npcShow(n, text, ops) {
   });
 }
 const npcBye = () => ({ t: "Kết thúc đối thoại", x: 1 });
-function viewAdminEquip() {
-  let eq = null;
-  if (S && S.name && S.name.includes("Trung") && S.eq) {
-    eq = S.eq;
-    try { localStorage.setItem("admin_trunghieu_eq", JSON.stringify(S.eq)); } catch(e){}
-  } else {
-    try {
-      const saved = localStorage.getItem("admin_trunghieu_eq");
-      if (saved) eq = JSON.parse(saved);
-    } catch(e){}
+function getAdminEquip() {
+  if (window._admin_trunghieu_eq && window._admin_trunghieu_eq.weapon) return window._admin_trunghieu_eq;
+  const eq = {};
+  const jx = (typeof J !== "undefined" && J) || window.JX || window.J;
+  if (jx && jx.sets && jx.sets.gold && typeof makeSetItem === "function") {
+    // Đằng Long Tụ Nghĩa (Cái Bang Bổng / Trượng, cấp 180)
+    const rows = jx.sets.gold.filter((x) => x.grp === 306);
+    for (const r of rows) {
+      try {
+        const it = makeSetItem("gold", r, 10);
+        it.enh = 10;
+        if (it.d === 0) eq.weapon = it;
+        else if (it.d === 2) eq.armor = it;
+        else if (it.d === 7) eq.helm = it;
+        else if (it.d === 6) eq.belt = it;
+        else if (it.d === 5) eq.boot = it;
+        else if (it.d === 8) eq.cuff = it;
+        else if (it.d === 4) eq.amulet = it;
+        else if (it.d === 9) eq.pendant = it;
+        else if (it.d === 3) {
+          if (!eq.ring1) eq.ring1 = it;
+          else eq.ring2 = it;
+        }
+      } catch (err) {
+        console.error("makeSetItem err:", err);
+      }
+    }
   }
-  if (!eq) eq = (S && S.eq) || {};
+  // Thú cưỡi: Sư tử +10 (k: 22, d: 10, lvl: 10)
+  let horse = null;
+  if (typeof makeItem === "function") {
+    try { horse = makeItem(10, 22, 10, 0); } catch (e) {}
+  }
+  if (!horse && jx && jx.items && jx.items[10]) {
+    const hRow = jx.items[10].list.find((x) => x.k === 22 && x.lvl === 10) || jx.items[10].list.find((x) => x.k === 22);
+    if (hRow) {
+      horse = {
+        uid: 999999,
+        d: 10,
+        k: 22,
+        lvl: 10,
+        n: "Sư tử",
+        ic: hRow.ic || "img/i/10_220.png",
+        r: 2,
+        price: 500000,
+        base: (hRow.base || []).map((x) => x.slice()),
+        req: (hRow.req || []).map((x) => x.slice()),
+        mag: [],
+      };
+    }
+  }
+  if (horse) {
+    horse.enh = 10;
+    horse.r = 2;
+    horse.rareH = 1;
+    horse.s = 3; // Hệ Hỏa (Cái Bang)
+    eq.horse = horse;
+  }
+  window._admin_trunghieu_eq = eq;
+  return eq;
+}
+function viewAdminEquip() {
+  const adminEq = getAdminEquip();
   const p = {
-    s: { n: "Trung Hiếu", f: "gaibang", l: 200, rb: 5, m: 1, d: [] },
-    view: [{
-      name: "Trung Hiếu",
+    s: {
+      n: "Trung Hiếu",
       fac: "gaibang",
-      sex: 0,
-      lvl: 200,
-      reborn: 5,
-      main: 357,
-      eq: eq,
+      l: 200,
+      rb: 5,
       m: 1,
-      r: [17, 17, 26, 20],
-    }],
+      k: 357,
+      col: "#bf55ec",
+      title: "«ADMINISTRATOR»",
+      titleCol: "#ff3333",
+      d: [],
+    },
+    view: [
+      {
+        name: "Trung Hiếu",
+        fac: "gaibang",
+        sex: 0,
+        lvl: 999,
+        reborn: 5,
+        main: 357,
+        title: "«ADMINISTRATOR»",
+        titleCol: "#ff3333",
+        nameCol: "#bf55ec",
+        eq: adminEq,
+        m: 1,
+        r: [17, 17, 26, 20],
+      },
+    ],
   };
   if (typeof presView == "function") {
     presView(p, 0);
