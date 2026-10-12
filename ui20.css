@@ -1719,7 +1719,15 @@ body.u2s #modeSw {
 body.u2s #topCtl {
   top: 26px !important;
   bottom: auto !important;
-  left: 196px !important;
+  left: 126px !important;
+  right: auto !important;
+  width: 236px !important;
+  gap: 8px !important;
+}
+body.u2s #mswMenu {
+  top: 100% !important;
+  bottom: auto !important;
+  margin-top: 2px !important;
 }
 body.u2s .u20w {
   max-height: calc(100vh - 4px) !important;
