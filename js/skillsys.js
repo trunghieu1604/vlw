@@ -1,160 +1,298 @@
-/* ======================= HE THONG CHIEU THUC JX1: bi dong · bua loi · vong sang · bua hai =======================
-   Phan loai theo du lieu Skills.txt (tham so 2 cua moi thuoc tinh = so khung hieu luc, 18 khung = 1 giay):
-   - Bi dong   : khong ton noi luc (thoi gian -1) -> luon co hieu luc.
-   - Bua loi   : tu than (self), ton noi luc, co thoi gian (vd Kim Chung Trao 148s, Thien Ma Giai The 194s) -> tu thi trien lai khi het.
-                 Thoi gian rat ngan (Tu Hang Pho Do 2s) = chieu hoi phuc tuc thi, dung khi sinh luc < 60%.
-   - Vong sang : aura (Nga Mi Mong Diep, Pho Do Chung Sinh, Phat Tam Tu Huu...) -> chi 1 vong sang bat cung luc, hieu luc lien tuc.
-   - Bua hai   : len quai (Thien Nhan Ao anh Phi Ho, Phi Hong Vo Tich; Ngu Doc Xich Diem Thuc Thien, Xuyen Y Pha Giap...)
-                 gia tri am, giam khang / ne / chinh xac / sat thuong / toc do cua quai trong thoi gian cua chieu (vd 78s).
-   Truoc day moi chieu khong tan cong deu cong thang vao nhan vat (ca bua hai -> tu tru khang chinh minh). */
-'use strict';
-const FPS_JX = 18;
-/* Vong sang gay sat thuong (Skills.txt: IsAura, ChildSkillId 203 'Vo Hinh Doc', TimePerCast 72 khung = 4s, AttackRadius 200).
-   Bang cap (script may chu wudu.lua 'wuxing_gu', khong co trong client) lay tu bang du lieu ky nang Ngu Doc cua 17173
-   (news.17173.com/z/jx/jn/skill_wdu.htm, "毒攻伤害点数/次" cap 1-30): 1 1 1 1 2 2 2 2 2 3 3 3 3 3 4 4 4 4 4 5 5 5 5 5 6 6 6 6 6 7.
-   Thoi gian / chu ky doc lay nhu cac chieu doc khac cua Ngu Doc (60 khung, moi 10 khung) -> tinh qua activeInfo nhu moi chieu doc
-   (Noi cong, cuong hoa doc, bac ky nang...). */
-const WXG_POISON = [1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7];
-const AURA_DMG = { 69: { el: 'poison', every: 72 / 18, rad: 200, tab: WXG_POISON, col: '#8fe34a' } };
-const auraSkill = id => { const A = AURA_DMG[id]; return A.sk || (A.sk = Object.assign({}, SK[id], { aura: 0, attr: { poisondamage_v: A.tab.map(v => [v, 60, 10]) } })); };
-const auraHit = (id, L) => { const A = AURA_DMG[id], k = Math.min(L, A.tab.length); return R.P ? ((activeInfo(R.P, auraSkill(id), k).parts || {})[A.el] || 0) : 0; };
-const hasCost = s => !!(s.attr && s.attr.skill_cost_v);
-function skKind(s) {
-  if (!s) return 'none';
-  if (isAttack(s)) return 'atk';
-  if (s.aura) return Object.keys(s.attr || {}).length || AURA_DMG[s.id] ? 'aura' : 'none';
-  if (!hasCost(s)) return 'passive';
-  if (s.enemy) return 'curse';
-  return 'buff';
+"use strict";
+const FPS_JX = 18,
+  WXG_POISON = [1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7],
+  AURA_DMG = { 69: { el: "poison", every: 72 / 18, rad: 200, tab: WXG_POISON, col: "#8fe34a" } },
+  auraSkill = (t) => {
+    const e = AURA_DMG[t];
+    return (
+      e.sk || (e.sk = Object.assign({}, SK[t], { aura: 0, attr: { poisondamage_v: e.tab.map((s) => [s, 60, 10]) } }))
+    );
+  },
+  auraHit = (t, e) => {
+    const s = AURA_DMG[t],
+      n = Math.min(e, s.tab.length);
+    return (R.P && (activeInfo(R.P, auraSkill(t), n).parts || {})[s.el]) || 0;
+  },
+  hasCost = (t) => !!(t.attr && t.attr.skill_cost_v);
+// Team-shared skills, from the JX1 \settings\Skills.txt columns (paks of the cocos2dx client, read with
+// tools/jxmap/pak.py; KSkill::LoadSkillLevelData: IsAura -> m_bIsAura, TargetAlly -> m_eRelation |= relation_ally,
+// AttackRadius -> range; party members are relation_ally):
+//  aura  IsAura=1 TargetAlly=1 (state child skill, AttackRadius 180): the aura state reaches every member in range
+//  buff  IsAura=0 TargetAlly=1, SkillStyle 0, MisslesForm 6 AtTarget, AttackRadius 400/440: castable on an ally
+//  heal  same columns as buff, a short lifereplenish (Từ Hàng Phổ Độ): heals the lowest-HP member in range
+// TargetAlly=0 skills (Thu Phong Diệp 81, Nhân Kiếm Hợp Nhất 163, Kim Chung Tráo 33, Thái Cực Thần Công 157…) stay
+// self-only; Vô Hình Độc 69 is an enemy aura (TargetEnemy=1). Range = SK[id].radius (= AttackRadius).
+const SK_TEAM_AURA = new Set([16, 86, 89, 92, 146, 159, 282, 332]),
+  SK_TEAM_BUFF = new Set([15, 171, 173, 178]),
+  SK_TEAM_HEAL = new Set([93, 94]),
+  skTeamR = (t) => (SK[t] && SK[t].radius) || 180;
+function skKind(t) {
+  return t
+    ? isAttack(t)
+      ? "atk"
+      : t.aura
+        ? Object.keys(t.attr || {}).length || AURA_DMG[t.id]
+          ? "aura"
+          : "none"
+        : hasCost(t)
+          ? t.enemy
+            ? "curse"
+            : "buff"
+          : "passive"
+    : "none";
 }
-const SK_KIND_VI = { atk: 'Tấn công', passive: 'Bị động', buff: 'Bùa lợi', aura: 'Vòng sáng', curse: 'Bùa hại', none: '—' };
-/* thoi gian hieu luc (giay) o cap L: lay tham so 2 lon nhat cua cac thuoc tinh co thoi gian */
-function skDur(s, L) {
-  let f = 0; for (const n in s.attr) { if (/^(skill_|missle_|addskill)/.test(n)) continue; const p = skVal(s, n, L); if (p && p[1] > f) f = p[1]; }
-  return f > 0 ? f / FPS_JX : 0;
+const SK_KIND_VI = {
+  atk: "Tấn công",
+  passive: "Bị động",
+  buff: "Bùa lợi",
+  aura: "Vòng sáng",
+  curse: "Bùa hại",
+  none: "—",
+};
+function skDur(t, e) {
+  let s = 0;
+  for (const n in t.attr) {
+    if (/^(skill_|missle_|addskill)/.test(n)) continue;
+    const c = skVal(t, n, e);
+    c && c[1] > s && (s = c[1]);
+  }
+  return s > 0 ? s / 18 : 0;
 }
-const skCost = (s, L) => ((skVal(s, 'skill_cost_v', L) || [0])[0]) || 0;
-const SKS = () => R.sks || (R.sks = { buff: {}, cd: {} });   // trang thai tran: bua loi dang co (het han theo R.clock)
-const clk = () => R.clock || 0;
-const buffOn = id => (SKS().buff[id] || 0) > clk() && !!S.sk[id];
-/* vong sang: bat cung luc moi vong sang da hoc (tat rieng tung cai: S.auraOff) */
-const auraList = () => Object.keys(S.sk || {}).filter(id => S.sk[id] && SK[id] && skKind(SK[id]) === 'aura' && !(S.auraOff || {})[id]).map(Number);
-const auraOn = id => auraList().includes(+id);
-function auraActive() { return auraList()[0] || 0; }
-/* vong sang sat thuong: dang bat, moi 'every' giay danh 1 nhip */
-const auraT = {};
-function auraDmgTick(dt) { for (const id of auraList()) if (AURA_DMG[id]) auraDmg1(id, dt); }
-function auraDmg1(id, dt) {
-  const A = AURA_DMG[id]; if (!A || !R.P || !R.P.main || R.town || R.deadT > 0) return;
-  if ((auraT[id] = (auraT[id] || 0) - dt) > 0) return; auraT[id] = A.every;
-  const L = (S.sk[id] || 1) + (R.P.plusSkill || 0), hit = auraHit(id, L); if (!(hit > 0)) return;
-  const tg = R.enemies.filter(e => !e.dead && e.hp > 0 && Math.hypot(e.x - H.x, e.y - H.y) <= A.rad); if (!tg.length) return;
-  const ser = heroSeries();
-  for (const e of tg) {
-    const cm = curseMod(e), res = cm ? Object.fromEntries(ELEM.map(x => [x, e.res[x] + (cm.res[x] || 0)])) : e.res;
-    let d = applyPart(hit * rnd(0.9, 1.1) * (cm && cm.poison ? 1 + cm.poison / 100 : 1), A.el, ser, e.series, res, 75, R.P.series5 || 0);
-    if (A.el === 'poison') { const left = e.poison > 0 ? e.poisonDmg * e.poison : 0; e.poisonDmg = (left + d) / POISON_TIME; e.poison = POISON_TIME; }
-    else e.hp -= d;
+const skCost = (t, e) => (skVal(t, "skill_cost_v", e) || [0])[0] || 0,
+  SKS = () => R.sks || (R.sks = { buff: {}, cd: {} }),
+  clk = () => R.clock || 0,
+  buffOn = (t) => (SKS().buff[t] || 0) > clk() && !!S.sk[t],
+  auraList = () =>
+    Object.keys(S.sk || {})
+      .filter((t) => S.sk[t] && SK[t] && skKind(SK[t]) === "aura" && !(S.auraOff || {})[t])
+      .map(Number),
+  auraOn = (t) => auraList().includes(+t);
+function auraActive() {
+  return auraList()[0] || 0;
+}
+// aura / buff timers live in R.sks (per actor: swapped with the disciples, js/party.js)
+const auraTm = () => SKS().aT || (SKS().aT = {});
+function auraDmgTick(t) {
+  for (const e of auraList()) AURA_DMG[e] && auraDmg1(e, t);
+}
+function auraDmg1(t, e) {
+  const s = AURA_DMG[t];
+  if (!s || !R.P || !R.P.main || R.town || R.deadT > 0 || (auraTm()[t] = (auraTm()[t] || 0) - e) > 0) return;
+  auraTm()[t] = s.every;
+  const n = Math.max(1, skLv(t)),
+    c = auraHit(t, n);
+  if (!(c > 0)) return;
+  const a = R.enemies.filter((o) => !o.dead && o.hp > 0 && jxdE(H, o) <= s.rad);
+  if (!a.length) return;
+  const l = heroSeries();
+  for (const o of a) {
+    const i = curseMod(o),
+      p = i ? Object.fromEntries(ELEM.map((f) => [f, o.res[f] + (i.res[f] || 0)])) : o.res;
+    let r =
+      applyPart(
+        c * rnd(0.9, 1.1) * (i && i.poison ? 1 + i.poison / 100 : 1),
+        s.el,
+        l,
+        o.series,
+        p,
+        75,
+        R.P.series5 || 0,
+      ) * cheatK();
+    if (s.el === "poison") {
+      const f = o.poison > 0 ? o.poisonDmg * o.poison : 0;
+      ((o.poisonDmg = (f + r) / POISON_TIME), (o.poison = POISON_TIME));
+    } else o.hp -= r;
   }
 }
-/* calc(): chieu khong tan cong nao duoc cong vao nhan vat luc nay */
-function skApplies(s) {
-  const k = skKind(s);
-  if (k === 'passive') return true;
-  if (k === 'aura') return auraOn(s.id);
-  if (k === 'buff') return buffOn(s.id) || !!R.buffAssume;             // goi y cong diem: coi nhu bua loi dang bat
-  return false;                                                          // bua hai: chi tac dung len quai
+function skApplies(t) {
+  const e = skKind(t);
+  if (e === "passive") return !0;
+  const own = e === "aura" ? auraOn(t.id) : e === "buff" ? buffOn(t.id) || !!R.buffAssume : !1;
+  // the same team aura / buff from a party member at a higher level replaces the own copy (JX1 states don't stack)
+  return own && !(typeof partyShareLv == "function" && partyShareLv(t.id) > skLv(t.id));
 }
-/* ---------- tu thi trien ---------- */
-let skT = 0;
-function skillSysTick(dt) {
-  auraDmgTick(dt);
-  skT -= dt; if (skT > 0) return; skT = 0.5;
-  if (!S.fac || !R.P || R.deadT > 0 || R.town) return;
-  const now = clk(), st = SKS(); let changed = false;
-  for (const id in st.buff) if (st.buff[id] <= now && st.buff[id] > 0) { st.buff[id] = 0; changed = true; }
-  const fight = R.enemies.some(e => !e.dead);
-  for (const id in S.sk) {
-    const s = SK[id], L = (S.sk[id] || 0); if (!L) continue;
-    const k = skKind(s); if (k !== 'buff' && k !== 'curse') continue;
-    if (k === 'buff' && S.autoBuff === false) continue;
-    if (k === 'curse' && S.autoCurse === false) continue;
-    const Lv = L + (R.P.plusSkill || 0), cost = skCost(s, Lv), dur = skDur(s, Lv);
-    if (R.mana < cost + R.P.mana * 0.15) continue;                       // chua noi luc cho chieu danh
-    if (k === 'buff') {
-      if (buffOn(id)) continue;
-      if (dur < 5) {                                                      // hoi phuc tuc thi (Tu Hang Pho Do)
-        if (!(fight && R.life < R.P.life * 0.6) || (st.cd[id] || 0) > now) continue;
-        const p = skVal(s, 'lifereplenish_v', Lv); R.mana -= cost; heal((p ? p[0] : 0) * dur * 2, false); st.cd[id] = now + 8;
-        addText(H.x, H.y - 60, '✚ ' + s.n, '#8f8', 12); continue;
+function skillSysTick(t) {
+  const q = SKS();
+  if ((auraDmgTick(t), (q.t = (q.t || 0) - t), q.t > 0 || ((q.t = 0.5), !S.fac || !R.P || R.deadT > 0 || R.town))) return;
+  const e = clk(),
+    s = SKS();
+  let n = !1;
+  for (const a in s.buff) s.buff[a] <= e && s.buff[a] > 0 && ((s.buff[a] = 0), (n = !0));
+  const c = R.enemies.some((a) => !a.dead);
+  for (const a in S.sk) {
+    const l = SK[a];
+    if (!(S.sk[a] || 0)) continue;
+    const i = skKind(l);
+    if ((i !== "buff" && i !== "curse") || (i === "buff" && S.autoBuff === !1) || (i === "curse" && S.autoCurse === !1))
+      continue;
+    const p = skLv(a),
+      r = skCost(l, p),
+      f = skDur(l, p),
+      k = skCostLife(l),
+      m = () => {
+        k ? (R.life = Math.max(1, R.life - r)) : (R.mana -= r);
+      };
+    if (!(k ? R.life < r + R.P.life * 0.3 : R.mana < r + R.P.mana * 0.15)) {
+      if (i === "buff") {
+        if (buffOn(a)) continue;
+        if (f < 5) {
+          if (!c || (s.cd[a] || 0) > e) continue;
+          // ally heal (TargetAlly): the lowest-HP living party member in range (the caster included)
+          const tg = SK_TEAM_HEAL.has(+a) && typeof partyHealTarget == "function" ? partyHealTarget(skTeamR(a)) : null;
+          if (tg ? tg.ratio >= 0.6 : !(R.life < R.P.life * 0.6)) continue;
+          const g = skVal(l, "lifereplenish_v", p),
+            hv = (g ? g[0] : 0) * f * 2;
+          (m(), (s.cd[a] = e + 8), addText(H.x, H.y - 60, "✚ " + l.n, "#8f8", 12));
+          tg && !tg.self ? partyHealApply(tg, hv) : heal(hv, !1);
+          continue;
+        }
+        (m(), (s.buff[a] = e + f), (n = !0), typeof uiSfx == "function" && uiSfx("use"));
+        typeof jmSupFx == "function" && jmSupFx(+a, H, !0);
+      } else if (c) {
+        const d = R.enemies
+          .filter((u) => !u.dead && !((u.curse || {})[a] > e))
+          .sort(
+            (u, h) =>
+              (h.cls === "boss") - (u.cls === "boss") ||
+              (h.cls === "elite") - (u.cls === "elite") ||
+              Math.hypot(u.x - H.x, u.y - H.y) - Math.hypot(h.x - H.x, h.y - H.y),
+          )[0];
+        if (!d || jxdE(H, d) > 420 || (d.cls === "normal" && R.enemies.filter((u) => !u.dead).length < 3)) continue;
+        m();
+        const b = d.curse || (d.curse = {});
+        ((b[a] = e + Math.min(f, 60)), typeof castFx == "function" && castFx({ id: +a }));
+        typeof jmSupFx == "function" && jmSupFx(+a, d);
+        for (const u of R.enemies)
+          u !== d && !u.dead && jxdE(d, u) < 120 && ((u.curse || (u.curse = {}))[a] = e + Math.min(f, 60));
       }
-      R.mana -= cost; st.buff[id] = now + dur; changed = true;
-      if (typeof uiSfx === 'function') uiSfx('use');
-    } else if (fight) {
-      const tgts = R.enemies.filter(e => !e.dead && !((e.curse || {})[id] > now)).sort((a, b) => (b.cls === 'boss') - (a.cls === 'boss') || (b.cls === 'elite') - (a.cls === 'elite') || Math.hypot(a.x - H.x, a.y - H.y) - Math.hypot(b.x - H.x, b.y - H.y));
-      const e = tgts[0]; if (!e || Math.hypot(e.x - H.x, e.y - H.y) > 420) continue;
-      if (e.cls === 'normal' && R.enemies.filter(x => !x.dead).length < 3) continue;   // quai thuong le te: khong ton bua
-      R.mana -= cost; const c = e.curse || (e.curse = {}); c[id] = now + Math.min(dur, 60);
-      if (typeof castFx === 'function') castFx({ id: +id });   // hinh luc bat bua (PreCastSpr)
-      // bua hai pham vi (Ngu Doc / Thien Nhan): trung them quai dung gan muc tieu
-      for (const o of R.enemies) if (o !== e && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 120) (o.curse || (o.curse = {}))[id] = now + Math.min(dur, 60);
     }
   }
-  if (changed) R.dirty = true;
+  n && ((R.dirty = !0), typeof partyShareNow == "function" && partyShareNow());
 }
-/* ---------- bua hai: tong hop tac dung tren 1 quai ---------- */
-function curseMod(e) {
-  const c = e.curse; if (!c) return null;
-  const now = clk(), m = { res: {}, def: 0, ar: 0, dmg: 0, ret: 0, slow: 0, regen: 0, poison: 0, crit: 0 }; let any = false;
-  for (const id in c) {
-    if (c[id] <= now) continue; const s = SK[id], L = (S.sk[id] || 1) + ((R.P && R.P.plusSkill) || 0); if (!s) continue; any = true;
-    for (const n in s.attr) {
-      if (/^(skill_|missle_|addskill)/.test(n)) continue; const p = skVal(s, n, L); if (!p) continue; const v = p[0];
-      if (n === 'allres_p') for (const el of ELEM) m.res[el] = (m.res[el] || 0) + v;
-      else if (/res_p$/.test(n)) { const el = n.startsWith('physics') ? 'phys' : n.startsWith('lighting') ? 'light' : n.replace('res_p', ''); m.res[el] = (m.res[el] || 0) + v; }
-      else if (n === 'adddefense_v') m.def += v;
-      else if (n === 'attackratingenhance_p') m.ar += v;
-      else if (n === 'addphysicsdamage_p') m.dmg += v;
-      else if (n === 'meleedamagereturn_p') m.ret += -v;               // Hoa Lien Phan Hoa: quai danh can chien bi phan lai
-      else if (n === 'fasthitrecover_v') m.slow += -v;
-      else if (n === 'lifereplenish_v') m.regen += v;
-      else if (n === 'poisontimereduce_p') m.poison += -v;
-      else if (n === 'deadlystrikeenhance_p') m.crit += v;
+function curseMod(t) {
+  const e = t.curse;
+  if (!e) return null;
+  const s = clk(),
+    n = { res: {}, def: 0, ar: 0, dmg: 0, ret: 0, slow: 0, regen: 0, poison: 0, crit: 0 };
+  let c = !1;
+  for (const a in e) {
+    if (e[a] <= s) continue;
+    const l = SK[a],
+      o = Math.max(1, skLv(a));
+    if (l) {
+      c = !0;
+      for (const i in l.attr) {
+        if (/^(skill_|missle_|addskill)/.test(i)) continue;
+        const p = skVal(l, i, o);
+        if (!p) continue;
+        const r = p[0];
+        if (i === "allres_p") for (const f of ELEM) n.res[f] = (n.res[f] || 0) + r;
+        else if (/res_p$/.test(i)) {
+          const f = i.startsWith("physics") ? "phys" : i.startsWith("lighting") ? "light" : i.replace("res_p", "");
+          n.res[f] = (n.res[f] || 0) + r;
+        } else
+          i === "adddefense_v"
+            ? (n.def += r)
+            : i === "attackratingenhance_p"
+              ? (n.ar += r)
+              : i === "addphysicsdamage_p"
+                ? (n.dmg += r)
+                : i === "meleedamagereturn_p"
+                  ? (n.ret += -r)
+                  : i === "fasthitrecover_v"
+                    ? (n.slow += -r)
+                    : i === "lifereplenish_v"
+                      ? (n.regen += r)
+                      : i === "poisontimereduce_p"
+                        ? (n.poison += -r)
+                        : i === "deadlystrikeenhance_p" && (n.crit += r);
+      }
     }
   }
-  return any ? m : null;
+  return c ? n : null;
 }
-const isCursed = e => !!curseMod(e);
-/* ---------- giao dien Vo cong: dong trang thai ---------- */
-function skStateTag(s) {
-  const k = skKind(s), L = S.sk[s.id] || 0;
-  if (k === 'buff') { const d = skDur(s, Math.max(1, L)); return d < 5 ? `<span class="tag buff">Hồi phục</span>` : `<span class="tag buff">Bùa lợi ${Math.round(d)}s</span>${L && buffOn(s.id) ? ` <small class="cp">đang có ${Math.ceil(SKS().buff[s.id] - clk())}s</small>` : ''}`; }
-  if (k === 'aura' && AURA_DMG[s.id]) return `<span class="tag aura">Vòng sáng độc</span> <small class="dim">mỗi ${AURA_DMG[s.id].every}s phủ độc quái trong ${AURA_DMG[s.id].rad} · độc ${AURA_DMG[s.id].tab[Math.min(Math.max(1, L + ((R.P && R.P.plusSkill) || 0)), 30) - 1]} điểm/lần → ~${fmt(auraHit(s.id, Math.max(1, L + ((R.P && R.P.plusSkill) || 0))))}/nhịp</small>${L ? (auraActive() === s.id ? ' <small class="cp">● đang bật</small>' : ` <button class="btn sm" data-aura="${s.id}">Bật</button>`) : ''}`;
-  if (k === 'aura') return `<span class="tag aura">Vòng sáng</span>${L ? (auraOn(s.id) ? ` <small class="cp">● đang bật</small> <button class="btn sm" data-aura="${s.id}">Tắt</button>` : ` <button class="btn sm" data-aura="${s.id}">Bật</button>`) : ''}`;
-  if (k === 'curse') return `<span class="tag curse">Bùa hại ${Math.round(Math.min(60, skDur(s, Math.max(1, L))))}s</span>`;
-  if (k === 'passive') return '<span class="tag">Bị động</span>';
-  return '';
+const isCursed = (t) => !!curseMod(t);
+function skStateTag(t) {
+  const e = skKind(t),
+    s = S.sk[t.id] || 0;
+  if (e === "buff") {
+    const n = skDur(t, Math.max(1, s));
+    return n < 5
+      ? '<span class="tag buff">Hồi phục</span>'
+      : `<span class="tag buff">Bùa lợi ${Math.round(n)}s</span>${s && buffOn(t.id) ? ` <small class="cp">đang có ${Math.ceil(SKS().buff[t.id] - clk())}s</small>` : ""}`;
+  }
+  return e === "aura" && AURA_DMG[t.id]
+    ? `<span class="tag aura">Vòng sáng độc</span> <small class="dim">mỗi ${AURA_DMG[t.id].every}s phủ độc quái trong ${AURA_DMG[t.id].rad} · độc ${AURA_DMG[t.id].tab[Math.min(Math.max(1, s + ((R.P && R.P.plusSkill) || 0)), 30) - 1]} điểm/lần → ~${fmt(auraHit(t.id, Math.max(1, s + ((R.P && R.P.plusSkill) || 0))))}/nhịp</small>${s ? (auraActive() === t.id ? ' <small class="cp">● đang bật</small>' : ` <button class="btn sm" data-aura="${t.id}">Bật</button>`) : ""}`
+    : e === "aura"
+      ? `<span class="tag aura">Vòng sáng</span>${s ? (auraOn(t.id) ? ` <small class="cp">● đang bật</small> <button class="btn sm" data-aura="${t.id}">Tắt</button>` : ` <button class="btn sm" data-aura="${t.id}">Bật</button>`) : ""}`
+      : e === "curse"
+        ? `<span class="tag curse">Bùa hại ${Math.round(Math.min(60, skDur(t, Math.max(1, s))))}s</span>`
+        : e === "passive"
+          ? '<span class="tag">Bị động</span>'
+          : "";
 }
-function bindSkState(root) {
-  root.querySelectorAll('[data-aura]').forEach(b => b.onclick = e => { e.stopPropagation(); const id = b.dataset.aura, off = S.auraOff || (S.auraOff = {}); if (off[id]) delete off[id]; else off[id] = 1; R.dirty = true; recalc(); save(); toast(`${off[id] ? 'Tắt' : 'Bật'} vòng sáng: ${SK[id].n}`); refresh(); });
+function bindSkState(t) {
+  t.querySelectorAll("[data-aura]").forEach(
+    (e) =>
+      (e.onclick = (s) => {
+        s.stopPropagation();
+        const n = e.dataset.aura,
+          c = S.auraOff || (S.auraOff = {});
+        (c[n] ? delete c[n] : (c[n] = 1),
+          (R.dirty = !0),
+          recalc(),
+          typeof partyShareNow == "function" && partyShareNow(),
+          save(),
+          toast(`${c[n] ? "Tắt" : "Bật"} vòng sáng: ${SK[n].n}`),
+          refresh());
+      }),
+  );
 }
 function skOptsHTML() {
-  return `<label><input type="checkbox" id="cBuff" ${S.autoBuff === false ? '' : 'checked'}> Tự thi triển bùa lợi khi hết thời gian (tốn nội lực)</label>
-    <label><input type="checkbox" id="cCurse" ${S.autoCurse === false ? '' : 'checked'}> Tự thi triển bùa hại lên trùm, tinh anh hoặc đám từ 3 quái</label>`;
+  const sh = typeof partyShared == "function" ? partyShared() : [];
+  return `${sh.length ? `<div class="small" style="margin:2px 0 6px">Nhận từ tổ đội: ${sh.map((o) => `<span class="tag ${o.aura ? "aura" : "buff"}">${esc(o.n)}</span>`).join(" ")}</div>` : ""}<label><input type="checkbox" id="cBuff" ${S.autoBuff === !1 ? "" : "checked"}> Tự thi triển bùa lợi khi hết thời gian (tốn nội lực)</label>
+    <label><input type="checkbox" id="cCurse" ${S.autoCurse === !1 ? "" : "checked"}> Tự thi triển bùa hại lên trùm, tinh anh hoặc đám từ 3 quái</label>`;
 }
 function bindSkOpts() {
-  const b = $('#cBuff'), c = $('#cCurse');
-  if (b) b.onchange = () => { S.autoBuff = b.checked; save(); };
-  if (c) c.onchange = () => { S.autoCurse = c.checked; save(); };
+  const t = $("#cBuff"),
+    e = $("#cCurse");
+  (t &&
+    (t.onchange = () => {
+      ((S.autoBuff = t.checked), save());
+    }),
+    e &&
+      (e.onchange = () => {
+        ((S.autoCurse = e.checked), save());
+      }));
 }
-/* thanh bieu tuong trang thai kieu JX1 (goc trai tren): icon + thoi gian con lai (N/A = vong sang / vinh vien) */
-const BUF_ITEM_IC = { tt: 'img/ep/tt.png', luck: 'img/ep/qht.png', xp: 'img/ep/fd.png', drop: 'img/ep/mys.png' };
-const fmtLeft = s => s < 0 ? 'N/A' : s >= 3600 ? Math.floor(s / 3600) + 'h' : s >= 60 ? Math.floor(s / 60) + 'm' : Math.ceil(s) + 's';
+const BUF_ITEM_IC = { tt: "img/ep/tt.png", luck: "img/ep/qht.png", xp: "img/ep/fd.png", drop: "img/ep/mys.png" },
+  fmtLeft = (t) =>
+    t < 0 ? "N/A" : t >= 3600 ? Math.floor(t / 3600) + "h" : t >= 60 ? Math.floor(t / 60) + "m" : Math.ceil(t) + "s";
 function stateIcons() {
-  const out = [];
-  if (newbieOn()) out.push({ ic: 'img/ep/tanthu.png', t: -1, n: `Hỗ Trợ Tân Thủ: mỗi giây hồi ${NEWBIE_REGEN.life * 100}% sinh lực, ${NEWBIE_REGEN.mana * 100}% nội lực, +${NEWBIE_XP * 100}% kinh nghiệm (đến cấp ${NEWBIE_LV})` });
-  for (const a of auraList()) out.push({ ic: SK[a].ic, t: -1, n: 'Vòng sáng: ' + SK[a].n });
-  const now = clk(); for (const id in SKS().buff) if (SKS().buff[id] > now && SK[id] && S.sk[id]) out.push({ ic: SK[id].ic, t: SKS().buff[id] - now, n: SK[id].n });
-  const tn = Date.now(); for (const k in (S.buf || {})) { const b = S.buf[k]; if (b && b.until > tn && BUFF_VI[k]) out.push({ ic: BUF_ITEM_IC[k] || 'img/ep/fd.png', t: (b.until - tn) / 1000, n: `${BUFF_VI[k]} +${k === 'luck' ? Math.round(b.p) : Math.round(b.p * 100) + '%'}` }); }
-  return out;
+  const t = [];
+  newbieOn() &&
+    t.push({
+      ic: "img/ep/tanthu.png",
+      t: -1,
+      n: `Hỗ Trợ Tân Thủ: mỗi giây hồi ${NEWBIE_REGEN.life * 100}% sinh lực, ${NEWBIE_REGEN.mana * 100}% nội lực, +${NEWBIE_XP * 100}% kinh nghiệm (đến cấp ${NEWBIE_LV})`,
+    });
+  for (const n of auraList()) t.push({ ic: SK[n].ic, t: -1, n: "Vòng sáng: " + SK[n].n });
+  const e = clk();
+  for (const n in SKS().buff)
+    SKS().buff[n] > e && SK[n] && S.sk[n] && t.push({ ic: SK[n].ic, t: SKS().buff[n] - e, n: SK[n].n });
+  // auras / buffs the other party members share with this character (party.js pAuraTick)
+  if (typeof partyShared == "function") for (const o of partyShared()) t.push({ ic: o.ic, t: o.t, n: o.n });
+  const s = Date.now();
+  for (const n in S.buf || {}) {
+    const c = S.buf[n];
+    c &&
+      c.until > s &&
+      BUFF_VI[n] &&
+      t.push({
+        ic: BUF_ITEM_IC[n] || "img/ep/fd.png",
+        t: (c.until - s) / 1e3,
+        n: `${BUFF_VI[n]} +${n === "luck" ? Math.round(c.p) : Math.round(c.p * 100) + "%"}`,
+      });
+  }
+  return t;
 }

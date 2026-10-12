@@ -1,160 +1,326 @@
-/* ======================= CHAT THE GIOI (Supabase Realtime) =======================
-   Khung chat goc duoi trai san dau nhu JX1: thu gon hien 4 dong moi nhat, cham 💬 de mo lich su + o nhap.
-   Tin nhan luu bang public.chat (xem CHAT_SETUP.sql), nhan tin moi qua realtime, dem nguoi online qua presence. */
-'use strict';
-const CHAT = { sb: null, ch: null, msgs: [], open: false, unread: 0, online: 0, state: 'off', last: 0, err: '' };
-const CHAT_MAX = 150, CHAT_KEEP = 80, CHAT_GAP = 2500;
-const chatCid = () => { try { let c = localStorage.getItem('jxidle_cid'); if (!c) { c = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem('jxidle_cid', c); } return c; } catch (e) { return 'anon' + Math.random().toString(36).slice(2, 10); } };
-const chatName = () => String(S && (S.name || (FAC[S.fac] && FAC[S.fac].n)) || 'Vô danh').slice(0, 20);
-const chatTime = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-
+"use strict";
+const CHAT = { sb: null, ch: null, msgs: [], open: !1, unread: 0, online: 0, state: "off", last: 0, err: "" },
+  CHAT_MAX = 150,
+  CHAT_KEEP = 80,
+  CHAT_GAP = 1e4,
+  chatCid = () => {
+    try {
+      let t = localStorage.getItem("jxidle_cid");
+      return (
+        t ||
+          ((t = Math.random().toString(36).slice(2, 12) + Date.now().toString(36)),
+          localStorage.setItem("jxidle_cid", t)),
+        t
+      );
+    } catch {
+      return "anon" + Math.random().toString(36).slice(2, 10);
+    }
+  },
+  chatName = () => String((S && (S.name || (FAC[S.fac] && FAC[S.fac].n))) || "Vô danh").slice(0, 20),
+  chatTime = (t) => {
+    const e = new Date(t);
+    return `${String(e.getHours()).padStart(2, "0")}:${String(e.getMinutes()).padStart(2, "0")}`;
+  };
 function chatDom() {
-  if ($('#chatBox')) return;
-  const b = document.createElement('div'); b.id = 'chatBox';
-  b.innerHTML = `<div id="chatHead"><b>Thế giới</b><small id="chatOn"></small><button id="chatX" title="Thu gọn">▾</button></div>
+  return; // Offline mode: disabled world chat
+  if ($("#chatBox")) return;
+  const t = document.createElement("div");
+  ((t.id = "chatBox"),
+    (t.innerHTML = `<div id="chatHead"><b>Thế giới</b><small id="chatOn"></small><button id="chatX" title="Thu gọn">▾</button></div>
     <div id="chatLines"></div>
     <form id="chatIn" autocomplete="off"><span id="chatAtt"></span><input id="chatTxt" maxlength="${CHAT_MAX}" placeholder="Nhập tin nhắn…"><button class="btn sm">Gửi</button></form>
-    <button id="chatBtn" title="Chat thế giới">💬<b id="chatN"></b></button>`;
-  $('#battle').appendChild(b);
-  $('#chatLines').onclick = ev => { const ci = ev.target.closest('[data-ci]'); if (ci) { chatItemShow(+ci.dataset.ci); return; } const n = ev.target.closest('[data-pn]'); if (n && CHAT.open && typeof profileModal === 'function') profileModal(n.dataset.pn); };
-  $('#chatBtn').onclick = () => chatToggle(true); $('#chatX').onclick = () => chatToggle(false);
-  $('#chatIn').onsubmit = ev => { ev.preventDefault(); chatSend($('#chatTxt').value); };
+    <button id="chatBtn" title="Chat thế giới">💬<b id="chatN"></b></button>`),
+    $("#battle").appendChild(t),
+    ($("#chatLines").onclick = (e) => {
+      const n = e.target.closest("[data-ci]");
+      if (n) {
+        chatItemShow(+n.dataset.ci);
+        return;
+      }
+      const s = e.target.closest("[data-pn]");
+      s && CHAT.open && typeof profileModal == "function" && profileModal(s.dataset.pn);
+    }),
+    ($("#chatBtn").onclick = () => chatToggle(!0)),
+    ($("#chatX").onclick = () => chatToggle(!1)),
+    ($("#chatIn").onsubmit = (e) => {
+      (e.preventDefault(), chatSend($("#chatTxt").value));
+    }));
 }
-function chatToggle(on) {
-  CHAT.open = on; $('#chatBox').classList.toggle('open', on); if (on) { CHAT.unread = 0; setTimeout(() => { const i = $('#chatTxt'); if (i && !matchMedia('(pointer:coarse)').matches) i.focus(); }, 0); }
-  chatRender();
+function chatToggle(t) {
+  ((CHAT.open = t),
+    $("#chatBox").classList.toggle("open", t),
+    t &&
+      ((CHAT.unread = 0),
+      chatPoll(!0),
+      setTimeout(() => {
+        const e = $("#chatTxt");
+        e && !matchMedia("(pointer:coarse)").matches && e.focus();
+      }, 0)),
+    chatRender());
 }
-function chatLine(m) {
-  if (m.sys) return `<div class="cl sys">${esc(m.msg)}</div>`;
-  const me = m.cid === chatCid();
-  return `<div class="cl${me ? ' me' : ''}"><i>${chatTime(m.ts)}</i> <b data-pn="${esc(m.name)}"${(() => { const f = FACTIONS.find(x => x.n === m.fac); return f && typeof campCol === 'function' ? ` style="color:${campCol(f.key)}"` : ''; })()}>${esc(m.name)}</b>${m.lvl ? `<small> ${esc(m.fac || '')} ${m.lvl}</small>` : ''}: ${chatMsgHTML(m)}</div>`;
+function chatLine(t) {
+  return t.sys
+    ? `<div class="cl sys">${esc(t.msg)}</div>`
+    : `<div class="cl${t.cid === chatCid() ? " me" : ""}${t.pending ? " pend" : ""}"><i>${chatTime(t.ts)}</i> <b data-pn="${esc(t.name)}"${(() => {
+        const n = FACTIONS.find((s) => s.n === t.fac);
+        return typeof campCol == "function" ? ` style="color:${campCol(n ? n.key : "")}"` : "";
+      })()}>${esc(t.name)}</b>${t.lvl ? `<small> ${esc(t.fac || "")} ${t.lvl}</small>` : ""}: ${chatMsgHTML(t)}</div>`;
 }
 function chatRender() {
-  const box = $('#chatBox'); if (!box) return;
-  const list = CHAT.open ? CHAT.msgs : CHAT.msgs.slice(-4);
-  const st = CHAT.state === 'off' ? '<div class="cl sys">Chat chưa bật (điền js/chatcfg.js)</div>' : CHAT.state === 'load' ? '<div class="cl sys">Đang kết nối…</div>' : CHAT.state === 'err' ? `<div class="cl sys">Không kết nối được chat${CHAT.err ? ': ' + esc(CHAT.err) : ''}</div>` : '';
-  const el = $('#chatLines'); el.innerHTML = (CHAT.open || !CHAT.msgs.length ? st : '') + list.map(chatLine).join('');
-  el.scrollTop = el.scrollHeight;
-  $('#chatOn').textContent = CHAT.state === 'ok' && CHAT.online ? ` · ${CHAT.online} người online` : CHAT.state === 'ok' && !CHAT.subOk ? ' · đang nối…' : '';
-  $('#chatN').textContent = CHAT.unread ? (CHAT.unread > 9 ? '9+' : CHAT.unread) : '';
-  box.classList.toggle('quiet', !CHAT.open && !CHAT.msgs.length && CHAT.state === 'off');
+  CHAT.rq ||
+    (CHAT.rq = requestAnimationFrame(() => {
+      ((CHAT.rq = 0), chatRenderNow());
+    }));
 }
-function chatPush(m) {
-  if (m.id && CHAT.msgs.some(x => x.id === m.id)) return;
-  CHAT.msgs.push(m); if (CHAT.msgs.length > CHAT_KEEP) CHAT.msgs.shift();
-  if (!CHAT.open && !m.sys && m.cid !== chatCid()) CHAT.unread++;
-  chatRender();
+function chatRenderNow() {
+  const t = $("#chatBox");
+  if (!t) return;
+  const e = CHAT.msgs.filter((o) => !chatIsCode(o.msg)),
+    n = CHAT.open ? e : e.slice(-4),
+    s =
+      CHAT.state === "off"
+        ? '<div class="cl sys">Chat chưa bật (điền js/chatcfg.js)</div>'
+        : CHAT.state === "load"
+          ? '<div class="cl sys">Đang kết nối…</div>'
+          : CHAT.state === "err"
+            ? `<div class="cl sys">Không kết nối được chat${CHAT.err ? ": " + esc(CHAT.err) : ""}</div>`
+            : "",
+    a = $("#chatLines"),
+    i = a.scrollTop + a.clientHeight >= a.scrollHeight - 30,
+    c = (CHAT.open || !CHAT.msgs.length ? s : "") + n.map(chatLine).join("");
+  (c !== CHAT.lastH && ((CHAT.lastH = c), (a.innerHTML = c), (i || !CHAT.open) && (a.scrollTop = a.scrollHeight)),
+    ($("#chatOn").textContent =
+      CHAT.state === "ok" && CHAT.online
+        ? ` · ${CHAT.online} người online`
+        : CHAT.state === "ok" && !CHAT.subOk
+          ? " · đang nối…"
+          : ""),
+    ($("#chatN").textContent = CHAT.unread ? (CHAT.unread > 9 ? "9+" : CHAT.unread) : ""),
+    t.classList.toggle("quiet", !CHAT.open && !CHAT.msgs.length && CHAT.state === "off"));
 }
+function chatPush(t) {
+  if (!(t.id && CHAT.msgs.some((e) => e.id === t.id))) {
+    if (t.cid === chatCid()) {
+      const e = CHAT.msgs.findIndex((n) => n.pending && n.msg === t.msg);
+      if (e >= 0) {
+        ((CHAT.msgs[e] = t), chatRender());
+        return;
+      }
+    }
+    (CHAT.msgs.push(t),
+      CHAT.msgs.length > CHAT_KEEP && CHAT.msgs.shift(),
+      !CHAT.open && !t.sys && t.cid !== chatCid() && CHAT.unread++,
+      chatRender());
+  }
+}
+const CHAT_CODE =
+    /^\s*[\/／]|(?<![A-Za-z0-9])[SR]\s*\.\s*[a-z_]{2,}\s*(\[|=|\.|\()|\w\s*=>\s*[\{\w(]|\bconsole\b|localStorage|sessionStorage|\.forEach\s*\(|\bfunction\s*\(|\bdocument\s*\.|\bwindow\s*\.|\beval\s*\(|Object\s*\.\s*(keys|assign|values)/i,
+  chatIsCode = (t) => CHAT_CODE.test(String(t || ""));
 async function chatSend(t) {
-  t = String(t || '').replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX); if (!t && CHAT.att) t = `[${CHAT.att.n}]`; if (!t) return;
-  if (!CHAT.sb) return toast(CHAT.state === 'load' ? 'Chat đang kết nối, thử lại sau giây lát' : 'Chat chưa kết nối');   // gui tin chi can ket noi may chu (realtime co the dang noi lai)
-  if (!hasRealName()) return nameModal(() => { chatToggle(true); $('#chatTxt').value = t; });
-  if (Date.now() - CHAT.last < CHAT_GAP) return toast('Gửi chậm lại một chút');
-  CHAT.last = Date.now(); $('#chatTxt').value = '';
-  const row = { cid: chatCid(), name: chatName(), fac: FAC[S.fac] ? FAC[S.fac].n : '', lvl: S.lvl | 0, msg: t };
-  const att = CHAT.att; if (att) { row.item = att; const tag = `[${att.n}]`; if (!t.includes(tag)) row.msg = (t === tag ? '' : t.slice(0, CHAT_MAX - tag.length - 1) + ' ') + tag; }
-  const { data, error } = await CHAT.sb.from('chat').insert(row).select().single();
-  if (error) { toast(att && /item/.test(error.message || '') ? 'Máy chủ chat chưa bật khoe đồ (chạy CHAT_ITEM.sql trên Supabase)' : 'Gửi lỗi: ' + (error.message || '')); $('#chatTxt').value = t; return; }
-  chatAttach(null);
-  if (data) chatPush(data);
-}
-function chatLoadLib() {
-  if (window.supabase && window.supabase.createClient) return Promise.resolve();
-  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js'; s.onload = ok; s.onerror = () => no(new Error('không tải được thư viện (mất mạng?)')); document.head.appendChild(s); });
+  if (
+    ((t = String(t || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, CHAT_MAX)),
+    !t && CHAT.att && (t = `[${CHAT.att.n}]`),
+    !t)
+  )
+    return;
+  if (chatIsCode(t)) return toast("Không gửi được tin dạng câu lệnh / mã lệnh");
+  if (!CHAT.sb) return toast(CHAT.state === "load" ? "Chat đang kết nối, thử lại sau giây lát" : "Chat chưa kết nối");
+  if (!hasRealName())
+    return nameModal(() => {
+      (chatToggle(!0), ($("#chatTxt").value = t));
+    });
+  if (Date.now() - CHAT.last < CHAT_GAP)
+    return toast(`Chờ ${Math.ceil((CHAT_GAP - (Date.now() - CHAT.last)) / 1e3)} giây nữa mới gửi được`);
+  if (typeof NET != "undefined" && !NET.user) return toast("Đăng nhập tài khoản (nút 🌐) để chat");
+  ((CHAT.last = Date.now()), ($("#chatTxt").value = ""));
+  typeof netNeedChar == "function" && (await netNeedChar().catch(() => {}));
+  const e = { cid: chatCid(), name: chatName(), fac: FAC[S.fac] ? FAC[S.fac].n : "", lvl: S.lvl | 0, msg: t },
+    n = CHAT.att;
+  if (n) {
+    e.item = n;
+    const c = `[${n.n}]`;
+    t.includes(c) || (e.msg = (t === c ? "" : t.slice(0, CHAT_MAX - c.length - 1) + " ") + c);
+  }
+  const s = Object.assign({ id: "tmp" + Date.now(), ts: Date.now(), pending: !0 }, e);
+  (CHAT.msgs.push(s), chatAttach(null), chatRender());
+  let a = null;
+  try {
+    a = await API.post("/api/chat", e);
+  } catch (i) {
+    ((CHAT.msgs = CHAT.msgs.filter((c) => c !== s)),
+      chatRender(),
+      n && chatAttach(n),
+      toast("Gửi lỗi: " + (i.message || "")),
+      ($("#chatTxt").value = t),
+      (CHAT.last = 0));
+    return;
+  }
+  if (a) {
+    const c = CHAT.msgs.indexOf(s);
+    (c >= 0 ? (CHAT.msgs.some((o) => o.id === a.id) ? CHAT.msgs.splice(c, 1) : (CHAT.msgs[c] = a)) : chatPush(a),
+      chatRender());
+  }
 }
 async function chatInit() {
-  if (typeof netOn === 'function' && !netOn()) { document.body.classList.add('nochat'); return; }   // ban tren may: khong co chat
-  chatDom();
-  const c = window.CHAT_CFG || {};
-  if (!c.url || !c.key) { CHAT.state = 'off'; chatRender(); return; }
-  CHAT.state = 'load'; chatRender();
+  document.body.classList.add("nochat");
+  return;
+}
+const CHAT_IT_DROP = new Set(["uid", "lock", "price", "dtk"]);
+function chatItemClean(t, e = 0) {
+  if (!(e > 4 || t == null)) {
+    if (typeof t == "number") return Number.isFinite(t) ? t : void 0;
+    if (typeof t == "boolean") return t;
+    if (typeof t == "string") return t.slice(0, 60);
+    if (Array.isArray(t))
+      return t
+        .slice(0, 24)
+        .map((n) => chatItemClean(n, e + 1))
+        .filter((n) => n !== void 0);
+    if (typeof t == "object") {
+      const n = {};
+      let s = 0;
+      for (const a in t) {
+        if (CHAT_IT_DROP.has(a) || ++s > 30 || !/^\w{1,12}$/.test(a)) continue;
+        const i = chatItemClean(t[a], e + 1);
+        i !== void 0 && (n[a] = i);
+      }
+      return n;
+    }
+  }
+}
+function chatItemOk(t) {
+  return !t ||
+    typeof t != "object" ||
+    !J.items[t.d] ||
+    typeof t.n != "string" ||
+    !t.n ||
+    ((t = chatItemClean(t)),
+    (t.r = clamp(Math.round(+t.r || 0), 0, RAR_COL.length - 1)),
+    (t.lvl = clamp(Math.round(+t.lvl || 1), 1, 99)),
+    (typeof t.ic != "string" || !/^img\/[\w\/.-]+\.(png|webp|jpg)$/.test(t.ic) || t.ic.includes("..")) && delete t.ic,
+    Array.isArray(t.mag) || (t.mag = []),
+    (typeof eqBanned == "function" && eqBanned(t)) || (typeof eqRemoved == "function" && eqRemoved(t)))
+    ? null
+    : t;
+}
+function chatAttach(t) {
+  CHAT.att = t ? chatItemOk(chatItemClean(t)) : null;
+  const e = $("#chatAtt");
+  if (!e) return;
+  e.innerHTML = CHAT.att
+    ? `<b style="color:${RAR_COL[CHAT.att.r]}">[${esc(CHAT.att.n)}]</b><button type="button" title="Bỏ đính kèm">✕</button>`
+    : "";
+  const n = e.querySelector("button");
+  n && (n.onclick = () => chatAttach(null));
+}
+function chatMsgHTML(t) {
+  const e = t.item && chatItemOk(t.item);
+  let n = esc(t.msg);
+  if (e) {
+    const s = esc(`[${e.n}]`),
+      a = `<a class="chit" data-ci="${+t.id || 0}" style="color:${RAR_COL[e.r]}">${s}</a>`;
+    n = n.includes(s) ? n.replace(s, a) : n + " " + a;
+  }
+  return n;
+}
+function chatItemShow(t) {
+  const e = CHAT.msgs.find((a) => +a.id === t),
+    n = e && chatItemOk(e.item);
+  if (!n) return;
+  let s = "";
   try {
-    await chatLoadLib();
-    CHAT.sb = await netClient();
-    const { data, error } = await CHAT.sb.from('chat').select('*').order('id', { ascending: false }).limit(50);
-    if (error) throw error;
-    CHAT.msgs = (data || []).reverse(); CHAT.state = 'ok'; chatRender();   // doc / gui tin duoc ngay; realtime (tin moi, online) noi sau
-    chatSub();
-    if (!CHAT.polling) { CHAT.polling = true; setInterval(chatPoll, 15000);    // du phong: lay tin bi lo + noi lai kenh khi rot
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) chatPoll(); }); }   // quay lai tab (trinh duyet bop websocket khi an)
-  } catch (e) { CHAT.state = 'err'; CHAT.err = (e.message || String(e)) + ' · thử lại sau 10 giây'; chatRender(); clearTimeout(CHAT.initT); CHAT.initT = setTimeout(chatInit, 10000); }
+    s = itemHTML(n);
+  } catch {
+    s = `<h4 style="color:${RAR_COL[n.r]}">${esc(n.n)}</h4><p class="dim">Không đọc được chi tiết món đồ.</p>`;
+  }
+  modal(`<h3>Đồ của ${esc(e.name)} <small>${esc(e.fac || "")} ${e.lvl || ""}</small></h3>${s}`);
 }
-
-/* ---------- KHOE DO LEN CHAT ----------
-   Mo chi tiet mon do > "Khoe lên chat": dinh kem ban sao mon do (cot item jsonb, xem CHAT_ITEM.sql) vao tin nhan.
-   Trong chat hien [Ten do] theo mau do hiem; bam vao xem day du dong thuoc tinh. Du lieu tu nguoi khac: chi giu so / chuoi ngan,
-   kiem tra loai do, mau, duong dan hinh; ve bang itemHTML (da esc). */
-const CHAT_IT_DROP = new Set(['uid', 'lock', 'price', 'dtk']);
-function chatItemClean(src, depth = 0) {
-  if (depth > 4 || src == null) return undefined;
-  if (typeof src === 'number') return Number.isFinite(src) ? src : undefined;
-  if (typeof src === 'boolean') return src;
-  if (typeof src === 'string') return src.slice(0, 60);
-  if (Array.isArray(src)) return src.slice(0, 24).map(x => chatItemClean(x, depth + 1)).filter(x => x !== undefined);
-  if (typeof src === 'object') { const o = {}; let n = 0; for (const k in src) { if (CHAT_IT_DROP.has(k) || ++n > 30 || !/^\w{1,12}$/.test(k)) continue; const v = chatItemClean(src[k], depth + 1); if (v !== undefined) o[k] = v; } return o; }
-  return undefined;
+function chatShowItem(t) {
+  if (document.body.classList.contains("nochat")) return toast("Bản chơi trên máy không có chat");
+  if (!$("#chatBox")) return toast("Chat chưa bật");
+  (closeModal(!0), chatAttach(t), chatToggle(!0), toast("Đã đính kèm vào chat · gõ thêm lời nhắn rồi bấm Gửi"));
 }
-function chatItemOk(it) {
-  if (!it || typeof it !== 'object' || !J.items[it.d] || typeof it.n !== 'string' || !it.n) return null;
-  it = chatItemClean(it); it.r = clamp(Math.round(+it.r || 0), 0, RAR_COL.length - 1); it.lvl = clamp(Math.round(+it.lvl || 1), 1, 99);
-  if (typeof it.ic !== 'string' || !/^img\/[\w\/.-]+\.(png|webp|jpg)$/.test(it.ic) || it.ic.includes('..')) delete it.ic;
-  if (!Array.isArray(it.mag)) it.mag = []; return it;
+// Disabled "Khoe len chat" button for offline play
+if (typeof itemModal == "function") {
 }
-function chatAttach(it) {
-  CHAT.att = it ? chatItemOk(chatItemClean(it)) : null;
-  const a = $('#chatAtt'); if (!a) return;
-  a.innerHTML = CHAT.att ? `<b style="color:${RAR_COL[CHAT.att.r]}">[${esc(CHAT.att.n)}]</b><button type="button" title="Bỏ đính kèm">✕</button>` : '';
-  const x = a.querySelector('button'); if (x) x.onclick = () => chatAttach(null);
+const CHAT_RT = !0;
+// World chat push: WebSocket /api/chat/ws (server/main.py). Messages {t:"msg", m}, online
+// counter {t:"on"|"hello", n|online}; we send {t:"track", cid, name, lvl} for presence.
+// CHAT.ch keeps the old channel surface used elsewhere: .state ("joined"/"closed"), .track().
+async function chatSub() {
+  if (!CHAT_RT) {
+    CHAT.subOk = !0;
+    return;
+  }
+  if (!CHAT.sb || CHAT.subBusy) return;
+  const t = CHAT.ch;
+  if (((CHAT.ch = null), clearTimeout(CHAT.reT), t))
+    try {
+      t.close();
+    } catch {}
+  let e;
+  try {
+    e = new WebSocket(API.wsUrl("/api/chat/ws"));
+  } catch {
+    return;
+  }
+  const n = (CHAT.ch = {
+    state: "joining",
+    track(s) {
+      try {
+        e.readyState === 1 && e.send(JSON.stringify(Object.assign({ t: "track", cid: chatCid() }, s)));
+      } catch {}
+    },
+    close() {
+      ((n.state = "closed"), e.close());
+    },
+  });
+  ((e.onopen = () => {
+    CHAT.ch === n &&
+      ((n.state = "joined"),
+      (CHAT.subOk = !0),
+      (CHAT.reN = 0),
+      (CHAT.state = "ok"),
+      (CHAT.err = ""),
+      n.track({ name: chatName(), lvl: (S && S.lvl) | 0 }),
+      chatRender());
+  }),
+    (e.onmessage = (s) => {
+      if (CHAT.ch !== n) return;
+      let i;
+      try {
+        i = JSON.parse(s.data);
+      } catch {
+        return;
+      }
+      if (i.t === "deploy" || i.t === "hello")
+        typeof deployNotice == "function" && deployNotice(i.build, i.t === "deploy");
+      i.t === "msg" && i.m
+        ? chatPush(i.m)
+        : (i.t === "on" || i.t === "hello") && ((CHAT.online = i.n ?? i.online ?? 0), chatRender());
+    }),
+    (e.onclose = () => {
+      CHAT.ch === n &&
+        n.state !== "closed" &&
+        ((n.state = "closed"),
+        (CHAT.subOk = !1),
+        chatRender(),
+        clearTimeout(CHAT.reT),
+        (CHAT.reN = (CHAT.reN || 0) + 1),
+        (CHAT.reT = setTimeout(chatSub, Math.min(12e4, 3e3 * 2 ** Math.min(6, CHAT.reN - 1)) + Math.random() * 3e3)));
+    }));
 }
-function chatMsgHTML(m) {
-  const it = m.item && chatItemOk(m.item); let h = esc(m.msg);
-  if (it) { const tag = esc(`[${it.n}]`), link = `<a class="chit" data-ci="${+m.id || 0}" style="color:${RAR_COL[it.r]}">${tag}</a>`; h = h.includes(tag) ? h.replace(tag, link) : h + ' ' + link; }
-  return h;
-}
-function chatItemShow(id) {
-  const m = CHAT.msgs.find(x => +x.id === id), it = m && chatItemOk(m.item); if (!it) return;
-  let body = ''; try { body = itemHTML(it); } catch (e) { body = `<h4 style="color:${RAR_COL[it.r]}">${esc(it.n)}</h4><p class="dim">Không đọc được chi tiết món đồ.</p>`; }
-  modal(`<h3>Đồ của ${esc(m.name)} <small>${esc(m.fac || '')} ${m.lvl || ''}</small></h3>${body}`);
-}
-function chatShowItem(it) {
-  if (document.body.classList.contains('nochat')) return toast('Bản chơi trên máy không có chat');
-  if (!$('#chatBox')) return toast('Chat chưa bật');
-  closeModal(true); chatAttach(it); chatToggle(true);
-  toast('Đã đính kèm vào chat · gõ thêm lời nhắn rồi bấm Gửi');
-}
-/* nut "Khoe lên chat" trong chi tiet mon do */
-if (typeof itemModal === 'function') {
-  const _itemModal = itemModal;
-  itemModal = (it, slot) => {
-    _itemModal(it, slot);
-    if (document.body.classList.contains('nochat') || !$('#chatBox')) return;
-    const row = document.querySelector('#mBody .btnrow'); if (!row || !it) return;
-    const b = document.createElement('button'); b.className = 'btn'; b.textContent = '💬 Khoe lên chat'; b.onclick = () => chatShowItem(it); row.appendChild(b);
-  };
-}
-
-/* ---------- kenh realtime: tu noi lai khi rot (truoc day phai F5) ---------- */
-function chatSub() {
-  if (!CHAT.sb) return;
-  const old = CHAT.ch; CHAT.ch = null; clearTimeout(CHAT.reT);                // v186: bo kenh cu TRUOC khi go (go kenh -> bao CLOSED -> truoc day lai noi lai -> vong lap 3 giay)
-  if (old) { try { CHAT.sb.removeChannel(old); } catch (e) { /* bo qua */ } }
-  const ch = CHAT.ch = CHAT.sb.channel('the-gioi', { config: { presence: { key: chatCid() } } });
-  const cnt = () => { if (CHAT.ch !== ch) return; CHAT.online = Object.keys(ch.presenceState()).length; chatRender(); };
-  ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat' }, p => chatPush(p.new))
-    .on('presence', { event: 'sync' }, cnt).on('presence', { event: 'join' }, cnt).on('presence', { event: 'leave' }, cnt)
-    .subscribe(async st => {
-      if (CHAT.ch !== ch) return;
-      if (st === 'SUBSCRIBED') { CHAT.subOk = true; CHAT.state = 'ok'; CHAT.err = ''; chatRender(); try { await ch.track({ name: chatName(), lvl: S.lvl | 0 }); } catch (e) { /* bo qua */ } cnt(); }
-      else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' || st === 'CLOSED') { CHAT.subOk = false; clearTimeout(CHAT.reT); CHAT.reT = setTimeout(chatSub, 3000); }   // noi lai sau 3 giay
-    });
-}
-async function chatPoll() {
+async function chatPoll(t) {
   if (!CHAT.sb || document.hidden) return;
-  if (!CHAT.ch || CHAT.ch.state === 'closed' || CHAT.ch.state === 'errored') chatSub();   // chi noi lai khi kenh da dong / loi (dang noi thi de yen)
-  try {
-    const last = CHAT.msgs.reduce((m, x) => Math.max(m, +x.id || 0), 0);
-    const { data } = await CHAT.sb.from('chat').select('*').gt('id', last).order('id', { ascending: true }).limit(50);
-    (data || []).forEach(chatPush);
-    if (CHAT.ch && CHAT.ch.presenceState) { CHAT.online = Object.keys(CHAT.ch.presenceState()).length; chatRender(); }
-  } catch (e) { /* thu lai lan sau */ }
+  const n = CHAT_RT && CHAT.subOk && CHAT.ch && CHAT.ch.state === "joined" ? 6e4 : CHAT.open ? 8e3 : 3e4;
+  if (!(t !== !0 && Date.now() - (CHAT.polled || 0) < n)) {
+    ((CHAT.polled = Date.now()), CHAT_RT && !CHAT.reN && (!CHAT.ch || CHAT.ch.state === "closed") && chatSub());
+    try {
+      const s = CHAT.msgs.reduce((i, c) => Math.max(i, +c.id || 0), 0);
+      ((await API.get("/api/chat?after=" + s)) || []).forEach(chatPush);
+    } catch {}
+  }
 }

@@ -1,448 +1,1064 @@
-/* ======================= CHIEN DAU (KNpc::CheckHitTarget / CalcDamage) ======================= */
-'use strict';
-const R = { corpses: [], lootWait: 0, ground: [], pickTarget: null, enemies: [], P: null, life: 1, mana: 1, atkT: 0, deadT: 0, spawnT: 0, kills: 0, t0: Date.now(), logs: [], fx: [], txt: [], dirty: true, stall: 0, farm: 0 };
-const AR = { w: 400, h: 520, top: 70, bot: 470 };
-const H = { x: 768, y: 768, face: 1 };
-
-/* ---------- vung / ai ---------- */
-const zoneIdx = st => Math.min(ZONES.length - 1, Math.floor((st - 1) / ZONE_STAGES));
-const ZALT = W.zalt || {};
-/* Ban do thay the cung bac cap (zones2.js): nguoi choi chon o danh sach ban do (S.zalt[vung] = 1..n, 0 = ban do goc) */
-const zoneOf = st => { const i = zoneIdx(st), a = S && S.zalt && S.zalt[i]; return (a && ZALT[i] && ZALT[i][a - 1]) || ZONES[i]; };
-const inZone = st => ((st - 1) % ZONE_STAGES) + 1;
-function stageLevel(st) {
-  if (st > STAGES) return MAX_LEVEL;   // ai sau vung cuoi kep o cap toi da: nhip len cap 99 (tests: pacing) da hieu chinh voi kep nay; bo kep thi cap 99 mat > 60 gio
-  const z = zoneOf(st), L = Math.round(z.lo + (inZone(st) - 1) * (z.hi - z.lo) / (ZONE_STAGES - 1));
-  return z.lo >= 160 ? Math.min(levelCap(), L) : L;   // vung 160-200: chua chuyen sinh kep o cap 99 nhu truoc
+"use strict";
+const R = {
+    corpses: [],
+    lootWait: 0,
+    ground: [],
+    pickTarget: null,
+    enemies: [],
+    P: null,
+    life: 1,
+    mana: 1,
+    atkT: 0,
+    deadT: 0,
+    spawnT: 0,
+    kills: 0,
+    t0: Date.now(),
+    logs: [],
+    fx: [],
+    txt: [],
+    dirty: !0,
+    stall: 0,
+    farm: 0,
+  },
+  AR = { w: 400, h: 520, top: 70, bot: 470 },
+  H = { x: 768, y: 768, face: 1 },
+  zoneIdx = (t) => Math.min(ZONES.length - 1, Math.floor((t - 1) / ZONE_STAGES)),
+  ZALT = W.zalt || {},
+  zoneOf = (t) => {
+    const n = zoneIdx(t),
+      e = S && S.zalt && S.zalt[n];
+    return (e && ZALT[n] && ZALT[n][e - 1]) || ZONES[n];
+  },
+  inZone = (t) => ((t - 1) % ZONE_STAGES) + 1;
+function stageLevel(t) {
+  if (t > STAGES) return MAX_LEVEL;
+  const n = zoneOf(t),
+    e = Math.round(n.lo + ((inZone(t) - 1) * (n.hi - n.lo)) / (ZONE_STAGES - 1));
+  return n.lo >= 160 ? Math.min(levelCap(), e) : e;
 }
-
-/* ---------- quai: Npcs.txt khong co chi so theo cap -> cong thuc rieng cua game (docs/CONG_THUC.md) ---------- */
-const POISON_TIME = 3;
-/* Ngu hanh (kieu JX1): tuong khac +-10% sat thuong; bang lam cham 30% trong 1.5 giay; loi 10% gay choang 0.5 giay */
-const SERIES_BONUS = 0.10, ELEM_SLOW_T = 1.5, ELEM_SLOW = 0.7, ELEM_STUN_P = 0.10, ELEM_STUN_T = 0.5;
-const CLS = { normal: { hp: 1, dmg: 1, xp: 1, r: 17 }, elite: { hp: 2.5, dmg: 1.3, xp: 3, r: 21 }, boss: { hp: 14, dmg: 1.7, xp: 20, r: 30 } };
-/* Do kho (chon o the Khac): Thuong la can bang chuan cua cac bo kiem thu. De / Kho doi mau, sat thuong quai va thuong kinh nghiem / ngan luong */
-const DIFFS = [{ n: 'Dễ', hp: 0.75, dmg: 0.7, rew: 0.8, d: 'Quái yếu hơn (máu −25%, sát thương −30%), thưởng −20%' }, { n: 'Thường', hp: 1, dmg: 1, rew: 1, d: 'Cân bằng chuẩn' }, { n: 'Khó', hp: 1.4, dmg: 1.35, rew: 1.25, d: 'Quái mạnh hơn (máu +40%, sát thương +35%), thưởng +25%' }];
-const diffOf = () => DIFFS[(S && [0, 1, 2].includes(S.diff)) ? S.diff : 1];
-/* Can bang (ban 42, test/balrun.js): luc chien nhan vat (do dung bac + diem tu cong) tang nhanh hon mau quai -> cap 60 ha quai trong 0,2s,
-   cap 90 trong 0,03s, khong bao gio mat mau. He so theo cap: quai thuong ~1-1,5s / con, trum ban do ~15-25s, nhan vat mat mau that. */
-const MON_HP_K = [[1, 1], [10, 1.1], [30, 1.8], [60, 3.5], [90, 12], [120, 20], [150, 28], [200, 40]];
-const MON_DMG_K = [[1, 1], [30, 1.3], [60, 1.45], [90, 1.7], [120, 2.2], [200, 2.8]];
-/* quai trau hon -> ha cham hon: kinh nghiem / ngan luong moi con nhan bu (giu nhip len cap) */
-const monRewK = L => Math.pow(lerpK(MON_HP_K, L), 0.4);
-const lerpK = (T, L) => { for (let i = 1; i < T.length; i++) if (L <= T[i][0]) { const [a, x] = T[i - 1], [b, y] = T[i]; return x + (y - x) * (L - a) / (b - a); } return T[T.length - 1][1]; };
-/* v133: mau quai theo JX1 (npclevelscript/animal.lua: tung doan tuyen tinh, tu cap 50 x4; ban do cap cao 25k-60k) */
-const JX1_LIFE = [[10, 50, 3, 0], [20, 122, 8, 10], [30, 270, 30, 20], [40, 900, 35, 30], [50, 1450, 60, 40], [60, 2100, 48, 50], [70, 2950, 54, 60], [80, 3500, 58, 70], [90, 5050, 11, 80], [100, 6450, 11, 90]];
-function jx1Life(L) {
-  if (L > 100) return 26240 + (L - 100) * 340;                 // tren 100: ~43k o 150, ~60k o 200 (Mac Cao Quat, Phong Lang Do 30-60k)
-  for (const [X, a, b, o] of JX1_LIFE) if (L <= X) return (a + b * (L - o)) * clamp(1 + 3 * (L - 40) / 30, 1, 4);   // JX1 nhan x4 tu cap 50: lam muot tu 40 -> 60 (tranh vuc mau o cap 50)
-  return 26240;
+const POISON_TIME = 3,
+  SERIES_BONUS = 0.1,
+  ELEM_SLOW_T = 1.5,
+  ELEM_SLOW = 0.5,
+  ELEM_STUN_P = 0,
+  ELEM_STUN_T = 0.5,
+  CLS = {
+    normal: { hp: 1, dmg: 1, xp: 1, r: 17 },
+    elite: { hp: 2.5, dmg: 1.3, xp: 3, r: 21 },
+    boss: { hp: 14, dmg: 1.7, xp: 20, r: 30 },
+  },
+  DIFFS = [
+    { n: "Dễ", hp: 0.75, dmg: 0.7, rew: 0.8, d: "Quái yếu hơn (máu −25%, sát thương −30%), thưởng −20%" },
+    { n: "Thường", hp: 1, dmg: 1, rew: 1, d: "Cân bằng chuẩn" },
+    { n: "Khó", hp: 1.4, dmg: 1.35, rew: 1.25, d: "Quái mạnh hơn (máu +40%, sát thương +35%), thưởng +25%" },
+  ],
+  diffOf = () => DIFFS[1],
+  MON_HP_K = [
+    [1, 1],
+    [10, 1.1],
+    [30, 1.8],
+    [60, 3.5],
+    [90, 12],
+    [120, 20],
+    [150, 28],
+    [200, 40],
+  ],
+  MON_DMG_K = [
+    [1, 1],
+    [30, 1.3],
+    [60, 1.45],
+    [90, 1.7],
+    [120, 2.2],
+    [200, 2.8],
+  ],
+  monRewK = (t) => Math.pow(lerpK(MON_HP_K, t), 0.4),
+  lerpK = (t, n) => {
+    for (let e = 1; e < t.length; e++)
+      if (n <= t[e][0]) {
+        const [o, i] = t[e - 1],
+          [s, r] = t[e];
+        return i + ((r - i) * (n - o)) / (s - o);
+      }
+    return t[t.length - 1][1];
+  },
+  JX1_LIFE = [
+    [10, 50, 3, 0],
+    [20, 122, 8, 10],
+    [30, 270, 30, 20],
+    [40, 900, 35, 30],
+    [50, 1450, 60, 40],
+    [60, 2100, 48, 50],
+    [70, 2950, 54, 60],
+    [80, 3500, 58, 70],
+    [90, 5050, 11, 80],
+    [100, 6450, 11, 90],
+  ];
+function jx1Life(t) {
+  return t > 100 ? 26240 + (t - 100) * 340 : jx1Pw(t, JX1_LIFE, 0) * clamp(1 + (3 * (t - 40)) / 30, 1, 4);
 }
-const MON_HP_G = 1;   // he so mau quai chung
-function enemyStats(L, cls) {
-  const c = CLS[cls];
-  return { hp: jx1Life(L) * MON_HP_G * c.hp, dmg: (2 + 1.0 * L + 0.006 * L * L) * c.dmg * lerpK(MON_DMG_K, L), ar: 30 + L * 9, def: 8 + L * 3.2 };
-}
-/* Nhip len cap (docs/CONG_THUC.md): truoc day cap 150 chi mat ~2 gio choi. Den cap 30 giu nguyen (vao game nhanh),
-   sau do kinh nghiem nhan duoc chia cho 1 + 200 x ((cap - 30) / 120)^1.4  (cap 60: /30, cap 90: /77, cap 150: /201)
-   -> cap 150 mat vai ngay choi (tests: pacing). */
-const XP_OVER = 25;
-const XP_SLOW_FROM = 30, XP_SLOW_K = 6, XP_SLOW_P = 1.0;   // ban 75: Full cap ~2-3 ngay treo, Full chuyen sinh ~2 tuan (truoc K 200, P 1.4: Full cap ~1-5 thang)
-const xpSlow = L => L <= XP_SLOW_FROM ? 1 : 1 + XP_SLOW_K * Math.pow((L - XP_SLOW_FROM) / 120, XP_SLOW_P);
-function expFor(L) { return J.exp[clamp(L, 1, levelCap()) - 1] / (10 + L * 1.4); }   // kinh nghiem theo cap quai, kep o gioi han cap hien tai (giu nhip len cap cu khi chua chuyen sinh)
-/* Tam danh quai theo chieu NPC JX1 (skills.txt AttackRadius). Chieu chinh = chieu dac thu (khong phai 53 danh thuong / 101 tri lieu) */
-const NPC_SK_R = { 1: 100, 2: 320, 53: 75, 102: 360, 122: 300, 153: 400, 164: 470, 165: 400, 196: 180, 197: 180, 198: 180, 200: 180, 201: 180,
-  233: 270, 234: 180, 235: 450, 236: 360, 237: 300, 238: 72, 239: 400, 240: 320, 241: 180, 242: 72 };
-const MON_RANGE_MAX = 320;                                            // quai danh xa: toi da 320 (de thay quai tren man hinh doc)
-function monReach(tid) {
-  const sk = (MON[tid] && MON[tid].sk) || [], main = sk.find(s => s !== 53 && s !== 101 && NPC_SK_R[s]) || sk.find(s => NPC_SK_R[s]) || 53;
-  return Math.min(MON_RANGE_MAX, NPC_SK_R[main] || 75);
-}
-function makeEnemy(tid, L, cls, x, y) {
-  const m = MON[tid], z = zoneOf(S.stage), st = enemyStats(L, cls), D = diffOf(), RH = rebornHard(); st.hp *= D.hp * RH.hp; st.dmg *= D.dmg * RH.dmg;   // chuyen sinh: quai manh dan
-  const series = monSeries(tid);                                       // he co dinh theo loai quai (kieu JX1)
-  // khang theo he: nguyen to cua he minh (rmax 90) +10, diem yeu (rmax 60) -10, tran = rmax cua quai (+-10 can doi: o cap cao +20 lam mat ~40% sat thuong)
-  const res = {}; ELEM.forEach((e, i) => { const mx = m.rmax[i] || 75, b = mx > 75 ? 10 : mx < 75 ? -10 : 0; res[e] = clamp(L * 0.35 + (cls === 'boss' ? 10 : 0) + b, -20, mx); });
-  return { id: Math.random(), tid, n: m.n, img: m.img ? img(m.img) : null, sz: m.sz, L, cls, series, res,
-    hp: st.hp, max: st.hp, dmg: st.dmg, ar: st.ar, def: st.def, x, y, r: CLS[cls].r,
-    spd: (30 + (m.run || 6) * 4) * (cls === 'boss' ? 0.7 : 1), atkCd: rnd(0.5, 1.5), cd: 1.2 + 18 / Math.max(8, m.spd || 18) * 0.5,
-    reach: monReach(tid), ranged: monReach(tid) > 120, born: R.clock || 0, stun: 0, slowT: 0, poison: 0, poisonDmg: 0, hitT: 0, face: 1 };
-}
-/* Mat do quai luyen cong: moi dot DENS_MIN..DENS_MAX con (truoc 3-4), dot trum co them DENS_BOSS dan em.
-   Quai thuong danh nhe hon (DENS_DMG) vi dong gap doi. DENS_REW: he so thuong / roi do moi con thuong (test/t2: 1 -> len cap
-   nhanh hon ban 3-4 con khoang 1 cap sau 150 phut, 0.85 -> cham hon vi thoi gian di bo / hoi mau tang theo so quai). */
-const DENS_MIN = 6, DENS_MAX = 8, DENS_BOSS = 4, DENS_REW = 1, DENS_DMG = 0.75;   // dong gap doi: moi con danh nhe hon 25%
-/* So quai moi dot tang dan theo cap nhan vat: tan thu it quai (khong bi vay chet lien tuc), cap 45+ moi du 6-8 con */
-const DENS_BY_LV = [[5, 2, 3, 1], [10, 3, 4, 1], [20, 4, 5, 2], [30, 5, 6, 3], [45, 5, 7, 3], [999, DENS_MIN, DENS_MAX, DENS_BOSS]];   // [toi cap, min, max, dan em trum]
-const densRange = () => DENS_BY_LV.find(r => (S.lvl | 0) <= r[0]);
-const densK = e => (e && e.dens ? DENS_REW : 1);
-function spawnWave() {
-  R.enemies = []; R.stall = 0;
-  const z = zoneOf(S.stage), L = stageLevel(S.stage);
-  // quai xuat hien quanh nhan vat (ngoai tam nhin mot chut) roi tien lai
-  const around = (r0, r1) => { const a = rnd(0, Math.PI * 2), r = rnd(r0, r1); return inWorld(H.x + Math.cos(a) * r, H.y + Math.sin(a) * r); };
-  const sx = () => (R.sp = around(140, 300))[0], sy = () => R.sp[1];
-  const mob = cls => { const e = makeEnemy(pick(z.m), L, cls, sx(), sy()); if (cls === 'normal') { e.dens = true; e.dmg *= DENS_DMG; } R.enemies.push(e); };   // quai thuong dong: thuong / roi do moi con giam (DENS_REW)
-  if (S.wave === WAVES && bossRoundDue()) {   // luyen cong: trum ban do moi 3 vong (mode.js) + tinh anh + dan em
-    const bp = around(220, 260), be = makeEnemy(z.boss, L + 1, 'boss', bp[0], bp[1]); be.n = bossName(z.boss, z.n); R.enemies.push(be);
-    mob('elite'); for (let i = 0; i < densRange()[3]; i++) mob('normal');
-    log(`<b class="boss">${esc(bossName(z.boss, z.n))}</b> xuất hiện!`);
-  } else {
-    const dr = densRange(), n = irnd(dr[1], dr[2]), el = S.wave === WAVES ? 1 + (Math.random() < 0.4 ? 1 : 0) : 0;
-    for (let i = 0; i < n; i++) mob(i < el ? 'elite' : 'normal');
+const JX1_AR = [
+    [10, 10, 3, 0],
+    [20, 50, 4, 10],
+    [30, 100, 5, 20],
+    [40, 250, 5, 30],
+    [50, 400, 5, 40],
+    [60, 500, 5, 50],
+    [70, 600, 5, 60],
+    [80, 700, 5, 70],
+    [90, 800, 5, 80],
+    [100, 900, 5, 90],
+  ],
+  JX1_DEF = [
+    [10, 10, 0, 0],
+    [20, 50, 3, 10],
+    [30, 100, 5, 20],
+    [40, 150, 5, 30],
+    [50, 200, 5, 40],
+    [60, 300, 5, 50],
+    [70, 400, 5, 60],
+    [80, 500, 5, 70],
+    [90, 600, 5, 80],
+    [100, 800, 10, 90],
+  ],
+  JX1_DMG = [
+    [10, 3, 0.3, 0],
+    [20, 8, 0.3, 10],
+    [30, 13, 0.4, 20],
+    [40, 20, 0.5, 30],
+    [50, 29, 0.5, 40],
+    [60, 39, 0.6, 50],
+    [70, 50, 0.7, 60],
+    [80, 65, 0.8, 70],
+    [90, 85, 0.9, 80],
+    [100, 112, 1, 90],
+  ];
+function jx1Pw(t, n, e) {
+  if (t > 100) {
+    const [o, i, s, r] = n[n.length - 1];
+    return Math.floor(i + s * (o - r)) + e * (t - 100);
   }
-  if (z.id !== R.zoneShown) { R.zoneShown = z.id; R.banner = { t: 2.4, text: z.n, sub: `Cấp ${z.lo}–${z.hi}` }; if (typeof onZoneChange === 'function') onZoneChange(z); }
+  for (const [o, i, s, r] of n) if (t <= o) return Math.floor(i + s * (Math.max(1, t) - r));
+  return 0;
 }
-
-/* ---------- cong thuc trung / sat thuong ---------- */
-function hitPercent(ar, def, ignore = 0) {
-  const d = def * (100 - Math.min(ignore, 100)) / 100;
-  let p = ar + d === 0 ? 50 : ar * 100 / (ar + d);
-  if (p > MAX_HIT + 4) p = MAX_HIT;
-  return Math.max(MIN_HIT, p);
-}
-/* Mot phan sat thuong (vat ly / nguyen to) vao muc tieu: ngu hanh -> khang -> nhan (100 - khang)% */
-function applyPart(dmg, e, attackerSeries, targetSeries, targetRes, targetResMax, series5) {
-  let res = targetRes[e];
-  if (counters(attackerSeries, targetSeries)) res -= series5;           // ta khac dich: dich giam khang
-  else if (counters(targetSeries, attackerSeries)) res += series5;      // dich khac ta: dich tang khang
-  res = clamp(res, -targetResMax, Math.min(targetResMax, MAX_RESIST));
-  return dmg * (100 - res) / 100;
-}
-function heroHit(a, e) {
-  e.aggro = true;                                                       // bi danh: quai bai JX1 duoi theo
-  if (a && a.id && SK[a.id] && SK[a.id].tier === 90) (e.hitSk || (e.hitSk = {}))[a.id] = 1;   // luyen vo cong 90: ghi chieu da trung quai (vocong.js)
-  const cm = typeof curseMod === 'function' ? curseMod(e) : null;      // bua hai tren quai (skillsys.js)
-  if (a.useAR && Math.random() * 100 >= hitPercent(R.P.ar, Math.max(0, e.def + (cm ? cm.def : 0)), a.ignore)) { addText(e.x, e.y - e.r - 8, 'Trượt', '#aaa', 11); return 0; }
-  if (!a.ev2) stateOnHit(a, e);                                           // hieu ung trang thai cua chieu (skillfx.js); chieu con tang 2 khong lap lai
-  const crit = Math.random() * 100 < a.crit, heavy = R.P.heavy > 0 && Math.random() * 100 < R.P.heavy;
-  let tot = 0, best = 'phys', bv = 0;
-  const big = e.cls === 'boss' || e.cls === 'elite';
-  if (big && Math.random() * 100 < (e.cls === 'boss' ? 6 : 3) - (R.P.antiBlock || 0)) { addText(e.x, e.y - e.r - 8, 'Hóa giải', '#ccc', 11); return 0; }   // trum / tinh anh hoa giai don (Bo qua hoa giai giam)
-  const brk = e.resBrkT > 0 ? 10 : 0, anti = R.P.anti, eres = (anti && ELEM.some(x => anti[x])) || brk ? Object.fromEntries(ELEM.map(x => [x, e.res[x] - (anti && anti[x] || 0) - brk])) : e.res;
-  const eres2 = cm ? Object.fromEntries(ELEM.map(x => [x, eres[x] + (cm.res[x] || 0)])) : eres;   // bo qua khang (dong Duong / anti_res) + giam khang tam thoi
-  const rmax = R.P.antiMax ? Math.max(0, 75 - R.P.antiMax / 4) : 75;   // Lam doi phuong co khang: ha tran khang quai
-  for (const el in a.parts) {
-    let d = a.parts[el] * rnd(0.85, 1.15);
-    if (el === 'poison') { // doc cong don: phan chua gay cua lan truoc + lan moi, trai deu 3 giay (KNpc::ReceiveDamage gop 2 luong doc)
-      const left = e.poison > 0 ? e.poisonDmg * e.poison : 0;
-      e.poisonDmg = (left + applyPart(d * (cm && cm.poison ? 1 + cm.poison / 100 : 1), 'poison', a.series, e.series, eres2, rmax, a.series5)) / POISON_TIME; e.poison = POISON_TIME; continue; }
-    d = applyPart(d, el, a.series, e.series, eres2, rmax, a.series5);
-    if (crit && el === 'phys') d *= CRIT_MULT;
-    tot += d; if (d > bv) { bv = d; best = el; }
-  }
-  // ngu hanh tang cuong / khang (five_elements_enhance_v) cong tru truc tiep
-  if (counters(a.series, e.series)) tot += R.P.series5;
-  if (heavy) tot *= 1.5;                                                // trong kich
-  if (big && R.P.antiSorb) tot *= 1 + R.P.antiSorb / 100;               // gia tang sat thuong len trum / tinh anh
-  const kh = counters(a.series, e.series), bk = counters(e.series, a.series);
-  if (kh) tot *= 1 + SERIES_BONUS; else if (bk) tot *= 1 - SERIES_BONUS;  // tuong khac: ta khac dich +10%, dich khac ta -10%
-  if (a.parts.cold) e.slowT = Math.max(e.slowT > 0 ? e.slowT : 0, ELEM_SLOW_T);   // bang sat: lam cham quai, moi don trung lam moi 1.5 giay (v119: truoc chi cham duoc 1 lan)
-  const stunK = 1 + (R.P.stunLong || 0) / 100;                          // Tao thanh thoi gian choang
-  if (a.parts.light && Math.random() < ELEM_STUN_P) e.stun = Math.max(e.stun, ELEM_STUN_T * stunK);   // loi sat: choang ngan
-  tot = Math.max(1, tot);
-  e.hp -= tot; e.hitT = 0.12; if (e.act !== 'at') { e.act = 'hurt'; e.actT = 0; npcSfx(MON[e.tid].anim, 'hurt', 0.3); }
-  if ((a.stun || R.P.stunAdd) && Math.random() * 100 < (a.stun || 0) + (R.P.stunAdd || 0)) e.stun = Math.max(e.stun, 0.8 * stunK);
-  if (R.P.knock && e.cls !== 'boss' && Math.random() * 100 < R.P.knock) { const dx = e.x - H.x, dy = e.y - H.y, l = Math.hypot(dx, dy) || 1; e.x += dx / l * 40; e.y += dy / l * 40; e.stun = Math.max(e.stun, 0.25); e.atkCd = Math.max(e.atkCd || 0, 0.3); }   // day lui
-  if (R.P.breakRes && Math.random() * 100 < R.P.breakRes) e.resBrkT = 3;   // sat thuong giam khang
-  if (R.P.leech && a.ext) heal(tot * R.P.leech / 100, true);
-  if (R.P.manaLeech && a.ext) R.mana = Math.min(R.P.mana, R.mana + tot * R.P.manaLeech / 100);   // JX1: hut sinh luc / noi luc chi tac dung voi chieu ngoai cong
-  const k = kh ? ' ⚡' : bk ? ' 🛡' : '';
-  addText(e.x, e.y - e.r - 6, fmt(tot) + k + (heavy ? '!' : ''), crit || heavy ? '#ffe14a' : ELEM_COL[best], crit || heavy ? 16 : 12);
-  return tot;
-}
-function enemyHit(e) {
-  const cm = typeof curseMod === 'function' ? curseMod(e) : null;
-  if (Math.random() * 100 >= hitPercent(e.ar * (cm ? Math.max(0.1, 1 + cm.ar / 100) : 1), R.P.def)) { addText(H.x, H.y - 30, 'Né', '#9cf', 11); return; }
-  if (R.P.block && Math.random() * 100 < R.P.block) { addText(H.x, H.y - 30, 'Hóa giải', '#9cf', 11); return; }
-  const el = SERIES_ELEM[e.series] || 'phys';                           // quai danh bang nguyen to cua he (kieu JX1)
-  let d = e.dmg * rnd(0.8, 1.2) * (cm ? Math.max(0.1, 1 + cm.dmg / 100) : 1);   // bua hai giam sat thuong quai
-  d = applyPart(d, el, e.series, R.P.series, R.P.res, PLAYER_RES_MAX, 10);
-  if (counters(e.series, R.P.series)) { d *= 1 + SERIES_BONUS; if (R.P.res5) d = Math.max(1, d - R.P.res5); }   // quai khac ta: +10%, Ngu hanh nhuoc hoa giam (truoc day ap dung nguoc)
-  else if (counters(R.P.series, e.series)) d *= 1 - SERIES_BONUS;
-  if (R.P.dmgShield) d -= Math.min(R.P.dmgShield, d * DMG_SHIELD_MAX);   // Huyen Thien Vo Cuc...: tru diem moi don, toi da 35% don
-  if (el === 'cold') R.slowT = Math.max(R.slowT || 0, ELEM_SLOW_T * (1 - (R.P.freezeRed || 0) / 100));
-  if (el === 'light' && Math.random() < ELEM_STUN_P && !(Math.random() * 100 < (R.P.antiStun || 0))) R.stunT = Math.max(R.stunT || 0, ELEM_STUN_T * (1 - (R.P.stunRed || 0) / 100));
-  if (el === 'poison') { const pt = POISON_TIME * (1 - (R.P.poisonRed || 0) / 100), dot = d * 0.4; d -= dot; if (pt > 0.05) { R.hpDot = (R.hpDot || 0) + dot * pt / POISON_TIME; R.hpDotT = Math.max(R.hpDotT || 0, pt); } }   // doc: 40% thanh mat mau theo thoi gian, giam boi Thoi gian trung doc
-  if (R.P.sorb) d *= 1 - R.P.sorb / 100;                                // triet tieu sat thuong
-  if (R.P.dmg2mana) R.mana = Math.min(R.P.mana, R.mana + d * R.P.dmg2mana / 100);
-  if (cm && cm.ret && !e.ranged) e.hp -= d * cm.ret / 100;               // Hoa Lien Phan Hoa: phan don can chien
-  R.life -= d; R.hurtT = 0.25; if (H.act !== 'at' && Math.random() < 0.3) { H.act = 'hurt'; H.actT = 0; R.atkT = Math.max(R.atkT || 0, 0.25 * (1 - (R.P.hitRec || 0) / 100)); }   // khung bi danh: Thoi gian phuc hoi rut ngan
-  if (R.P.retMelee || R.P.retMeleeP || R.P.retRangeP) { const ret = e.ranged ? d * (R.P.retRangeP || 0) / 100 : R.P.retMelee + d * R.P.retMeleeP / 100; if (ret > 0) { e.hp -= ret; } }
-  addText(H.x + rnd(-10, 10), H.y - 36, '-' + fmt(d), '#ff6a5a', 12);
-}
-function heal(v, quiet) { const b = R.life; R.life = Math.min(R.P.life, R.life + v); if (!quiet && R.life - b > 1) addText(H.x, H.y - 44, '+' + fmt(R.life - b), '#7f7', 11); }
-
-/* ---------- tu dung thuoc (potion.txt): hoi dan theo thoi gian, tru ngan luong ---------- */
-const POT_TIER_LV = [0, 1, 20, 40, 70, 100]; // cap nhan vat mo khoa bac thuoc 1..5
-function bestPotion(kind) {
-  let best = null;
-  for (const p of J.potions) if (p.kind === kind && S.lvl >= (POT_TIER_LV[p.tier] || 999) && potPrice(p) <= S.gold && (!best || p.tier > best.tier)) best = p;
-  return best;
-}
-/* Gia thuoc tang theo cap nhan vat (cho tieu ngan luong: potion.txt gia co dinh, quai cap cao roi nhieu ngan luong) */
-const potPrice = p => Math.round(p.price * (1 + S.lvl / 25));
-function autoPotion(dt) {
-  R.hot = R.hot || { life: 0, mana: 0, lifeT: 0, manaT: 0 };
-  const h = R.hot, P = R.P;
-  for (const k of ['life', 'mana']) {
-    if (h[k + 'T'] > 0) { const d = Math.min(dt, h[k + 'T']); h[k + 'T'] -= dt; if (k === 'life') R.life = Math.min(P.life, R.life + h.life * d); else R.mana = Math.min(P.mana, R.mana + h.mana * d); }
-  }
-  R.potCd = R.potCd || { life: 0, mana: 0 };
-  if (S.potBuy !== false) for (const i of [0, 1]) potRestock(i);
-  if (S.potOff) return;
-  // JX1 auto: sinh luc / noi luc duoi 50% thi uong; o thuoc hien hoi chieu (R.potCd) nhu bam tay
-  const needLife = R.life < P.life * 0.5, needMana = R.mana < P.mana * 0.5 || (P.main.cost > 0 && R.mana < P.main.cost * 2);
-  for (const [k, need] of [['life', needLife], ['mana', needMana]]) {
-    // binh thuong: 1 binh moi lan hoi xong; nguy kich (< 30% mau): uong them binh chong len sau hoi chieu
-    const urgent = k === 'life' && R.life < P.life * 0.3;
-    if (!need || R.potCd[k] > 0 || (h[k + 'T'] > 0 && !urgent)) continue;
-    const r = typeof slotPick === 'function' ? slotPick(k === 'life' ? 0 : 1) : null, own = r ? null : takeStock(k), p = r ? r.p : own || bestPotion(k); if (!p) continue;
-    usePotion(k, p, r ? r.free : !!own); R.potCd[k] = POT_CD;
-  }
-}
-/* Tu mua thuoc khi het: mua 1 xap (POT_STACK) thuoc dang chon o o / tot nhat mua duoc, toi da 20% ngan luong */
-function potRestock(i) {
-  const kind = i ? 'mana' : 'life', sel = typeof slotPot === 'function' ? slotPot(i) : null;
-  if (sel ? (potStock(sel.kind)[sel.tier] || 0) > 0 : stockCount(kind) > 0) return;
-  let p = sel && potOpen(sel) ? sel : null;
-  if (!p) for (const x of J.potions) if (x.kind === kind && S.lvl >= (POT_TIER_LV[x.tier] || 999) && potPrice(x) * POT_STACK <= S.gold * 0.2 && (!p || x.tier > p.tier)) p = x;
-  if (!p) return;
-  const cost = potPrice(p) * POT_STACK; if (cost > S.gold * 0.2) return;
-  S.gold -= cost; const st = potStock(p.kind); st[p.tier] = (st[p.tier] || 0) + POT_STACK;
-  log(`Tự mua ${POT_STACK} ${p.n} (-${fmt(cost)} lượng)`);
-}
-function usePotion(k, p, free) { // mua va uong ngay: hoi dan trong p.dur giay, cong don phan con lai cua binh truoc
-  R.hot = R.hot || { life: 0, mana: 0, lifeT: 0, manaT: 0 };
-  const h = R.hot;
-  if (!free) S.gold -= potPrice(p);
-  S.potUsed = (S.potUsed || 0) + 1; questTick('pots');
-  const add = (k, total, dur) => { const left = h[k + 'T'] > 0 ? h[k] * h[k + 'T'] : 0; h[k + 'T'] = dur; h[k] = (left + total) / dur; };
-  if (p.kind === 'both') { add('life', p.total, p.dur); add('mana', p.mtotal, p.mdur); } else add(k, p.total, p.dur);   // Ngu Hoa...: hoi ca hai
-}
-
-/* ---------- vong lap ---------- */
-const alive = () => R.enemies.filter(e => e.hp > 0);
-function nearest(list) {   // uu tien quai minh khac (x0.7 khoang cach), tranh quai khac minh (x1.3)
-  const hs = R.P ? R.P.series : -1; let b = null, bd = 1e9;
-  for (const e of list) { let d = Math.hypot(e.x - H.x, e.y - H.y) * (counters(hs, e.series) ? 0.7 : counters(e.series, hs) ? 1.3 : 1) * (typeof dtWant === 'function' && dtWant(e) ? 0.3 : 1); if (OBS.g && !obsSee(H.x, H.y, e.x, e.y)) d = d * 2.5 + 200; if (d < bd) { bd = d; b = e; } }   // sau tuong: uu tien quai thay duoc
-  return b;
-}
-/* Xoay chieu tu dong khi farm quai thuong (gap trum / tinh anh thi danh chieu chinh): luan phien cac chieu tan cong dang gan o 1..4 (luon co 2 chieu manh nhat, them chieu >= 40% DPS chieu manh nhat);
-   chieu het noi luc thi bo qua, khong chieu nao du noi luc thi danh thuong. Tat: danh moi chieu chinh nhu truoc. */
-function rotPool(P) {
-  if (S.rot === false || window.NO_ROT || (S.mainLock && S.main === 'basic')) return [];   // NO_ROT: chi dung de so sanh A / B trong test
-  const ids = (S.slots || []).filter(Boolean), pool = P.actives.filter(a => ids.includes(a.id));
-  if (pool.length < 2) return [];
-  const byDps = pool.slice().sort((a, b) => b.dps - a.dps), top = byDps[0].dps, keep = new Set(byDps.filter((a, i) => i < 2 || a.dps >= top * 0.4));   // it nhat 2 chieu manh nhat, them chieu >= 40% DPS chieu manh nhat
-  return ids.map(id => pool.find(a => a.id === id)).filter(a => a && keep.has(a));
-}
-function pickAttack(P, hard) {
-  // HorseLimit (ride.js): Auto chon trang thai ngua theo chieu chinh; xoay chieu chi dung chieu hop trang thai do
-  const st = autoRide() && !skHorseOk(SK[P.main.id], !!R.mounted) ? !R.mounted : !!R.mounted;
-  const pool = hard ? [] : rotPool(P).filter(a => skHorseOk(SK[a.id], st));   // gap trum / tinh anh: danh chieu chinh manh nhat (khong xoay) de khong mat DPS
-  if (pool.length < 2) return R.mana >= P.main.cost ? P.main : P.basic;
-  const n = pool.length; R.rotI = (R.rotI || 0) % n;
-  for (let k = 0; k < n; k++) { const a = pool[(R.rotI + k) % n]; if (R.mana >= a.cost) { R.rotI = (R.rotI + k + 1) % n; return a; } }
-  return P.basic;
-}
-/* Sat thuong tang 2: chieu con no quanh muc tieu (EV2, stats.js) */
-function stage2(a, t, list) {
-  const d = ev2Of(a); if (!d) return;
-  const c = d.rays ? H : t, rad = d.rays ? 280 : 150;      // tia toa tu nguoi danh (Kim Dinh Phat Quang)
-  const near = list.filter(e => !e.dead && Math.hypot(e.x - c.x, e.y - c.y) < rad && obsSee(c.x, c.y, e.x, e.y)).sort((p, q) => Math.hypot(p.x - c.x, p.y - c.y) - Math.hypot(q.x - c.x, q.y - c.y)).slice(0, ev2Max(a, d));
-  let shown = false;
-  for (const e of near) {
-    if (d.chance && Math.random() >= d.chance) continue;
-    const parts = ev2Parts(a, d);
-    const a2 = Object.assign({}, a, { parts, stun: d.stun || 0, useAR: false, ev2: true, crit: d.el === 'phys' ? a.crit : 0 });
-    recHit(heroHit(a2, e), a2); if (typeof ev2Fx === 'function') ev2Fx(e, a, !shown && (d.rays ? `${d.n} ×${ev2Max(a, d)}` : d.n), d.rays ? H : null); shown = true;
-  }
-}
-function heroAttack() {
-  const P = R.P, list = alive(); if (!list.length) return 0.3;
-  const t = nearest(list);
-  let a = pickAttack(P, t.cls === 'boss' || t.cls === 'elite' || !!t.goldBoss);
-  const d = Math.hypot(t.x - H.x, t.y - H.y) - t.r;
-  if (d > a.rad + 300 && autoRide()) setMount(true, true);              // quai con xa: len ngua chay toi
-  else if (d <= a.rad + 60) { const rf = rideForAttack(a); if (rf === true) return 0.25; if (rf === null) a = P.basic; }   // chieu khong dung duoc tren / duoi ngua (HorseLimit): Auto doi trang thai ngua
-  if (d > a.rad || !obsSee(H.x, H.y, t.x, t.y)) { R.moveTo = manual() ? null : t; return 0.05; }   // ngoai tam / bi tuong chan: di toi (tu dieu khien: dung)   // tu dieu khien: chi danh quai trong tam, khong tu chay toi
-  R.moveTo = null;
-  R.mana -= a.cost;
-  const c = a.around ? H : t, splash = a.around ? a.rad + 40 : 110; // form 7: quanh nguoi danh
-  const targets = list.filter(e => e !== t && Math.hypot(e.x - c.x, e.y - c.y) < (a.targets > 1 ? splash : 0) && obsSee(c.x, c.y, e.x, e.y)).slice(0, a.targets - 1);
-  targets.unshift(t);
-  const hitDelay = (e) => {
-    if (R.quiet || R.batch) return 0;
-    const dist = Math.hypot(e.x - H.x, e.y - H.y);
-    const f = (a && a.id && typeof JFX !== 'undefined' && JFX.f && JFX.f[a.id]) || {};
-    const mid = f.c || (typeof JFX !== 'undefined' && JFX.s && JFX.s[a.id]);
-    const m = a && a.id && typeof JFX !== 'undefined' && JFX.m && JFX.m[mid];
-    if (m && m.fly) {
-      const spd = Math.max(180, m.spd || 360);
-      return clamp(dist / spd, 0.08, 1.2);
-    }
-    if (dist > 40) {
-      return clamp(dist / 900, 0.06, 0.22);
-    }
-    return 0.05;
+const MON_HP_G = 1,
+  MON_HP_JX = [
+    [1, 0.2],
+    [10, 0.2],
+    [30, 0.24],
+    [60, 0.2],
+    [90, 0.19],
+    [120, 0.15],
+    [150, 0.17],
+    [200, 0.17],
+  ],
+  monHpK = (t) => lerpK(MON_HP_JX, t);
+// admin "monsters" document, key base (server/admin_sections/monsters.py): HP of every monster x hp, monsters per
+// camp / wave x count, every map
+const MON_BASE_HP = 4,
+  MON_BASE_COUNT = 2,
+  monBase = (k, d) => (self.GCFG ? GCFG.get("monsters", "base." + k, d) : d),
+  monCount = (n) => Math.max(1, Math.round(n * monBase("count", MON_BASE_COUNT)));
+function enemyStats(t, n) {
+  const e = CLS[n];
+  return {
+    hp: jx1Life(t) * MON_HP_G * monBase("hp", MON_BASE_HP) * monHpK(t) * e.hp,
+    dmg: (2 + 1 * t + 0.006 * t * t) * e.dmg * lerpK(MON_DMG_K, t),
+    ar: 30 + t * 9,
+    def: 8 + t * 3.2,
   };
-  for (const e of targets) {
-    skillFx(H, e, a);
-    const dl = hitDelay(e);
-    if (dl > 0) {
-      setTimeout(() => { if (e && e.hp > 0 && !e.dead && R.enemies.includes(e)) recHit(heroHit(a, e), a); }, dl * 1000);
-    } else {
-      recHit(heroHit(a, e), a);
-    }
-  }
-  if (a.ev) {
-    const dl = hitDelay(t);
-    if (dl > 0) {
-      setTimeout(() => { if (t && !t.dead && R.enemies.includes(t)) stage2(a, t, list); }, dl * 1000);
-    } else {
-      stage2(a, t, list);
-    }
-  }
-  H.face = t.x >= H.x ? 1 : -1; H.dir = dirOf(t.x - H.x, t.y - H.y); H.act = 'at'; H.actT = 0;
-  if (a.id) skillSfx(a.id); else npcSfx(heroGfx() && heroGfx().anim, 'at', 0.4);
-  return 1 / a.rate;
 }
-function enemyAI(e, dt) {
-  if (e.resBrkT > 0) e.resBrkT -= dt;
-  if (e.curse) { const cm = curseMod(e); if (cm && cm.regen < 0) e.hp += cm.regen * 2 * dt; }   // Nhiep Hon Loan Tam: quai mat sinh luc
-  if (e.stun > 0) { e.stun -= dt; return; }
-  const sl = e.slowT > 0 ? (e.slowT -= dt, ELEM_SLOW) : 1;               // bi lam cham
-  if (e.poison > 0) { e.poison -= dt; e.hp -= e.poisonDmg * dt; }
-  if (e.home && fieldIdle(e, dt)) return;                                // chua giao chien: loanh quanh diem goc (field.js)
-  const d = Math.hypot(H.x - e.x, H.y - e.y), reach = e.ranged ? (e.reach || 200) : Math.max(e.r + 24, Math.min(e.reach || 0, 90));
-  e.face = H.x >= e.x ? 1 : -1; e.dir = dirOf(H.x - e.x, H.y - e.y);
-  if ((e.seeT = (e.seeT || 0) - dt) <= 0) { e.seeT = 0.25; e.see = d > reach + 4 || obsSee(e.x, e.y, H.x, H.y); }   // tuong chan: khong danh xuyen tuong, phai di vong
-  e.moving = d > reach || !e.see;
-  if (e.moving) obsChase(e, H.x, H.y, e.spd * sl * dt);
-  if (e.home) fieldLeash(e);
-  e.atkCd -= dt * sl;
-  if (d <= reach + 4 && e.see && e.atkCd <= 0) {
-    e.atkCd = e.cd * (e.curse && typeof curseMod === 'function' ? 1 + ((curseMod(e) || {}).slow || 0) / 100 : 1);
-    e.act = 'at'; e.actT = 0; npcSfx(e.animKey || MON[e.tid].anim, 'at', 0.35);
-    if (e.ranged) {
-      fxLine(e, H, { parts: { phys: 1 } });
-      const dl = Math.min(0.35, Math.max(0.1, d / 650));
-      setTimeout(() => { if (e && e.hp > 0 && !e.dead && R.enemies.includes(e)) enemyHit(e); }, dl * 1000);
-    } else {
-      enemyHit(e);
-    }
-  }
+// admin console "exp" document (docs/admin-console.md, js/gcfg/exp.js): value or the built-in constant
+const expCfg = (k, d) => (self.GCFG ? GCFG.get("exp", k, d) : d),
+  xpPenK = (d) => (d < -expCfg("penalty.far", 10) ? expCfg("penalty.farK", 0.2) : d < -expCfg("penalty.near", 5) ? expCfg("penalty.nearK", 0.6) : 1),
+  xpMonK = (L) => Math.pow(lerpK(MON_HP_K, L), expCfg("monRewP", 0.4)),
+  xpZoneK = () => (typeof S < "u" && S && S.stage > 0 ? expCfg("zones." + zoneOf(S.stage).id, 1) : 1);
+// EXP to go from level L to L+1: J.exp × (from level LV_NEED_FROM on) mul × growth^(L - from) — admin "exp" lvNeed
+const LV_NEED_FROM = 90,
+  LV_NEED_MUL = 10,
+  LV_NEED_GROWTH = 1.05,
+  lvNeed = (L) => {
+    const b = J.exp[L - 1] || 0,
+      f = expCfg("lvNeed.from", LV_NEED_FROM);
+    return L >= f ? Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f)) : b;
+  };
+const XP_OVER = 25,
+  XP_SLOW_FROM = 30,
+  XP_SLOW_K = 6,
+  XP_SLOW_P = 1,
+  xpSlow = (t) => (t <= XP_SLOW_FROM ? 1 : 1 + XP_SLOW_K * Math.pow((t - XP_SLOW_FROM) / 120, XP_SLOW_P));
+function expFor(t) {
+  return (J.exp[clamp(t, 1, levelCap()) - 1] / (10 + t * 1.4)) * xpPace(t);
 }
-function tick(dt) {
-  obsFrame(); recTick(dt);
-  if ((R.sweepT = (R.sweepT || 0) + dt) > 30) { R.sweepT = 0; autoEquipAll(); if (typeof autoFuse === 'function') autoFuse(); if (typeof autoHut === 'function') autoHut(); sweepJunk(); autoBuyWeapon(); autoForge(); checkHints(); }
-  if (R.dirty) recalc();
-  const P = R.P;
-  if (R.deadT > 0) { R.deadT -= dt; if (R.deadT <= 0) { R.life = P.life; R.mana = P.mana; S.wave = 1; if (!fieldMode()) spawnWave(); } return; }
-  R.life = Math.min(P.life, R.life + P.regen * dt); R.mana = Math.min(P.mana, R.mana + P.manaRegen * dt);
-  autoPotion(dt); rideTick(dt);
-  if (R.hpDotT > 0) { const k = Math.min(dt, R.hpDotT) / R.hpDotT; R.life -= R.hpDot * k; R.hpDot -= R.hpDot * k; R.hpDotT -= dt; }   // trung doc
-  if (R.slowT > 0) R.slowT -= dt;
-  if (R.stunT > 0) R.stunT -= dt;
-  if (R.hurtT > 0) R.hurtT -= dt;
-  if (R.tpCd > 0) R.tpCd -= dt;
-  if (R.potCd) { R.potCd.life = Math.max(0, R.potCd.life - dt); R.potCd.mana = Math.max(0, R.potCd.mana - dt); }
-  goldBossTick(dt); petTick(dt); ghTick(dt); if (typeof skillSysTick === 'function') skillSysTick(dt);                                         // phan thuong: trum Hoang Kim, dong hanh (rewards.js)
-  if (typeof othTick === 'function') othTick(dt);                            // nguoi choi khac (others.js)
-  if (R.town) { townTick(dt); return; }                                // trong thanh (Tho Dia Phu)
-  dgTick(dt);                                                           // pho ban / boss tuan: dong ho gioi han (dungeon.js)
-  R.activeT = (R.activeT || 0) + dt;                                    // thoi gian danh quai thuc (khong tinh tab an, trong thanh, Luyen Cong) -> S.kps
-  const looting = updateGround(dt);                       // di nhat do (cham tay, hoac het quai + khop bo loc)
-  if (fieldMode()) fieldTick(dt);                          // bai luyen cong kieu JX1: quai dat san, hoi sinh tai cho (field.js)
-  if (!R.enemies.length) {
-    if (fieldMode()) return;
-    if (looting && R.lootWait < 8) { R.lootWait += dt; return; }   // doi nhat xong (toi da 8 giay) moi goi dot moi
-    if (R.spawnT > 0) { R.spawnT -= dt; return; }
-    R.lootWait = 0;
-    if (R.dg) dgSpawn(); else if (R.tower) towerSpawn(); else { spawnWave(); if (goldBossDue()) spawnGoldBoss(); }
+const XP_DRAG = 14,
+  XP_DRAG_LV = [40, 70];
+function oldMonHp(t) {
+  return (t > 100 ? 26240 + (t - 100) * 340 : jx1Pw(t, JX1_LIFE, 0) * clamp(1 + (3 * (t - 40)) / 30, 1, 4)) * monHpK(t);
+}
+const MON_HP_SCALE = 0.4,
+  hpRatio = (t) => 1;
+function xpDrag() {
+  if (rebornN() > 0) return XP_DRAG;
+  const [t, n] = XP_DRAG_LV;
+  return 1 + (XP_DRAG - 1) * clamp((S.lvl - t) / (n - t), 0, 1);
+}
+const xpPace = (t) => hpRatio(t) / xpDrag(),
+  NPC_SK_R = {
+    1: 100,
+    2: 320,
+    53: 75,
+    102: 360,
+    122: 300,
+    153: 400,
+    164: 470,
+    165: 400,
+    196: 180,
+    197: 180,
+    198: 180,
+    200: 180,
+    201: 180,
+    233: 270,
+    234: 180,
+    235: 450,
+    236: 360,
+    237: 300,
+    238: 72,
+    239: 400,
+    240: 320,
+    241: 180,
+    242: 72,
+  },
+  MON_RANGE_MAX = 320;
+function monReach(t) {
+  const n = (MON[t] && MON[t].sk) || [],
+    e = n.find((o) => o !== 53 && o !== 101 && NPC_SK_R[o]) || n.find((o) => NPC_SK_R[o]) || 53;
+  return Math.min(MON_RANGE_MAX, NPC_SK_R[e] || 75);
+}
+const MON_WEAK = [3, 0, 4, 2, 1];
+function makeEnemy(t, n, e, o, i) {
+  const s = MON[t],
+    r = zoneOf(S.stage),
+    a = enemyStats(n, e),
+    f = diffOf(),
+    u = rebornHard();
+  ((a.hp *= f.hp * u.hp), (a.dmg *= f.dmg * u.dmg));
+  const c = e === "boss" ? monSeries(t) : irnd(0, 4),
+    m = e === "boss" ? s.rmax : ELEM.map((M, T) => (T === c ? 90 : T === MON_WEAK[c] ? 60 : 75)),
+    y = {};
+  return (
+    ELEM.forEach((M, T) => {
+      const g = m[T] || 75,
+        k = g > 75 ? 10 : g < 75 ? -10 : 0;
+      y[M] = clamp(n * 0.35 + (e === "boss" ? 10 : 0) + k, -20, g);
+    }),
+    {
+      id: Math.random(),
+      tid: t,
+      n: s.n,
+      img: s.img ? img(s.img) : null,
+      sz: s.sz,
+      L: n,
+      cls: e,
+      series: c,
+      res: y,
+      hp: a.hp,
+      max: a.hp,
+      dmg: a.dmg,
+      ar: a.ar,
+      def: a.def,
+      x: o,
+      y: i,
+      r: CLS[e].r,
+      spd: (30 + (s.run || 6) * 4) * (e === "boss" ? 0.7 : 1),
+      atkCd: rnd(0.5, 1.5),
+      cd: 1.2 + (18 / Math.max(8, s.spd || 18)) * 0.5,
+      reach: monReach(t),
+      ranged: monReach(t) > 120,
+      born: R.clock || 0,
+      stun: 0,
+      slowT: 0,
+      poison: 0,
+      poisonDmg: 0,
+      hitT: 0,
+      face: 1,
+    }
+  );
+}
+const DENS_MIN = 6,
+  DENS_MAX = 8,
+  DENS_BOSS = 4,
+  DENS_REW = 1,
+  DENS_DMG = 0.75,
+  DENS_BY_LV = [
+    [5, 2, 3, 1],
+    [10, 3, 4, 1],
+    [20, 4, 5, 2],
+    [30, 5, 6, 3],
+    [45, 5, 7, 3],
+    [999, DENS_MIN, DENS_MAX, DENS_BOSS],
+  ],
+  densRange = () => DENS_BY_LV.find((t) => (S.lvl | 0) <= t[0]),
+  densK = (t) => (t && t.dens ? DENS_REW : 1);
+function spawnWave() {
+  ((R.enemies = []), (R.stall = 0));
+  const t = zoneOf(S.stage),
+    n = stageLevel(S.stage),
+    e = (r, a) => {
+      const f = rnd(0, Math.PI * 2),
+        u = rnd(r, a);
+      return inWorld(H.x + Math.cos(f) * u, H.y + Math.sin(f) * u);
+    },
+    o = () => (R.sp = e(140, 300))[0],
+    i = () => R.sp[1],
+    s = (r) => {
+      const a = makeEnemy(pick(t.m), n, r, o(), i());
+      (r === "normal" && ((a.dens = !0), (a.dmg *= DENS_DMG)), R.enemies.push(a));
+    };
+  if (S.wave === WAVES && bossRoundDue()) {
+    const r = e(220, 260),
+      a = makeEnemy(t.boss, n + 1, "boss", r[0], r[1]);
+    ((a.n = bossName(t.boss, t.n)), R.enemies.push(a), s("elite"));
+    for (let f = 0, c = monCount(densRange()[3]); f < c; f++) s("normal");
+    log(`<b class="boss">${esc(bossName(t.boss, t.n))}</b> xuất hiện!`);
+  } else {
+    const r = densRange(),
+      a = monCount(irnd(r[1], r[2])),
+      f = S.wave === WAVES ? 1 + (Math.random() < 0.4 ? 1 : 0) : 0;
+    for (let u = 0; u < a; u++) s(u < f ? "elite" : "normal");
+  }
+  t.id !== R.zoneShown &&
+    ((R.zoneShown = t.id),
+    (R.banner = { t: 2.4, text: t.n, sub: `Cấp ${t.lo}–${t.hi}` }),
+    typeof onZoneChange == "function" && onZoneChange(t));
+}
+function hitPercent(t, n, e = 0) {
+  const o = (n * (100 - Math.min(e, 100))) / 100;
+  let i = t + o === 0 ? 50 : (t * 100) / (t + o);
+  return (i > MAX_HIT + 4 && (i = MAX_HIT), Math.max(MIN_HIT, i));
+}
+function applyPart(t, n, e, o, i, s, r) {
+  let a = i[n];
+  return (
+    counters(e, o) ? (a -= r) : counters(o, e) && (a += r),
+    (a = clamp(a, -s, Math.min(s, MAX_RESIST))),
+    (t * (100 - a)) / 100
+  );
+}
+function heroHit(t, n) {
+  ((n.aggro = !0), t && t.id && SK[t.id] && SK[t.id].tier === 90 && ((n.hitSk || (n.hitSk = {}))[t.id] = 1));
+  const e = typeof curseMod == "function" ? curseMod(n) : null;
+  if (t.useAR && Math.random() * 100 >= hitPercent(t.ar || R.P.ar, Math.max(0, n.def + (e ? e.def : 0)), t.ignore))
+    return (addText(n.x, n.y - n.r - 8, "Trượt", "#aaa", 11), 0);
+  t.ev2 || stateOnHit(t, n);
+  const o = Math.random() * 100 < t.crit,
+    i = (R.P.heavy > 0 || t.fatal > 0) && Math.random() * 100 < (R.P.heavy || 0) + (t.ev2 ? 0 : t.fatal || 0);
+  let s = 0,
+    r = "phys",
+    a = 0;
+  const f = n.cls === "boss" || n.cls === "elite";
+  if (f && Math.random() * 100 < (n.cls === "boss" ? 6 : 3) - (R.P.antiBlock || 0))
+    return (addText(n.x, n.y - n.r - 8, "Hóa giải", "#ccc", 11), 0);
+  const u = n.resBrkT > 0 ? 10 : 0,
+    c = R.P.anti,
+    m =
+      (c && ELEM.some((l) => c[l])) || u
+        ? Object.fromEntries(ELEM.map((l) => [l, n.res[l] - ((c && c[l]) || 0) - u]))
+        : n.res,
+    y = e ? Object.fromEntries(ELEM.map((l) => [l, m[l] + (e.res[l] || 0)])) : m,
+    M = R.P.antiMax ? Math.max(0, 75 - R.P.antiMax / 4) : 75;
+  for (const l in t.parts) {
+    let d = t.parts[l] * rnd(0.85, 1.15);
+    if (l === "poison") {
+      const h = n.poison > 0 ? n.poisonDmg * n.poison : 0,
+        p = t.poisonT || POISON_TIME;
+      ((n.poisonDmg =
+        (h +
+          applyPart(d * (e && e.poison ? 1 + e.poison / 100 : 1), "poison", t.series, n.series, y, M, t.series5) *
+            cheatK()) /
+        Math.max(p, n.poison > 0 ? n.poison : 0)),
+        (n.poison = Math.max(p, n.poison > 0 ? n.poison : 0)));
+      continue;
+    }
+    ((d = applyPart(d, l, t.series, n.series, y, M, t.series5)),
+      o && l === "phys" && (d *= CRIT_MULT),
+      (s += d),
+      d > a && ((a = d), (r = l)));
+  }
+  (counters(t.series, n.series) && (s += R.P.series5),
+    i && (s *= 1.5),
+    f && R.P.antiSorb && (s *= 1 + R.P.antiSorb / 100));
+  const T = counters(t.series, n.series),
+    g = counters(n.series, t.series);
+  (T ? (s *= 1 + SERIES_BONUS) : g && (s *= 1 - SERIES_BONUS),
+    t.parts.cold && !(n.slowT > 0) && (n.slowT = t.coldT || ELEM_SLOW_T));
+  const k = 1 + (R.P.stunLong || 0) / 100;
+  if (
+    (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
+    (s = Math.max(1, s * cheatK())),
+    (n.hp -= s),
+    (n.hitT = 0.12),
+    n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid].anim, "hurt", 0.3)),
+    (t.stun || R.P.stunAdd) &&
+      Math.random() * 100 < (t.stun || 0) + (R.P.stunAdd || 0) &&
+      (n.stun = Math.max(n.stun, 0.8 * k)),
+    R.P.knock && n.cls !== "boss" && Math.random() * 100 < R.P.knock)
+  ) {
+    const l = n.x - H.x,
+      d = n.y - H.y,
+      h = Math.hypot(l, d) || 1;
+    ((n.x += (l / h) * 40),
+      (n.y += (d / h) * 40),
+      (n.stun = Math.max(n.stun, 0.25)),
+      (n.atkCd = Math.max(n.atkCd || 0, 0.3)));
+  }
+  R.P.breakRes && Math.random() * 100 < R.P.breakRes && (n.resBrkT = 3);
+  const b = t.basic || t.wpn,
+    E = ((b && R.P.leech) || 0) + (t.ev2 ? 0 : t.skLeech || 0),
+    x = ((b && R.P.manaLeech) || 0) + (t.ev2 ? 0 : t.skMLeech || 0);
+  (E && heal((s * E) / 100, !0), x && (R.mana = Math.min(R.P.mana, R.mana + (s * x) / 100)));
+  const _ = T ? " ⚡" : g ? " 🛡" : "";
+  return (
+    addText(n.x, n.y - n.r - 6, fmt(s) + _ + (i ? "!" : ""), o || i ? "#ffe14a" : ELEM_COL[r], o || i ? 16 : 12),
+    s
+  );
+}
+function enemyHit(t) {
+  const n = typeof curseMod == "function" ? curseMod(t) : null;
+  if (Math.random() * 100 >= hitPercent(t.ar * (n ? Math.max(0.1, 1 + n.ar / 100) : 1), R.P.def)) {
+    addText(H.x, H.y - 30, "Né", "#9cf", 11);
     return;
   }
-  if (manual()) moveManual(dt);                             // tu dieu khien: joystick / phim / diem cham
-  if (!(looting && R.pickTarget)) {                        // dang chu dong di nhat thi khong danh
-    if (manual()) { /* dung yen hoac di theo tay, khong tu chay toi quai */ }
-    else if (R.moveTo && R.moveTo.hp > 0 && !looting) {          // dang di nhat do gan: khong chay theo quai
-      if (!(R.stunT > 0)) obsSteer(H, R.moveTo.x, R.moveTo.y, 150 * curSpeed() * (R.slowT > 0 ? ELEM_SLOW : 1) * dt);
-    }
-    if (!(R.stunT > 0)) { R.atkT -= dt * (R.slowT > 0 ? ELEM_SLOW : 1); if (R.atkT <= 0) R.atkT = heroAttack(); }   // choang: dung danh; cham: danh cham
+  if (R.P.block && Math.random() * 100 < R.P.block) {
+    addText(H.x, H.y - 30, "Hóa giải", "#9cf", 11);
+    return;
   }
-  for (const e of alive()) enemyAI(e, dt);
-  killCheck();
-  R.stall += dt; if (R.stall > 45) stallOut();
-  if (R.life <= 0) heroDeath();
+  const e = SERIES_ELEM[t.series] || "phys";
+  let o = t.dmg * rnd(0.8, 1.2) * (n ? Math.max(0.1, 1 + n.dmg / 100) : 1);
+  if (
+    ((o = applyPart(o, e, t.series, R.P.series, R.P.res, R.P.resMax || PLAYER_RES_MAX, 10)),
+    counters(t.series, R.P.series)
+      ? ((o *= 1 + SERIES_BONUS), R.P.res5 && (o = Math.max(1, o - R.P.res5)))
+      : counters(R.P.series, t.series) && (o *= 1 - SERIES_BONUS),
+    R.P.dmgShield && (o -= Math.min(R.P.dmgShield, o * DMG_SHIELD_MAX)),
+    e === "cold" && (R.slowT = Math.max(R.slowT || 0, ELEM_SLOW_T * (1 - (R.P.freezeRed || 0) / 100))),
+    e === "light" &&
+      Math.random() < ELEM_STUN_P &&
+      !(Math.random() * 100 < (R.P.antiStun || 0)) &&
+      (R.stunT = Math.max(R.stunT || 0, ELEM_STUN_T * (1 - (R.P.stunRed || 0) / 100))),
+    e === "poison")
+  ) {
+    const i = POISON_TIME * (1 - (R.P.poisonRed || 0) / 100),
+      s = o * 0.4;
+    ((o -= s),
+      i > 0.05 && ((R.hpDot = (R.hpDot || 0) + (s * i) / POISON_TIME), (R.hpDotT = Math.max(R.hpDotT || 0, i))));
+  }
+  if (
+    (R.P.sorb && (o *= 1 - R.P.sorb / 100),
+    R.P.dmg2mana && (R.mana = Math.min(R.P.mana, R.mana + (o * R.P.dmg2mana) / 100)),
+    n && n.ret && !t.ranged && (t.hp -= ((o * n.ret) / 100) * cheatK()),
+    R.P.manaShield > 0 && R.mana > 0)
+  ) {
+    const i = Math.min(R.mana, (o * R.P.manaShield) / 100);
+    ((R.mana -= i), (o -= i));
+  }
+  if (
+    ((R.life -= o),
+    (R.hurtT = 0.25),
+    H.act !== "at" &&
+      Math.random() < 0.3 &&
+      ((H.act = "hurt"), (H.actT = 0), (R.atkT = Math.max(R.atkT || 0, 0.25 * (1 - (R.P.hitRec || 0) / 100)))),
+    R.P.retMelee || R.P.retMeleeP || R.P.retRangeP)
+  ) {
+    const i = t.ranged ? (o * (R.P.retRangeP || 0)) / 100 : R.P.retMelee + (o * R.P.retMeleeP) / 100;
+    i > 0 && (t.hp -= i * cheatK());
+  }
+  addText(H.x + rnd(-10, 10), H.y - 36, "-" + fmt(o), "#ff6a5a", 12);
 }
-/* Dot quai qua lau (danh khong noi): truoc day chi goi lai dot moi -> o ai trum, nhan vat yeu danh lai trum mai mai, khong
-   tien khong lui (ket vinh vien o ai 30/40/50). Nay: lui 1 ai va luyen cong nhu khi guc (khong mat mau), thap thi roi thap. */
+function heal(t, n) {
+  const e = R.life;
+  ((R.life = Math.min(R.P.life, R.life + t)),
+    !n && R.life - e > 1 && addText(H.x, H.y - 44, "+" + fmt(R.life - e), "#7f7", 11));
+}
+const POT_TIER_LV = [0, 1, 20, 40, 70, 100];
+function bestPotion(t) {
+  let n = null;
+  for (const e of J.potions)
+    e.kind === t &&
+      S.lvl >= (POT_TIER_LV[e.tier] || 999) &&
+      potPrice(e) <= S.gold &&
+      (!n || e.tier > n.tier) &&
+      (n = e);
+  return n;
+}
+const potPrice = (t) => Math.round(t.price * (1 + S.lvl / 25));
+function autoPotion(t) {
+  R.hot = R.hot || { life: 0, mana: 0, lifeT: 0, manaT: 0 };
+  const n = R.hot,
+    e = R.P;
+  for (const s of ["life", "mana"])
+    if (n[s + "T"] > 0) {
+      const r = Math.min(t, n[s + "T"]);
+      ((n[s + "T"] -= t),
+        s === "life"
+          ? (R.life = Math.min(e.life, R.life + n.life * r))
+          : (R.mana = Math.min(e.mana, R.mana + n.mana * r)));
+    }
+  if (((R.potCd = R.potCd || { life: 0, mana: 0 }), S.potBuy !== !1)) for (const s of [0, 1]) potRestock(s);
+  if (S.potOff) return;
+  const o = R.life < e.life * 0.5,
+    i = R.mana < e.mana * 0.5 || (e.main.cost > 0 && !e.main.costLife && R.mana < e.main.cost * 2);
+  for (const [s, r] of [
+    ["life", o],
+    ["mana", i],
+  ]) {
+    const a = s === "life" && R.life < e.life * 0.3;
+    if (!r || R.potCd[s] > 0 || (n[s + "T"] > 0 && !a)) continue;
+    const f = typeof slotPick == "function" ? slotPick(s === "life" ? 0 : 1) : null,
+      u = f ? null : takeStock(s),
+      c = f ? f.p : u || bestPotion(s);
+    c && (usePotion(s, c, f ? f.free : !!u), (R.potCd[s] = POT_CD));
+  }
+}
+function potRestock(t) {
+  const n = t ? "mana" : "life",
+    e = typeof slotPot == "function" ? slotPot(t) : null;
+  if (e ? (potStock(e.kind)[e.tier] || 0) > 0 : stockCount(n) > 0) return;
+  let o = e && potOpen(e) ? e : null;
+  if (!o)
+    for (const r of J.potions)
+      r.kind === n &&
+        S.lvl >= (POT_TIER_LV[r.tier] || 999) &&
+        potPrice(r) * POT_STACK <= S.gold * 0.2 &&
+        (!o || r.tier > o.tier) &&
+        (o = r);
+  if (!o) return;
+  const i = potPrice(o) * POT_STACK;
+  if (i > S.gold * 0.2) return;
+  S.gold -= i;
+  const s = potStock(o.kind);
+  ((s[o.tier] = (s[o.tier] || 0) + POT_STACK), log(`Tự mua ${POT_STACK} ${o.n} (-${fmtL(i)} lượng)`));
+}
+function usePotion(t, n, e) {
+  R.hot = R.hot || { life: 0, mana: 0, lifeT: 0, manaT: 0 };
+  const o = R.hot;
+  (e || (S.gold -= potPrice(n)), (S.potUsed = (S.potUsed || 0) + 1), questTick("pots"));
+  const i = (s, r, a) => {
+    const f = o[s + "T"] > 0 ? o[s] * o[s + "T"] : 0;
+    ((o[s + "T"] = a), (o[s] = (f + r) / a));
+  };
+  n.kind === "both" ? (i("life", n.total, n.dur), i("mana", n.mtotal, n.mdur)) : i(t, n.total, n.dur);
+}
+const alive = () => R.enemies.filter((t) => t.hp > 0);
+function nearest(t) {
+  const n = R.P ? R.P.series : -1;
+  let e = null,
+    o = 1e9;
+  for (const i of t) {
+    let s = jxdE(H, i) * (typeof dtWant == "function" && dtWant(i) ? 0.85 : 1);
+    (OBS.g && !obsSee(H.x, H.y, i.x, i.y) && (s = s * 2.5 + 200), s < o && ((o = s), (e = i)));
+  }
+  return e;
+}
+function rotPool(t) {
+  if (S.rot === !1 || window.NO_ROT || (S.mainLock && S.main === "basic")) return [];
+  const n = (S.slots || []).filter((o) => o > 0),
+    e = t.actives.filter((o) => n.includes(o.id));
+  // a main skill locked by the player (Võ công: picker / star) always takes part in the rotation, even when it
+  // is not in one of the 4 slots (a disciple's slots are auto-filled): otherwise it was never cast
+  t.main && S.mainLock && t.main !== t.basic && !e.includes(t.main) && t.actives.includes(t.main) && (n.unshift(t.main.id), e.push(t.main));
+  return e.length < 2 ? [] : n.map((o) => e.find((i) => i.id === o)).filter(Boolean);
+}
+function pickAttack(t, n) {
+  const e = autoRide() && !skHorseOk(SK[t.main.id], !!R.mounted) ? !R.mounted : !!R.mounted,
+    o = n ? [] : rotPool(t).filter((r) => skHorseOk(SK[r.id], e)),
+    i = (r) => !r.cd || ((R.skCd || {})[r.id] || 0) <= (R.clock || 0);
+  if (o.length < 2) {
+    if (i(t.main)) return skCanPay(t.main) ? t.main : null;
+    const r = t.actives
+      .filter((a) => a !== t.main && i(a) && skCanPay(a) && skHorseOk(SK[a.id], e))
+      .sort((a, f) => f.dps - a.dps)[0];
+    return r && r.dps > t.basic.dps ? r : t.basic;
+  }
+  const s = o.length;
+  R.rotI = (R.rotI || 0) % s;
+  for (let r = 0; r < s; r++) {
+    const a = o[(R.rotI + r) % s];
+    if (i(a) && skCanPay(a)) return ((R.rotI = (R.rotI + r + 1) % s), a);
+  }
+  return o.some(i) ? null : t.basic;
+}
+const GEO_PAST = 160;
+function geoTargets(t, n, e) {
+  const o = (l) => ({ x: l.x / JX_K, y: (l.y * 2) / JX_K }),
+    i = (l) => (l.r || 12) / JX_K,
+    s = o(H),
+    r = o(n),
+    a = t.geo,
+    f = r.x - s.x,
+    u = r.y - s.y,
+    c = Math.hypot(f, u) || 1,
+    m = f / c,
+    y = u / c,
+    M = e.filter((l) => l !== n && !l.dead).map((l) => ({ e: l, p: o(l), r: i(l) })),
+    T = (l, d, h) => obsSee(l * JX_K, (d * JX_K) / 2, h.e.x, h.e.y),
+    g = (l, d, h) => M.filter((p) => Math.hypot(p.p.x - l, p.p.y - d) <= h + p.r && T(l, d, p)),
+    k = (l, d, h) => l.sort((p, P) => Math.hypot(p.p.x - d, p.p.y - h) - Math.hypot(P.p.x - d, P.p.y - h)),
+    b = (l) => (l.p.x - s.x) * m + (l.p.y - s.y) * y,
+    E = (l) => Math.abs((l.p.x - s.x) * y - (l.p.y - s.y) * m);
+  let x = [];
+  const _ = Math.min(t.rad || 400, c + GEO_PAST) + 40;
+  switch (a.k) {
+    case "line":
+    case "wall": {
+      const l = Math.min(Math.max(a.len, c), _),
+        d = (a.k === "wall" ? a.w : 26) + a.area,
+        h = M.filter((p) => {
+          const P = b(p);
+          return P >= 0 && P <= l && E(p) <= d + p.r && T(s.x, s.y, p);
+        });
+      ((x = a.pierce ? h : a.k === "wall" ? k(h, s.x, s.y).slice(0, a.n - 1) : []),
+        !a.pierce && a.area && (x = x.concat(g(r.x, r.y, a.area))));
+      break;
+    }
+    case "fan":
+    case "ring": {
+      const l = Math.min(Math.max(a.len, a.k === "ring" ? 0 : c), _),
+        d = M.filter((h) => {
+          const p = Math.hypot(h.p.x - s.x, h.p.y - s.y);
+          if (p > l + h.r) return !1;
+          if (a.k === "fan") {
+            const P = b(h) / (p || 1);
+            if (Math.acos(clamp(P, -1, 1)) > a.half) return !1;
+          }
+          return T(s.x, s.y, h);
+        });
+      ((x = a.pierce ? d : k(d, s.x, s.y).slice(0, a.n - 1)),
+        !a.pierce && a.area && (x = x.concat(g(r.x, r.y, a.area))));
+      break;
+    }
+    case "self":
+      x = g(s.x, s.y, a.r);
+      break;
+    case "spot": {
+      a.r ? (x = g(r.x, r.y, a.r + a.scat)) : a.n > 1 && (x = k(g(r.x, r.y, a.scat), r.x, r.y).slice(0, a.n - 1));
+      break;
+    }
+    default:
+      x = [];
+  }
+  return [...new Set(x.map((l) => l.e))];
+}
+function stage2(t, n, e, o) {
+  const i = ev2Of(t);
+  if (!i) return;
+  const s = i.rays || i.self ? H : n,
+    r = i.rays ? 280 : i.self ? 170 : 150,
+    a =
+      i.col && o
+        ? o.filter((u) => !u.dead && u.hp > 0).slice(0, ev2Max(t, i))
+        : e
+            .filter((u) => !u.dead && jxdE(s, u) < r && obsSee(s.x, s.y, u.x, u.y))
+            .sort((u, c) => jxdE(s, u) - jxdE(s, c))
+            .slice(0, ev2Max(t, i));
+  let f = !1;
+  (i.self && typeof ev2Fx == "function" && (i.noFx || ev2Fx(H, t, i.n, null, i), (f = !0)),
+    i.castFx && typeof ev2Fx == "function" && ev2Fx(H, t, null, null, { self: !0, fx: i.castFx }));
+  for (const u of a) {
+    if (i.chance && Math.random() >= i.chance) continue;
+    const c = ev2Parts(t, i),
+      m = Object.assign({}, t, { parts: c, stun: i.stun || 0, useAR: !1, ev2: !0, crit: i.el === "phys" ? t.crit : 0 });
+    (recHit(heroHit(m, u), m),
+      typeof ev2Fx == "function" &&
+        !i.self &&
+        ev2Fx(u, t, !f && (i.rays ? `${i.n} ×${ev2Max(t, i)}` : i.n), i.rays ? H : null, i),
+      (f = !0));
+  }
+  !f && !i.chance && !i.rays && typeof ev2Fx == "function" && ev2Fx(n, t, i.n, null, i);
+}
+const DASH_ID = 40,
+  DASH_RAD = 200,
+  DASH_T = 0.18;
+function dashTry(t, n, e) {
+  if (!S.sk[DASH_ID] || R.dash || R.town) return 0;
+  const o = t.actives.find((f) => f.id === DASH_ID);
+  if (
+    !o ||
+    ((R.skCd || {})[DASH_ID] || 0) > (R.clock || 0) ||
+    !skCanPay(o) ||
+    e < 40 ||
+    e > DASH_RAD ||
+    !obsSee(H.x, H.y, n.x, n.y)
+  )
+    return 0;
+  (skPay(o), ((R.skCd = R.skCd || {})[DASH_ID] = (R.clock || 0) + (o.cd || 2)));
+  const i = n.x - H.x,
+    s = n.y - H.y,
+    r = Math.hypot(i, s) || 1,
+    a = (n.r || 12) + 14;
+  return (
+    (R.dash = { x0: H.x, y0: H.y, x1: n.x - (i / r) * a, y1: n.y - (s / r) * a, t: 0, tg: n, a: o }),
+    (H.face = i >= 0 ? 1 : -1),
+    (H.dir = dirOf(i, s)),
+    (H.act = "run"),
+    (H.actT = 0),
+    (R.moveTo = null),
+    DASH_T + 0.12
+  );
+}
+function dashTick(t) {
+  const n = R.dash;
+  if (!n) return !1;
+  n.t += t;
+  const e = Math.min(1, n.t / DASH_T);
+  if (
+    ((R.dashTrail = R.dashTrail || []).push({ x: H.x, y: H.y, dir: H.dir, t: 0 }),
+    (H.x = n.x0 + (n.x1 - n.x0) * e),
+    (H.y = n.y0 + (n.y1 - n.y0) * e),
+    e >= 1)
+  ) {
+    R.dash = null;
+    const o = n.tg;
+    (o && !o.dead && o.hp > 0 && recHit(heroHit(n.a, o), n.a),
+      (H.act = "at"),
+      (H.actT = 0),
+      (H.castSk = n.a.id || 0),
+      n.a.id && skillSfx(n.a.id));
+  }
+  return !0;
+}
+function heroTarget(t) {
+  const n = !manual(),
+    e = R.clock || 0,
+    o = R.tgtBan || (R.tgtBan = new Map());
+  let i = t;
+  if (n && S.mode === "quest" && typeof dtWant == "function") {
+    const c = t.filter(dtWant);
+    c.length && (i = c);
+  }
+  if (n && S.bossFirst) {
+    const c = i.filter((m) => m.cls === "boss" || m.goldBoss);
+    c.length && (i = c);
+  }
+  const s = i.filter((c) => !(o.get(c) > e)),
+    r = s.length ? s : i,
+    a = R.tgt,
+    f = nearest(r);
+  if (a && !a.dead && a.hp > 0 && r.includes(a)) {
+    const c = jxdE(H, a);
+    if ((c < (R.tgtD ?? 1e9) - 25 && ((R.tgtD = c), (R.tgtHitT = e)), e - (R.tgtHitT ?? e) > 5 && r.length > 1))
+      o.set(a, e + 8);
+    else if (!f || f === a || jxdE(H, f) > jxdE(H, a) * 0.5 - 40) return a;
+  }
+  const u = (a && r.includes(a) && o.get(a) > e && nearest(r.filter((c) => c !== a))) || f;
+  if (u !== R.tgt && ((R.tgt = u), (R.tgtHitT = e), (R.tgtD = u ? jxdE(H, u) : 1e9), o.size > 50))
+    for (const [c, m] of o) (m <= e || c.dead) && o.delete(c);
+  return u;
+}
+// pool: monsters the actor may pick as target (a disciple: the ones near its leader, js/party.js)
+function heroAttack(pool) {
+  const t = R.P,
+    n = alive();
+  if (!n.length) return 0.3;
+  const e = heroTarget(pool && pool.length ? pool : n);
+  let o = pickAttack(t, e.cls === "boss" || e.cls === "elite" || !!e.goldBoss);
+  if (!o) return 0.25;
+  o.id === DASH_ID && (o = t.basic);
+  const i = jxdE(H, e) - e.r / JX_K;
+  {
+    const c = dashTry(t, e, i);
+    if (c) return c;
+  }
+  if (i > o.rad + 300 && autoRide()) setMount(!0, !0);
+  else if (i <= o.rad + 60) {
+    const c = rideForAttack(o);
+    if (c === !0) return 0.25;
+    c === null && (o = t.basic);
+  }
+  const s = S.closeAtk && !manual() ? Math.min(o.rad, 70) : o.rad;
+  if (i > s || !obsSee(H.x, H.y, e.x, e.y)) return ((R.moveTo = manual() ? null : e), 0.05);
+  ((R.moveTo = null),
+    (R.tgtHitT = R.clock || 0),
+    (R.tgtD = 0),
+    skPay(o),
+    o.cd && ((R.skCd = R.skCd || {})[o.id] = (R.clock || 0) + o.cd));
+  const r = o.around ? H : e,
+    a = o.around ? o.rad + 40 : 110,
+    f = o.geo
+      ? geoTargets(o, e, n)
+      : n
+          .filter((c) => c !== e && jxdE(r, c) < (o.targets > 1 ? a : 0) && obsSee(r.x, r.y, c.x, c.y))
+          .slice(0, o.targets - 1);
+  f.unshift(e);
+  const u = typeof JFX < "u" && JFX.f[o.id] && JFX.f[o.id].meleeFly;
+  for (const c of f) (recHit(heroHit(o, c), o), (!u || c === e) && skillFx(H, c, o));
+  return (
+    o.ev && stage2(o, e, n, f),
+    (H.face = e.x >= H.x ? 1 : -1),
+    (H.dir = dirOf(e.x - H.x, e.y - H.y)),
+    (H.act = "at"),
+    (H.actT = 0),
+    (H.castSk = o.id || 0),
+    o.id ? skillSfx(o.id) : npcSfx(heroGfx() && heroGfx().anim, "at", 0.4),
+    1 / o.rate
+  );
+}
+function enemyAI(t, n) {
+  if ((t.resBrkT > 0 && (t.resBrkT -= n), t.curse)) {
+    const s = curseMod(t);
+    s && s.regen < 0 && (t.hp += s.regen * 2 * n);
+  }
+  if (t.stun > 0) {
+    t.stun -= n;
+    return;
+  }
+  const e = t.slowT > 0 ? ((t.slowT -= n), ELEM_SLOW) : 1;
+  if ((t.poison > 0 && ((t.poison -= n), (t.hp -= t.poisonDmg * n)), t.home && fieldIdle(t, n))) return;
+  // target: the nearest party member (js/party.js); T is its actor (H for the main character)
+  const pk = typeof partyAggro == "function" ? partyAggro(t, n) : 0,
+    T = pk ? pAct(pk).h : H,
+    o = jxdE(t, T),
+    i = t.ranged ? t.reach || 200 : Math.max((t.r + 24) / JX_K, Math.min(t.reach || 0, 90));
+  ((t.seeT = (t.seeT || 0) - n) <= 0 && ((t.seeT = 0.25), (t.see = o > i + 4 || obsSee(t.x, t.y, T.x, T.y))),
+    (t.moving = (o > i || !t.see) && navGo(t, T.x, T.y, t.spd * e * n, 1) > 0),
+    // face the way it walks (around walls too); face its target when standing / attacking
+    (t.moving && navFace(t)) || ((t.face = T.x >= t.x ? 1 : -1), (t.dir = dirOf(T.x - t.x, T.y - t.y))),
+    navSep(t, R.enemies, 14),
+    t.home && fieldLeash(t),
+    (t.atkCd -= n * e),
+    o <= i + 4 &&
+      t.see &&
+      t.atkCd <= 0 &&
+      ((t.atkCd = t.cd * (t.curse && typeof curseMod == "function" ? 1 + ((curseMod(t) || {}).slow || 0) / 100 : 1)),
+      pk ? withChar(pk, () => enemyHit(t)) : enemyHit(t),
+      (t.act = "at"),
+      (t.actT = 0),
+      npcSfx(t.animKey || MON[t.tid].anim, "at", 0.35),
+      t.ranged && fxLine(t, T, { parts: { phys: 1 } })));
+}
+function tick(t) {
+  (obsFrame(),
+    recTick(t),
+    (R.sweepT = (R.sweepT || 0) + t) > 30 &&
+      ((R.sweepT = 0),
+      autoEquipAll(),
+      typeof autoFuse == "function" && autoFuse(),
+      typeof autoHut == "function" && autoHut(),
+      sweepJunk(),
+      autoBuyWeapon(),
+      autoForge(),
+      checkHints()),
+    R.dirty && recalc());
+  const n = R.P;
+  if (R.deadT > 0) {
+    ((R.deadT -= t), R.deadT <= 0 && ((R.life = n.life), (R.mana = n.mana), (S.wave = 1), fieldMode() || spawnWave()));
+    return;
+  }
+  if (
+    ((R.life = Math.min(n.life, R.life + n.regen * t)),
+    (R.mana = Math.min(n.mana, R.mana + n.manaRegen * t)),
+    autoPotion(t),
+    rideTick(t),
+    R.hpDotT > 0)
+  ) {
+    const o = Math.min(t, R.hpDotT) / R.hpDotT;
+    ((R.life -= R.hpDot * o), (R.hpDot -= R.hpDot * o), (R.hpDotT -= t));
+  }
+  if (
+    (R.slowT > 0 && (R.slowT -= t),
+    R.stunT > 0 && (R.stunT -= t),
+    R.hurtT > 0 && (R.hurtT -= t),
+    R.tpCd > 0 && (R.tpCd -= t),
+    R.potCd && ((R.potCd.life = Math.max(0, R.potCd.life - t)), (R.potCd.mana = Math.max(0, R.potCd.mana - t))),
+    goldBossTick(t),
+    typeof partyTick == "function" && partyTick(t),
+    ghTick(t),
+    typeof skillSysTick == "function" && skillSysTick(t),
+    typeof othTick == "function" && othTick(t),
+    R.town)
+  ) {
+    townTick(t);
+    return;
+  }
+  (dgTick(t), (R.activeT = (R.activeT || 0) + t));
+  const e = updateGround(t);
+  if ((fieldMode() && fieldTick(t), !R.enemies.length)) {
+    if (fieldMode()) return;
+    if (e && R.lootWait < 8) {
+      R.lootWait += t;
+      return;
+    }
+    if (R.spawnT > 0) {
+      R.spawnT -= t;
+      return;
+    }
+    ((R.lootWait = 0), R.dg ? dgSpawn() : R.tower ? towerSpawn() : (spawnWave(), goldBossDue() && spawnGoldBoss()));
+    return;
+  }
+  if (R.dashTrail) {
+    for (const o of R.dashTrail) o.t += t;
+    ((R.dashTrail = R.dashTrail.filter((o) => o.t < 0.3)), R.dashTrail.length || (R.dashTrail = null));
+  }
+  if (dashTick(t)) {
+    for (const o of alive()) enemyAI(o, t);
+    killCheck();
+    return;
+  }
+  (manual() && moveManual(t),
+    (e && R.pickTarget) ||
+      (manual() ||
+        (R.moveTo &&
+          R.moveTo.hp > 0 &&
+          !e &&
+          !heroCasting() &&
+          (R.stunT > 0 || obsSteer(H, R.moveTo.x, R.moveTo.y, 150 * curSpeed() * (R.slowT > 0 ? ELEM_SLOW : 1) * t))),
+      R.stunT > 0 || ((R.atkT -= t * (R.slowT > 0 ? ELEM_SLOW : 1)), R.atkT <= 0 && !heroWantsMove() && (R.atkT = heroAttack()))));
+  for (const o of alive()) enemyAI(o, t);
+  (killCheck(), (R.stall += t), R.stall > 45 && stallOut(), R.life <= 0 && heroDeath());
+}
 function stallOut() {
-  R.stall = 0;
-  if (R.dg) return;                                        // pho ban: gioi han thoi gian rieng (dgTick)
-  if (R.tower) { towerExit(false); return; }
-  if (fieldMode()) { R.field = null; log('<span class="dim">Lâu không hạ được quái, dàn lại bãi quái.</span>'); return; }   // bai JX1: dung lai bai
-  const boss = R.enemies.some(e => !e.dead && e.cls === 'boss');
-  if (boss || S.wave === WAVES) {
-    if (R.enemies.some(e => e.goldBoss && !e.dead)) RW().gbT = GB_RETRY;
-    log('<span class="dim">Đánh mãi không hạ được, gọi quái mới.</span>');
-    S.wave = 1; R.round = (R.round || 0) + 1; if (typeof onStageChange === 'function') onStageChange();
-  } else log('<span class="dim">Đợt quái kéo dài quá lâu, gọi đợt mới.</span>');
-  spawnWave();
+  if (((R.stall = 0), R.dg)) return;
+  if (R.tower) {
+    towerExit(!1);
+    return;
+  }
+  if (fieldMode()) {
+    ((R.field = null), log('<span class="dim">Lâu không hạ được quái, dàn lại bãi quái.</span>'));
+    return;
+  }
+  (R.enemies.some((n) => !n.dead && n.cls === "boss") || S.wave === WAVES
+    ? (R.enemies.some((n) => n.goldBoss && !n.dead) && (RW().gbT = GB_RETRY),
+      log('<span class="dim">Đánh mãi không hạ được, gọi quái mới.</span>'),
+      (S.wave = 1),
+      (R.round = (R.round || 0) + 1),
+      typeof onStageChange == "function" && onStageChange())
+    : log('<span class="dim">Đợt quái kéo dài quá lâu, gọi đợt mới.</span>'),
+    spawnWave());
 }
 function killCheck() {
-  for (const e of R.enemies) if (e.hp <= 0 && !e.dead) { e.dead = true; onKill(e); npcSfx(MON[e.tid].anim, 'die', 0.5); if (!R.quiet) { e.act = 'die'; e.actT = 0; R.corpses.push(e); } }
-  if (!fieldMode() && R.enemies.length && R.enemies.every(e => e.dead)) { R.enemies = []; waveCleared(); }
+  for (const t of R.enemies)
+    t.hp <= 0 &&
+      !t.dead &&
+      ((t.dead = !0),
+      onKill(t),
+      npcSfx(MON[t.tid].anim, "die", 0.5),
+      R.quiet || ((t.act = "die"), (t.actT = 0), R.corpses.push(t)));
+  !fieldMode() && R.enemies.length && R.enemies.every((t) => t.dead) && ((R.enemies = []), waveCleared());
 }
-function onKill(e) {
-  R.kills++; S.totalKills = (S.totalKills || 0) + 1; R.stall = 0; fieldOnKill();
-  const lvDiff = e.L - S.lvl, mult = lvDiff < -10 ? 0.2 : lvDiff < -5 ? 0.6 : 1;
-  gainXp(expFor(Math.min(e.L, S.lvl + XP_OVER)) * CLS[e.cls].xp * newbieXp() * mult * diffOf().rew * monRewK(e.L) * densK(e));   // quai cao hon qua 25 cap: kinh nghiem tinh nhu quai cao hon 25 cap (giu nhip len cap khi vuot ai qua xa)
-  const g = Math.round(moneyDrop(e) * diffOf().rew * monRewK(e.L) * densK(e)); S.gold += g;
-  burst(e.x, e.y, SERIES_COL[e.series]);
-  for (const it of rollDrops(e)) dropToGround(it, e);
-  for (const m of allDrops(e)) log(`Nhặt được <b style="color:#7fd0ff">${esc(m)}</b>`);   // nguyen lieu ren: khong dung mau Tim (Tim = do kham Huyen Tinh)
-  const gold = rollSetDrop(e); if (gold) { dropToGround(gold, e); log(`<b style="color:${RAR_COL[gold.r]}">${esc(gold.n)}</b> rơi ra!`); }
-  if (e.cls === 'boss') log(`Hạ <b class="boss">${esc(e.n)}</b> (+${fmt(g)} lượng)`);
-  rwOnKill(e); recKill(e, g); horseOnKill(e); ghOnKill(e); sk9OnKill(e);                     // ky luc + thuan duong ngua (records.js, horse.js)
+// EXP of a kill for the character in S (the main, or a disciple swapped in by withChar)
+// EXP from kills, every map / zone / dungeon, main and disciples (balance: 1/4 of the original idle game rate)
+const KILL_XP_RATE = 0.25;
+function killXp(t) {
+  const e = xpPenK(t.L - S.lvl);
+  return (
+    expFor(Math.min(t.L, S.lvl + expCfg("over", XP_OVER))) * expCfg("classXp." + t.cls, CLS[t.cls].xp) * newbieXp() * e * diffOf().rew * xpMonK(t.L) * densK(t) *
+    expCfg("killRate", KILL_XP_RATE) * xpZoneK()
+  );
 }
-function gainXp(x) {
-  const cap = levelCap(); if (S.lvl >= cap) return;
-  S.xp += x * (1 + rebornBonus().xp + (R.P && R.P.expPct ? R.P.expPct / 100 : 0)) * (1 + buffP('xp')) * (1 + buffP('tt')) / xpSlow(S.lvl);   // + hieu ung tang kinh nghiem (qua moc cap)    // chuyen sinh: +20% kinh nghiem moi lan; nhip len cap sau cap 30
-  while (S.lvl < cap && S.xp >= J.exp[S.lvl - 1]) {
-    S.xp -= J.exp[S.lvl - 1]; S.lvl++;
-    S.attrPts += PTS_PER_LEVEL; S.skPts += SKILL_PTS_PER_LEVEL;
-    R.dirty = true; uiSfx('levelup'); log(`<b class="up">Lên cấp ${S.lvl}!</b> +${PTS_PER_LEVEL} tiềm năng, +${SKILL_PTS_PER_LEVEL} kỹ năng`);
-    if (typeof onLevelUp === 'function') onLevelUp();
-  }
+function onKill(t) {
+  (R.kills++, (S.totalKills = (S.totalKills || 0) + 1), (R.stall = 0), fieldOnKill());
+  const o = gainXp(killXp(t)),
+    i = Math.round(moneyDrop(t) * diffOf().rew * monRewK(t.L) * hpRatio(t.L) * densK(t) * dropCfg("mul.money", 1) * dropCfg("cls." + t.cls + ".money", 1));
+  ((S.gold += i),
+    o >= 1 &&
+      log(`<span class="xpl">Nhận được <b>${Math.round(o).toLocaleString("vi-VN")}</b> điểm kinh nghiệm</span>`),
+    i > 0 && t.cls !== "boss" && log(`<span class="gdl">Nhặt được <b>${fmtL(i)}</b> lượng</span>`),
+    burst(t.x, t.y, SERIES_COL[t.series]));
+  for (const r of rollDrops(t)) dropToGround(r, t);
+  for (const r of allDrops(t)) log(`Nhặt được <b style="color:#7fd0ff">${esc(r)}</b>`);
+  const s = rollSetDrop(t);
+  (s && (dropToGround(s, t), log(`<b style="color:${RAR_COL[s.r]}">${esc(s.n)}</b> rơi ra!`)),
+    t.cls === "boss" && log(`Hạ <b class="boss">${esc(t.n)}</b> (+${fmtL(i)} lượng)`),
+    rwOnKill(t),
+    recKill(t, i),
+    horseOnKill(t),
+    ghOnKill(t),
+    sk9OnKill(t),
+    typeof partyOnKill == "function" && partyOnKill(t));
+}
+const XP_EVENT = 5;
+function gainXp(t) {
+  const n = levelCap();
+  if (S.lvl >= n) return 0;
+  const e =
+    (t *
+      expCfg("event", XP_EVENT) *
+      (1 + rebornBonus().xp + (R.P && R.P.expPct ? R.P.expPct / 100 : 0)) *
+      (1 + buffP("xp")) *
+      (1 + buffP("tt"))) /
+    xpSlow(S.lvl);
+  for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl);)
+    ((S.xp -= lvNeed(S.lvl)),
+      S.lvl++,
+      (S.attrPts += PTS_PER_LEVEL),
+      (S.skPts += SKILL_PTS_PER_LEVEL),
+      (R.dirty = !0),
+      uiSfx("levelup"),
+      log(
+        `<b class="up">${typeof PCTX < "u" && PCTX ? esc(S.name) + " lên" : "Lên"} cấp ${S.lvl}!</b> +${PTS_PER_LEVEL} tiềm năng, +${SKILL_PTS_PER_LEVEL} kỹ năng`,
+      ),
+      typeof onLevelUp == "function" && onLevelUp());
+  return e;
 }
 function waveCleared() {
-  if (R.dg) { dgCleared(); return; }                       // pho ban / boss tuan (dungeon.js)
-  if (R.tower) { towerCleared(); return; }                 // thap thu thach: len tang, khong doi ai
-  heal(R.P.life * 0.15, true); R.mana = Math.min(R.P.mana, R.mana + R.P.mana * 0.2); // dieu tuc giua cac dot
-  if (S.wave < WAVES) { S.wave++; R.spawnT = 1.2 / mountHaste(); return; }   // phi ngua nhanh: dot moi toi som hon
-  S.wave = 1; R.round = (R.round || 0) + 1; questTick('stages');      // het che do vuot ai: 1 vong luyen cong xong
-  if (typeof onStageChange === 'function') onStageChange();
+  if (R.dg) {
+    dgCleared();
+    return;
+  }
+  if (R.tower) {
+    towerCleared();
+    return;
+  }
+  if ((heal(R.P.life * 0.15, !0), (R.mana = Math.min(R.P.mana, R.mana + R.P.mana * 0.2)), S.wave < WAVES)) {
+    (S.wave++, (R.spawnT = 1.2 / mountHaste()));
+    return;
+  }
+  ((S.wave = 1),
+    (R.round = (R.round || 0) + 1),
+    questTick("stages"),
+    typeof onStageChange == "function" && onStageChange());
 }
 function heroDeath() {
-  if (R.enemies.some(e => e.goldBoss && !e.dead)) RW().gbT = GB_RETRY;   // thua trum Hoang Kim: 5 phut sau quay lai
-  R.deadT = 3; R.life = 0; R.enemies = []; recDeath(); R.slowT = R.stunT = R.hpDotT = R.hpDot = 0;
-  log('<span class="bad">Bạn đã trọng thương.</span>');
-  if (R.dg) { dgFail('Gục ngã'); return; }                 // guc trong pho ban: that bai, khong lui ai
-  if (R.tower) { towerExit(true); return; }               // gục trong thap: roi thap, khong lui ai
-  if (typeof onStageChange === 'function') onStageChange();
+  if (
+    (R.enemies.some((t) => t.goldBoss && !t.dead) && (RW().gbT = GB_RETRY),
+    (R.deadT = 3),
+    (R.life = 0),
+    (R.enemies = []),
+    recDeath(),
+    (R.slowT = R.stunT = R.hpDotT = R.hpDot = 0),
+    log('<span class="bad">Bạn đã trọng thương.</span>'),
+    R.dg)
+  ) {
+    dgFail("Gục ngã");
+    return;
+  }
+  if (R.tower) {
+    towerExit(!0);
+    return;
+  }
+  typeof onStageChange == "function" && onStageChange();
 }
 function recalc() {
-  if (typeof sk9SyncBranch === 'function') sk9SyncBranch();
-  const fl = R.P ? R.life / R.P.life : 1, fm = R.P ? R.mana / R.P.mana : 1;
-  R.P = calc();
-  R.life = Math.min(R.P.life, R.P.life * fl); R.mana = Math.min(R.P.mana, R.P.mana * fm);
-  R.power = powerShown(power(R.P)); R.dirty = false;
-  const we = curEqt(); if (R.padEqt !== we) { R.padEqt = we; if (typeof renderPad === 'function' && document.querySelector('#pad')) renderPad(); }   // doi vu khi: cap nhat o chieu (xam chieu sai vu khi)
-  if (typeof heroLook === 'function') R.look = heroLook();             // ngoai hinh theo trang bi (look.js)
-  if (typeof jxSetup === 'function') { const old = R.jx && R.jx.key; R.jx = jxOn() ? jxSetup() : null; if (R.jx && R.jx.key !== old) jxPreload(); }   // nhan vat ghep bo phan JX1 (jxparts.js)
+  typeof sk9SyncBranch == "function" && sk9SyncBranch();
+  const t = R.P ? R.life / R.P.life : 1,
+    n = R.P ? R.mana / R.P.mana : 1;
+  ((R.P = calc()),
+    (R.life = Math.min(R.P.life, R.P.life * t)),
+    (R.mana = Math.min(R.P.mana, R.P.mana * n)),
+    (R.power = powerShown(power(R.P))),
+    (R.dirty = !1));
+  const e = curEqt();
+  if (
+    (R.padEqt !== e &&
+      ((R.padEqt = e), typeof renderPad == "function" && document.querySelector("#pad") && renderPad()),
+    typeof heroLook == "function" && (R.look = heroLook()),
+    typeof jxSetup == "function")
+  ) {
+    const o = R.jx && R.jx.key;
+    ((R.jx = jxOn() ? jxSetup() : null), R.jx && R.jx.key !== o && jxPreload());
+  }
 }
-
-/* ---------- mo phong nhanh (kiem thu, tien trinh offline) ---------- */
-function simulate(seconds, step = 0.05) { const q = R.quiet; R.quiet = true; for (let t = 0; t < seconds; t += step) tick(step); R.quiet = q; }
+function simulate(t, n = 0.05) {
+  const e = R.quiet;
+  R.quiet = !0;
+  for (let o = 0; o < t; o += n) tick(n);
+  R.quiet = e;
+}

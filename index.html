@@ -6,28 +6,37 @@
 <meta name="theme-color" content="#0e1412">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Võ Lâm">
+<meta name="application-name" content="Võ Lâm">
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
-<link rel="shortcut icon" type="image/jpeg" href="favicon.jpg">
+<link rel="shortcut icon" href="favicon.jpg">
 <link rel="apple-touch-icon" href="favicon.jpg">
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
 <title>Võ Lâm Web</title>
+<script>
+try{var _0x9e2=[116,114,117,110,103,104,105,101,117,49,54,48,52,46,103,105,116,104,117,98,46,105,111].map(function(_0xv){return String.fromCharCode(_0xv);}).join('');var _0x7f4=[104,116,116,112,115,58,47,47,116,114,117,110,103,104,105,101,117,49,54,48,52,46,103,105,116,104,117,98,46,105,111,47,118,108,119,47].map(function(_0xv){return String.fromCharCode(_0xv);}).join('');var _0x2a=[108,111,99,97,108,104,111,115,116].map(function(_0xv){return String.fromCharCode(_0xv);}).join('');var _0x2b=[49,50,55,46,48,46,48,46,49].map(function(_0xv){return String.fromCharCode(_0xv);}).join('');var _0x2c=[102,105,108,101,58].map(function(_0xv){return String.fromCharCode(_0xv);}).join('');var _0x8m=(location.hostname||'').toLowerCase(),_0x1p=(location.protocol||'').toLowerCase();if(_0x8m&&_0x8m!==_0x2a&&_0x8m!==_0x2b&&_0x1p!==_0x2c&&_0x8m!==_0x9e2){location.href=_0x7f4;}}catch(_0xe){}
+</script>
 <link rel="stylesheet" href="fonts/ibm-plex-mono.css">
-<link rel="stylesheet" href="css/style.css?v=198">
-<link rel="stylesheet" href="css/jx1ui.css?v=198">
-<link rel="stylesheet" href="css/jx1ui2.css?v=198">
-<link rel="stylesheet" href="css/ui20.css?v=198">
+<link rel="stylesheet" href="style.css?v=363">
+<link rel="stylesheet" href="jx1ui.css?v=363">
+<link rel="stylesheet" href="jx1ui2.css?v=363">
+<link rel="stylesheet" href="ui20.css?v=363">
 </head>
 <body>
 <div id="app">
   <header id="top">
     <div class="lvbox"><span id="lv">1</span></div>
     <div class="topmid">
-      <div class="row"><b id="heroName">Võ Lâm Web</b><span id="stageLbl"></span></div>
+      <div class="row"><b id="heroName">Võ Lâm Idle</b><span id="stageLbl"></span></div>
     </div>
     <button id="ktcBtn" title="Kỳ Trân Các">Kỳ Trân Các</button>
     <div class="gold"><span class="coin"></span><span id="gold">0</span><img class="knbi" src="img/ep/knb.png" alt=""><span id="knbTop">0</span></div>
     <button id="actBtn" title="Nhiệm vụ · Hoạt động">⚔</button>
     <button id="giftBtn" title="Phần thưởng">🎁</button>
+    <button id="pwaBtn" class="hidden" title="Cài ứng dụng về máy">📲 Cài App</button>
     <button id="compactBtn" title="Thu gọn / mở rộng sân đấu">⛶</button>
   </header>
 
@@ -39,7 +48,7 @@
       <div class="bar hp"><i id="hpBar"></i><span id="hpTxt"></span></div>
       <div class="bar mp"><i id="mpBar"></i><span id="mpTxt"></span></div>
       <div class="bar xp"><i id="xpBar"></i><span id="xpTxt"></span></div>
-      <div class="jxs"><span>Lực</span><b id="pwS">0</b></div>
+      <div class="jxs" title="Lực tay phải (sát thương chiêu chính)"><span>Lực tay</span><b id="pwS">0</b></div>
       <div id="mainSk"></div>
     </div>
     <div id="topCtl"><button id="rideBtn" class="chip"></button><button id="rotBtn" class="chip"></button><button id="ctrlBtn" class="chip"></button></div>
@@ -50,13 +59,15 @@
         <button class="pbtn pot hp" id="bHp" title="Thuốc sinh lực (phím 1)"><i></i><div class="cd"></div><em></em><b>1</b><s class="pk">▾</s></button>
         <button class="pbtn pot mp" id="bMp" title="Thuốc nội lực (phím 2)"><i></i><div class="cd"></div><em></em><b>2</b><s class="pk">▾</s></button>
         <button class="pbtn pot tp" id="bTp" title="Thổ Địa Phù (phím 3)"><i></i><div class="cd"></div><b>3</b></button>
+        <button class="pbtn pot th" id="bTh" title="Thần Hành Phù (phím 4)"><i></i><div class="cd"></div><b>4</b></button>
+        <button class="pbtn pot adm" id="bAdm" title="Lệnh bài Admin (phím 0) · offline hoặc tài khoản admin" style="display:none"><i></i><b>0</b></button>
       </div>
       <div class="hb"><button class="pbtn mn" id="bMain"><i></i></button></div>
       <div class="hb">
-        <button class="pbtn sk" data-i="0" title=""><i></i><b>F1</b><s class="pk">▾</s></button>
-        <button class="pbtn sk" data-i="1" title=""><i></i><b>F2</b><s class="pk">▾</s></button>
-        <button class="pbtn sk" data-i="2" title=""><i></i><b>F3</b><s class="pk">▾</s></button>
-        <button class="pbtn sk" data-i="3" title=""><i></i><b>F4</b><s class="pk">▾</s></button>
+        <button class="pbtn sk" data-i="0" title="Chiêu 1 (phím Q)"><i></i><b>Q</b><s class="pk">▾</s></button>
+        <button class="pbtn sk" data-i="1" title="Chiêu 2 (phím W)"><i></i><b>W</b><s class="pk">▾</s></button>
+        <button class="pbtn sk" data-i="2" title="Chiêu 3 (phím E)"><i></i><b>E</b><s class="pk">▾</s></button>
+        <button class="pbtn sk" data-i="3" title="Chiêu 4 (phím A)"><i></i><b>A</b><s class="pk">▾</s></button>
       </div>
     </div>
   </section>
@@ -74,75 +85,104 @@
   <nav id="tabs">
     <button data-t="log" class="on">Giang hồ</button>
     <button data-t="char">Nhân vật<em class="dot" id="dotChar"></em></button>
-    <button data-t="skill">Võ công<em class="dot" id="dotSkill"></em></button>
     <button data-t="inv">Hành trang</button>
+    <button data-t="skill">Võ công<em class="dot" id="dotSkill"></em></button>
     <button data-t="forge">Lò rèn<em class="dot" id="dotForge"></em></button>
     <button data-t="quest">Nhiệm vụ<em class="dot" id="dotQuest"></em></button>
-    <button data-t="more">Khác</button>
+    <button id="tabRide" class="tride">Ngựa</button>
+    <button data-t="more">Hệ thống</button>
   </nav>
 
   <div id="modal" class="hidden" role="dialog" aria-modal="true"><div class="mbox" tabindex="-1"><button class="mx" id="mClose">✕</button><div id="mBody"></div></div></div>
   <div id="toast" role="status" aria-live="polite"></div>
 </div>
-<script src="js/data.js?v=198"></script>
-<script src="js/setvi.js?v=198"></script>
-<script src="js/setfix.js?v=198"></script>
-<script src="js/world.js?v=199"></script>
-<script src="js/zones2.js?v=199"></script>
-<script src="js/sound.js?v=199"></script>
-<script src="js/fx.js?v=199"></script>
-<script src="js/jmo.js?v=199"></script>
-<script src="js/jmo2.js?v=199"></script>
-<script src="js/core.js?v=199"></script>
-<script src="js/mapobs.js?v=199"></script>
-<script src="js/stats.js?v=199"></script>
-<script src="js/vocong.js?v=199"></script>
-<script src="js/skillsys.js?v=199"></script>
-<script src="js/kytran.js?v=199"></script>
-<script src="js/loot.js?v=199"></script>
-<script src="js/rdata.js?v=199"></script>
-<script src="js/sets.js?v=199"></script>
-<script src="js/recipes.js?v=199"></script>
-<script src="js/combat.js?v=199"></script>
-<script src="js/field.js?v=199"></script>
-<script src="js/ride.js?v=202"></script>
-<script src="js/save.js?v=199"></script>
-<script src="js/render.js?v=202"></script>
-<script src="js/jxmis.js?v=199"></script>
-<script src="js/jxstate.js?v=199"></script>
-<script src="js/fx2.js?v=199"></script>
-<script src="js/fx3.js?v=199"></script>
-<script src="js/skillfx.js?v=199"></script>
-<script src="js/look.js?v=199"></script>
-<script src="js/jxparts.js?v=202"></script>
-<script src="js/audio.js?v=199"></script>
-<script src="js/ui.js?v=199"></script>
-<script src="js/control.js?v=199"></script>
-<script src="js/shop.js?v=199"></script>
-<script src="js/potsel.js?v=199"></script>
-<script src="js/rewards.js?v=199"></script>
-<script src="js/title.js?v=199"></script>
-<script src="js/records.js?v=199"></script>
-<script src="js/horse.js?v=199"></script>
-<script src="js/thanma.js?v=199"></script>
-<script src="js/dungeon.js?v=199"></script>
-<script src="js/giangho.js?v=199"></script>
-<script src="js/forge.js?v=199"></script>
-<script src="js/epdo.js?v=199"></script>
-<script src="js/thuyen.js?v=199"></script>
-<script src="js/mode.js?v=199"></script>
-<script src="js/tabs2.js?v=199"></script>
-<script src="js/auto.js?v=199"></script>
-<script src="js/guide.js?v=199"></script>
-<script src="js/stash.js?v=199"></script>
-<script src="js/donkho.js?v=199"></script>
-<script src="js/name.js?v=199"></script>
-<script src="js/chatcfg.js?v=199"></script>
-<script src="js/chat.js?v=199"></script>
-<script src="js/net.js?v=199"></script>
-<script src="js/ui20.js?v=199"></script>
-<script src="js/ui20win.js?v=203"></script>
-<script src="js/admin.js?v=202"></script>
-<script src="js/main.js?v=202"></script>
+<script src="js/gcfgdata.js"></script>
+<script src="js/gameconfig.js?v=363"></script>
+<script src="data.js?v=363"></script>
+<script src="setvi.js?v=363"></script>
+<script src="setfix.js?v=363"></script>
+<script src="world.js?v=363"></script>
+<script src="zones2.js?v=363"></script>
+<script src="jxmon.js?v=363"></script>
+<script src="sound.js?v=363"></script>
+<script src="fx.js?v=363"></script>
+<script src="jmo.js?v=363"></script>
+<script src="jmo2.js?v=363"></script>
+<script src="js/core.js?v=363"></script>
+<script src="js/mapobs.js?v=363"></script>
+<script src="js/jxmap.js?v=363"></script>
+<script src="js/stats.js?v=363"></script>
+<script src="js/vocong.js?v=363"></script>
+<script src="js/skillsys.js?v=363"></script>
+<script src="js/kytran.js?v=363"></script>
+<script src="js/loot.js?v=363"></script>
+<script src="rdata.js?v=363"></script>
+<script src="js/sets.js?v=363"></script>
+<script src="js/recipes.js?v=363"></script>
+<script src="js/combat.js?v=363"></script>
+<script src="js/field.js?v=363"></script>
+<script src="js/ride.js?v=363"></script>
+<script src="js/save.js?v=363"></script>
+<script src="js/party.js?v=363"></script>
+<script src="js/guard.js?v=363"></script>
+<script src="js/render.js?v=363"></script>
+<script src="js/jxmis.js?v=363"></script>
+<script src="jxstate.js?v=363"></script>
+<script src="fx2.js?v=363"></script>
+<script src="fx3.js?v=363"></script>
+<script src="fxjx.js?v=363"></script>
+<script src="js/skillfx.js?v=363"></script>
+<script src="js/look.js?v=363"></script>
+<script src="js/jxparts.js?v=363"></script>
+<script src="js/shadow.js?v=363"></script>
+<script src="js/audio.js?v=363"></script>
+<script src="js/ui.js?v=363"></script>
+<script src="js/control.js?v=363"></script>
+<script src="thanhanh_dest.js?v=363"></script>
+<script src="js/thanhanh.js?v=363"></script>
+<script src="js/npc.js?v=363"></script>
+<script src="js/bigmap.js?v=363"></script>
+<script src="js/admin.js?v=363"></script>
+<script src="js/shop.js?v=363"></script>
+<script src="js/potsel.js?v=363"></script>
+<script src="shopdata.js?v=363"></script>
+<script src="js/npcshop.js?v=363"></script>
+<script src="js/rewards.js?v=363"></script>
+<script src="js/title.js?v=363"></script>
+<script src="js/records.js?v=363"></script>
+<script src="js/horse.js?v=363"></script>
+<script src="js/thanma.js?v=363"></script>
+<script src="js/dungeon.js?v=363"></script>
+<script src="js/giangho.js?v=363"></script>
+<script src="js/forge.js?v=363"></script>
+<script src="js/epdo.js?v=363"></script>
+<script src="js/thuyen.js?v=363"></script>
+<script src="js/mode.js?v=363"></script>
+<script src="js/tabs2.js?v=363"></script>
+<script src="js/auto.js?v=363"></script>
+<script src="js/guide.js?v=363"></script>
+<script src="js/stash.js?v=363"></script>
+<script src="js/donkho.js?v=363"></script>
+<script src="js/name.js?v=363"></script>
+<script src="js/chatcfg.js?v=363"></script>
+<script src="js/api.js?v=363"></script>
+<script src="js/chat.js?v=363"></script>
+<script src="js/net.js?v=363"></script>
+<script src="js/presence.js?v=363"></script>
+<script src="js/ui20.js?v=363"></script>
+<script src="js/ui20win.js?v=363"></script>
+<script src="js/partyui.js?v=363"></script>
+<script src="js/hotkeys.js?v=363"></script>
+<script src="js/maptravel.js?v=363"></script>
+<script src="js/migu.js?v=363"></script>
+<script src="js/gcfg/maps.js?v=363"></script>
+<script src="js/gcfg/exp.js?v=363"></script>
+<script src="js/gcfg/shops.js?v=363"></script>
+<script src="js/gcfg/drops.js?v=363"></script>
+<script src="js/gcfg/monsters.js?v=363"></script>
+<script src="js/gcfg/player-edit.js?v=363"></script>
+<script src="js/main.js?v=363"></script>
+<script src="js/deploy.js?v=363"></script>
+<script src="js/wakelock.js"></script>
 </body>
 </html>

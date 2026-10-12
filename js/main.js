@@ -1,147 +1,351 @@
-/* ======================= KHOI DONG + VONG LAP ======================= */
-'use strict';
-let lastT = performance.now(), saveT = 0, uiT = 0, drawTog = false;
-/* Tuy chon hien thi luu rieng cho thiet bi (khong theo nhan vat): thu gon, co chu, tiet kiem pin */
-const UI_KEY = 'jxidle_ui', UI_FS = [0.9, 1, 1.15, 1.3], UI_FS_NAME = ['Nhỏ', 'Vừa', 'Lớn', 'Rất lớn'];
+"use strict";
+let lastT = performance.now(),
+  saveT = 0,
+  uiT = 0,
+  drawTog = !1;
+const UI_KEY = "jxidle_ui",
+  UI_FS = [0.9, 1, 1.15, 1.3],
+  UI_FS_NAME = ["Nhỏ", "Vừa", "Lớn", "Rất lớn"];
 let UIP = null;
 function uiPrefs() {
-  if (!UIP) { try { UIP = JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch (e) { UIP = {}; } }
-  UIP.fs = Number.isInteger(UIP.fs) && UIP.fs >= 0 && UIP.fs < UI_FS.length ? UIP.fs : 1; UIP.saver = !!UIP.saver; UIP.compact = !!UIP.compact;
-  return UIP;
-}
-function applyUiPrefs() { const p = uiPrefs(); document.documentElement.style.setProperty('--fs', UI_FS[p.fs]); document.body.classList.toggle('saver', p.saver); document.body.classList.toggle('compact', p.compact); }
-function setUiPref(o) { Object.assign(uiPrefs(), o); try { localStorage.setItem(UI_KEY, JSON.stringify(UIP)); } catch (e) { /* che do rieng tu */ } applyUiPrefs(); fitApp(); }
-function onZoneChange(z) { obsLoad(z.id); [H.x, H.y] = inWorld(H.x, H.y); for (const e of R.enemies) [e.x, e.y] = inWorld(e.x, e.y); for (const d of R.ground) [d.x, d.y] = inWorld(d.x, d.y); snapCamera(); R.bgImg = z.bg ? img(z.bg) : null; playMusic(z.id); preloadZoneSounds(z); if (curTab === 'log') refresh(); }
-function onStageChange() { if (curTab === 'log') refresh(); }
-function onLevelUp() { if (S.lvl === NEWBIE_LV && !rebornN()) log('🌱 Đạt cấp ' + NEWBIE_LV + ': hết <b>Hỗ Trợ Tân Thủ</b>.'); if (typeof autoMapCheck === 'function') autoMapCheck(); if (isNovice() && S.lvl >= NOVICE_LV && !R.quiet) { toast('Đạt cấp ' + NOVICE_LV + ': gia nhập môn phái!'); if ($('#modal').classList.contains('hidden')) joinModal(); } if (S.autoPts === true) { autoSpendAttrs(); autoSpendSkills(); } autoEquipAll(); if (!R.quiet) { checkHints(); updateDots(); renderPad(); dotGift(); if (LV_MS.some(m => m[0] === S.lvl)) toast(`Đạt mốc cấp ${S.lvl}: nhận quà ở nút 🎁`); } }
-/* Mo phong buoc co dinh 60 lan / giay + noi suy vi tri khi ve: chuyen dong deu, khong giat theo toc do khung hinh */
-const STEP = 1 / 60, MAX_STEPS = 10, LERP_MAX = 120;
-let simAcc = 0;
-function movers() { return [H, R.petPos].concat(R.enemies).filter(Boolean); }
-function simulateFrame(dt) {
-  simAcc += dt; let n = 0;
-  while (simAcc >= STEP && n < MAX_STEPS) {
-    for (const o of movers()) { o._px = o.x; o._py = o.y; }
-    tick(STEP);
-    simAcc -= STEP; n++;
-  }
-  if (n === MAX_STEPS) simAcc = 0;                       // may cham: bo phan tre, khong don buoc
-}
-function drawLerp(dt) {
-  const a = simAcc / STEP, list = movers().filter(o => o._px !== undefined && Math.hypot(o.x - o._px, o.y - o._py) < LERP_MAX);
-  for (const o of list) { o._cx = o.x; o._cy = o.y; o.x = o._px + (o.x - o._px) * a; o.y = o._py + (o.y - o._py) * a; }
-  try { draw(dt); }
-  finally { for (const o of list) { o.x = o._cx; o.y = o._cy; } }
-}
-/* Vong lap khong bao gio chet: moi buoc co try / catch rieng va luon dat lai requestAnimationFrame. Truoc day mot loi trong mot khung
-   (tick, ve, cap nhat giao dien) lam vong lap dung han, tro choi dung hinh va nut khong con tac dung.
-   Loi lap lai lien tuc: don trang thai chien dau (hieu ung, quai, vat roi tren dat) de thoat ket. */
-let loopErr = 0, loopLast = '';
-function guard(what, fn) {
-  try { fn(); loopErr = Math.max(0, loopErr - 0.02); }
-  catch (e) {
-    loopErr++; const k = what + ': ' + (e && e.message);
-    if (k !== loopLast) { loopLast = k; console.error('[loi vong lap]', what, e); }
-    if (loopErr > 30) {
-      loopErr = 0; R.fx = []; R.txt = []; R.enemies = [];
-      R.spawnT = 0.5; R.deadT = 0; simAcc = 0; R.quiet = false; closeModal(true);
+  if (!UIP)
+    try {
+      UIP = JSON.parse(localStorage.getItem(UI_KEY) || "{}") || {};
+    } catch {
+      UIP = {};
     }
+  return (
+    (UIP.fs = Number.isInteger(UIP.fs) && UIP.fs >= 0 && UIP.fs < UI_FS.length ? UIP.fs : 1),
+    (UIP.saver = !!UIP.saver),
+    (UIP.compact = !!UIP.compact),
+    UIP
+  );
+}
+function applyUiPrefs() {
+  const n = uiPrefs();
+  (document.documentElement.style.setProperty("--fs", UI_FS[n.fs]),
+    document.body.classList.toggle("saver", n.saver),
+    document.body.classList.toggle("compact", n.compact));
+}
+function setUiPref(n) {
+  Object.assign(uiPrefs(), n);
+  try {
+    localStorage.setItem(UI_KEY, JSON.stringify(UIP));
+  } catch {}
+  (applyUiPrefs(), fitApp());
+}
+function onZoneChange(n) {
+  (obsLoad(n.id), ([H.x, H.y] = inWorld(H.x, H.y)));
+  for (const e of R.enemies) [e.x, e.y] = inWorld(e.x, e.y);
+  for (const e of R.ground) [e.x, e.y] = inWorld(e.x, e.y);
+  (snapCamera(),
+    (R.bgImg = n.bg ? img(n.bg) : null),
+    playMusic(n.id),
+    preloadZoneSounds(n),
+    curTab === "log" && refresh());
+}
+function onStageChange() {
+  curTab === "log" && refresh();
+}
+function onLevelUp() {
+  // a disciple levelling up (js/party.js): its own points / gear / faction only, no map or UI changes
+  if (typeof PCTX < "u" && PCTX) {
+    (isNovice() &&
+      S.lvl >= NOVICE_LV &&
+      !R.quiet &&
+      toast(`${S.name} đạt cấp ${NOVICE_LV}: gia nhập môn phái ở thẻ Võ công`),
+      S.autoPts === !0 && (autoSpendAttrs(), autoSpendSkills()),
+      autoEquipAll(),
+      R.quiet || updateDots());
+    return;
+  }
+  (S.lvl === NEWBIE_LV && !rebornN() && log("🌱 Đạt cấp " + NEWBIE_LV + ": hết <b>Hỗ Trợ Tân Thủ</b>."),
+    typeof autoMapCheck == "function" && autoMapCheck(),
+    isNovice() &&
+      S.lvl >= NOVICE_LV &&
+      !R.quiet &&
+      (toast("Đạt cấp " + NOVICE_LV + ": gia nhập môn phái!"), $("#modal").classList.contains("hidden") && joinModal()),
+    S.autoPts === !0 && (autoSpendAttrs(), autoSpendSkills()),
+    autoEquipAll(),
+    R.quiet ||
+      (checkHints(),
+      updateDots(),
+      renderPad(),
+      dotGift(),
+      LV_MS.some((n) => n[0] === S.lvl) && toast(`Đạt mốc cấp ${S.lvl}: nhận quà ở nút 🎁`)));
+}
+const STEP = 1 / 60,
+  MAX_STEPS = 10,
+  LERP_MAX = 120;
+let simAcc = 0;
+function movers() {
+  return [H].concat(typeof partyN == "function" ? partyIdx().slice(1).map((k) => pAct(k).h) : [], R.enemies).filter(Boolean);
+}
+function simulateFrame(n) {
+  simAcc += n;
+  let e = 0;
+  for (; simAcc >= STEP && e < MAX_STEPS;) {
+    for (const o of movers()) ((o._px = o.x), (o._py = o.y));
+    (tick(STEP), (simAcc -= STEP), e++);
+  }
+  e === MAX_STEPS && (simAcc = 0);
+}
+function drawLerp(n) {
+  const e = simAcc / STEP,
+    o = movers().filter((t) => t._px !== void 0 && Math.hypot(t.x - t._px, t.y - t._py) < LERP_MAX);
+  for (const t of o)
+    ((t._cx = t.x), (t._cy = t.y), (t.x = t._px + (t.x - t._px) * e), (t.y = t._py + (t.y - t._py) * e));
+  try {
+    draw(n);
+  } finally {
+    for (const t of o) ((t.x = t._cx), (t.y = t._cy));
   }
 }
-function frame(now) {
-  const dt = Math.min(0.25, (now - lastT) / 1000); lastT = now;
-  guard('tay cam', gamepadPoll);
-  if (S.fac && !document.hidden) { guard('mo phong', () => simulateFrame(dt)); if (!uiPrefs().saver || (drawTog = !drawTog)) guard('ve', () => drawLerp(dt)); }
-  uiT += dt;
-  if (uiT > 0.1 && S.fac) {
-    uiT = 0;
-    guard('giao dien', () => {
-      updateTop(); updatePadCd();
-      if (R.logDirty && curTab === 'log') { R.logDirty = false; renderLogOnly(); }
-      if (invDirty && curTab === 'inv') renderInv();
-    });
+let loopErr = 0,
+  loopLast = "";
+function guard(n, e) {
+  try {
+    (e(), (loopErr = Math.max(0, loopErr - 0.02)));
+  } catch (o) {
+    loopErr++;
+    const t = n + ": " + (o && o.message);
+    (t !== loopLast && ((loopLast = t), console.error("[loi vong lap]", n, o)),
+      loopErr > 30 &&
+        ((loopErr = 0),
+        (R.fx = []),
+        (R.txt = []),
+        (R.enemies = []),
+        (R.spawnT = 0.5),
+        (R.deadT = 0),
+        (simAcc = 0),
+        (R.quiet = !1),
+        closeModal(!0)));
   }
-  saveT += dt;
-  if (saveT > 10 && S.fac) guard('luu', () => { saveT = 0; loginCheck(); achCheck(); dotGift(); actDot(); const el = R.activeT || 0; if (el > 30) S.kps = R.kills / el; save(); });
-  requestAnimationFrame(frame);
 }
-function showOffline(o) {
-  if (!o) return;
-  const h = Math.floor(o.secs / 3600), m = Math.floor(o.secs % 3600 / 60);
-  modal(`<h3>Chào mừng trở lại!</h3><p class="desc">Vắng mặt ${h ? h + ' giờ ' : ''}${m} phút, nhân vật vẫn luyện công tại ${esc(zoneOf(Math.min(S.stage, STAGES)).n)}.</p>
-    <div class="card stats"><span>Quái bị hạ</span><span>${fmt(o.kills)}</span><span>Kinh nghiệm</span><span>${fmt(o.xp)}</span>
-    <span>Ngân lượng</span><span>${fmt(o.gold)}</span><span>Cấp</span><span>${o.lv0} → ${o.lv1}</span><span>Vật phẩm</span><span>${o.got}${o.sold ? ` (+${o.sold} bán)` : ''}</span>
-    <span>Rương tu luyện</span><span>${o.chests || 0} / 3 mốc (1 · 4 · 8 giờ)</span></div>
-    ${o.chests ? '<p class="desc">Quà các mốc đã vào túi — xem nhật ký Giang hồ.</p>' : ''}
+function frame(n) {
+  const e = Math.min(0.25, (n - lastT) / 1e3);
+  ((lastT = n),
+    guard("tay cam", gamepadPoll),
+    // js/maptravel.js: no simulation while a map is loading, no drawing until a switched map is ready
+    S.fac &&
+      !document.hidden &&
+      ((typeof mgCheck != "function" || !mgCheck(!1)) && guard("mo phong", () => simulateFrame(e)),
+      (!uiPrefs().saver || (drawTog = !drawTog)) &&
+        (typeof mgCheck != "function" || !mgCheck(!0)) &&
+        guard("ve", () => drawLerp(e))),
+    (uiT += e),
+    uiT > 0.1 &&
+      S.fac &&
+      ((uiT = 0),
+      guard("giao dien", () => {
+        (updateTop(),
+          updatePadCd(),
+          R.logDirty && curTab === "log" && ((R.logDirty = !1), renderLogOnly()),
+          invDirty && curTab === "inv" && renderInv());
+      })),
+    (saveT += e),
+    saveT > 10 &&
+      S.fac &&
+      guard("luu", () => {
+        ((saveT = 0), loginCheck(), achCheck(), dotGift(), actDot());
+        const o = R.activeT || 0;
+        (o > 30 && (S.kps = R.kills / o), save());
+      }),
+    requestAnimationFrame(frame));
+}
+function showOffline(n) {
+  if (!n) return;
+  const e = Math.floor(n.secs / 3600),
+    o = Math.floor((n.secs % 3600) / 60);
+  modal(`<h3>Chào mừng trở lại!</h3><p class="desc">Vắng mặt ${e ? e + " giờ " : ""}${o} phút, nhân vật vẫn luyện công tại ${esc(zoneOf(Math.min(S.stage, STAGES)).n)}.</p>
+    <div class="card stats"><span>Quái bị hạ</span><span>${fmt(n.kills)}</span><span>Kinh nghiệm</span><span>${fmt(n.xp)}</span>
+    <span>Ngân lượng</span><span>${fmtL(n.gold)}</span><span>Cấp</span><span>${n.lv0} → ${n.lv1}</span><span>Vật phẩm</span><span>${n.got}${n.sold ? ` (+${n.sold} bán)` : ""}</span>
+    <span>Rương tu luyện</span><span>${n.chests || 0} / 3 mốc (1 · 4 · 8 giờ)</span></div>
+    ${n.chests ? '<p class="desc">Quà các mốc đã vào túi — xem nhật ký Giang hồ.</p>' : ""}
     <div class="btnrow"><button class="btn" onclick="closeModal()">Nhận</button></div>`);
 }
-/* Chieu cao that cua vung nhin (Safari / Chrome dien thoai: 100vh tinh ca phan bi thanh cong cu che -> thanh tab bi day xuong
-   duoi, khong cham duoc). Dat --app-h theo visualViewport moi khi doi kich thuoc. */
 function fitApp() {
-  document.body.classList.toggle('mob', isMobileUI());
-  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  if (h > 0) document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
-  if (CV) resizeArena();
+  document.body.classList.toggle("mob", isMobileUI());
+  const n = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  (n > 0 && document.documentElement.style.setProperty("--app-h", Math.round(n) + "px"), CV && resizeArena());
 }
-/* Che do thu gon: an bang thong tin + thanh tab, san dau chiem ca man hinh; nho theo trinh duyet */
-function setCompact(on) { setUiPref({ compact: on }); if (!on && S.fac) refresh(); }
-
-/* Giu sang man hinh khi treo may (Screen Wake Lock API) */
-let wakeLockObj = null;
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator && !wakeLockObj && document.visibilityState === 'visible') {
-      wakeLockObj = await navigator.wakeLock.request('screen');
-      wakeLockObj.addEventListener('release', () => { wakeLockObj = null; });
-    }
-  } catch (err) {}
+function setCompact(n) {
+  (setUiPref({ compact: n }), !n && S.fac && refresh());
 }
-
 function init() {
-  const pk = pickSlot(); SLOT = pk.slot;
-  if (pk.menu) { S = newSave(); }          // man hinh chon nhan vat: chua nap nhan vat nao
-  const had = pk.menu ? false : load();
-  CV = $('#arena'); CX = CV.getContext('2d');
-  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-t]'); if (b) showTab(b.dataset.t); });   // uy quyen su kien: khong mat khi gan lai onclick
-  $('#mClose').onclick = () => closeModal();
-  $('#giftBtn').onclick = () => { if (S.fac) { uiSfx('click'); giftModal(true); } };
-  $('#actBtn').onclick = () => { if (S.fac) { uiSfx('click'); openQuest('act'); } };
-  $('#modal').onclick = e => { if (e.target.id === 'modal') closeModal(); };
-  window.addEventListener('resize', fitApp); window.addEventListener('orientationchange', fitApp);
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitApp);
-  $('#compactBtn').onclick = () => setCompact(!document.body.classList.contains('compact'));
-  applyUiPrefs();
-  fitApp();
-  bindControls();
-  const unlock = () => { requestWakeLock(); audInit(); const z = zoneOf(Math.min(S.stage, STAGES)); preloadZoneSounds(z); if (AUD.music && sndCfg().music && AUD.music.paused) AUD.music.play().catch(() => {}); else if (!AUD.music && S.fac) playMusic(R.town ? W.town.id : z.id); };
-  document.addEventListener('pointerdown', unlock, true); document.addEventListener('keydown', unlock, true);
-  resizeArena(); [H.x, H.y] = inWorld(WORLD.w / 2, WORLD.h / 2); snapCamera(); restoreGround();
-  if (pk.menu) { slotMenu(); }
-  else if (!S.fac) { pickFaction(); }
+  const n = pickSlot();
+  ((SLOT = n.slot), n.menu && (S = newSave()));
+  const e = n.menu ? !1 : load();
+  ((CV = $("#arena")),
+    (CX = CV.getContext("2d")),
+    $("#tabs").addEventListener("click", (t) => {
+      if (t.target.closest("#tabRide")) {
+        typeof toggleMount == "function" && toggleMount();
+        return;
+      }
+      const i = t.target.closest("button[data-t]");
+      i && (i.dataset.t === "more" && typeof u20MoreMode < "u" && (u20MoreMode = "sys"), showTab(i.dataset.t));
+    }),
+    ($("#mClose").onclick = () => closeModal()),
+    ($("#giftBtn").onclick = () => {
+      S.fac && (uiSfx("click"), giftModal(!0));
+    }),
+    ($("#actBtn").onclick = () => {
+      S.fac && (uiSfx("click"), openQuest("act"));
+    }),
+    ($("#modal").onclick = (t) => {
+      t.target.id === "modal" && closeModal();
+    }),
+    window.addEventListener("resize", fitApp),
+    window.addEventListener("orientationchange", fitApp),
+    window.visualViewport && window.visualViewport.addEventListener("resize", fitApp),
+    ($("#compactBtn").onclick = () => setCompact(!document.body.classList.contains("compact"))),
+    applyUiPrefs(),
+    fitApp(),
+    bindControls());
+  const o = () => {
+    audInit();
+    const t = zoneOf(Math.min(S.stage, STAGES));
+    (preloadZoneSounds(t),
+      AUD.music && sndCfg().music && AUD.music.paused
+        ? AUD.music.play().catch(() => {})
+        : !AUD.music && S.fac && playMusic(R.town ? W.town.id : t.id));
+  };
+  if (
+    (document.addEventListener("pointerdown", o, !0),
+    document.addEventListener("keydown", o, !0),
+    resizeArena(),
+    ([H.x, H.y] = inWorld(...(typeof mapMid == "function" ? mapMid() : [WORLD.w / 2, WORLD.h / 2]))),
+    snapCamera(),
+    restoreGround(),
+    n.menu)
+  )
+    slotMenu();
+  else if (!S.fac) pickFaction();
   else {
-    recalc(); R.life = R.P.life; R.mana = R.P.mana;
-    if (had) { recalc(); showOffline(offlineGains()); }
-    showTab('log'); log('Tiếp tục hành tẩu giang hồ…');
-    if (window.__tampered) { log('<span class="dim">Dữ liệu lưu không khớp chữ ký (đã chỉnh sửa ngoài game): dùng bản sao lưu gần nhất nếu có.</span>'); toast('Phát hiện chỉnh sửa file lưu'); }
-    loginCheck(); dotGift(); actDot(); if (typeof autoMapCheck === 'function') { syncMaxStage(); if (S.mode !== 'quest' && S.autoMap !== false) autoMapCheck(); }
-    { let n = 0, k = 0; for (const it of S.inv.concat(Object.values(S.eq || {}), S.epBox || [])) { const c = vioDedup(it); if (c) { n += c; k++; } }
-      if (n) { R.dirty = true; log(`Sửa ${k} món Tím bị trùng dòng: gỡ ${n} dòng từ dòng trùng đầu tiên trở đi, trả lại đá thuộc tính để khảm lại.`); } }
-    if (window.SET_PURGED) { const n = window.SET_PURGED.reduce((a, b) => a + b, 0); window.SET_PURGED = null; log(`Đã xóa ${n} món thuộc bộ không còn trong game (Đằng Long, Tinh Sương…).`); }
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { if (S.fac) save(); }
-    else {
-      requestWakeLock();
-      if (S.fac && Date.now() - S.last > 60000) { R.dirty = true; recalc(); showOffline(offlineGains()); refresh(); }
+    if (
+      (delete S.jxLook,
+      delete S.lookFx,
+      recalc(),
+      (R.life = R.P.life),
+      (R.mana = R.P.mana),
+      e && (recalc(), showOffline(offlineGains())),
+      typeof XP_EVENT < "u" &&
+        expCfg("event", XP_EVENT) > 1 &&
+        log(`<b style="color:#ffd24a">🎉 Sự kiện toàn máy chủ: x${expCfg("event", XP_EVENT)} kinh nghiệm!</b>`),
+      showTab("log"),
+      log("Tiếp tục hành tẩu giang hồ…"),
+      // old save: give the 3 disciples once (js/party.js)
+      typeof partyEnsure == "function" &&
+        partyEnsure() &&
+        (log(
+          `🎎 Nhận ${S.party.length} đồ đệ: ${S.party.map((t) => `<b>${esc(t.name)}</b> (${FAC[t.fac].n} hệ ${SERIES[FAC[t.fac].series]})`).join(", ")}. Đổi tên / trang bị / kỹ năng ở các thẻ 1 2 3 4 trong bảng Nhân vật.`,
+        ),
+        toast(`Nhận ${S.party.length} đồ đệ`),
+        save()),
+      S.eqRebuildMsg)
+    ) {
+      const [t, i] = S.eqRebuildMsg;
+      (log(
+        `Hệ thống trang bị mới: bỏ Bạch Kim và Hoàng Kim lộ trình — thu hồi <b>${t}</b> món, hoàn <b class="up">${fmtL(i)}</b> lượng`,
+      ),
+        toast(`Thu hồi ${t} món, hoàn ${fmtL(i)} lượng`),
+        delete S.eqRebuildMsg,
+        save());
     }
-    lastT = performance.now();
-  });
-  window.addEventListener('pagehide', () => { if (S.fac) save(); });
-  window.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) closeModal(); });   // Esc dong hop thoai (hop thoai khoa thi bo qua)
-  if (typeof chatInit === 'function') try { chatInit(); } catch (e) { /* chat loi khong anh huong game */ }
-  if (typeof netInit === 'function') try { netInit(); } catch (e) { /* bo qua */ }
+    (S.petGold &&
+      (log(
+        `Đồng hành (thú nuôi) đã được thay bằng <b>đồ đệ</b>: thú cấp ${S.petGold[0]} đổi thành <b class="up">${fmtL(S.petGold[1])}</b> lượng.`,
+      ),
+      toast(`Thú đồng hành đổi thành ${fmtL(S.petGold[1])} lượng`),
+      delete S.petGold,
+      save()),
+      S.banMsg &&
+      (log(
+        `Hoàng Kim biến thể ([Cực phẩm], [Hoàn Mỹ], [Tinh Xảo]…), Dương Thần và đồ sự kiện (Hắc Thần, Thương Khung, Long Tương…) đã xóa khỏi game: thu hồi <b>${S.banMsg}</b> món`,
+      ),
+      delete S.banMsg,
+      save()),
+      S.horseEnhBack &&
+        (log(
+          `Ngựa không còn cường hóa: ngựa đã cường hóa về +0, hoàn lại <b class="up">${fmtL(S.horseEnhBack)}</b> lượng`,
+        ),
+        toast(`Hoàn ${fmtL(S.horseEnhBack)} lượng cường hóa ngựa`),
+        delete S.horseEnhBack,
+        save()),
+      window.__tampered &&
+        (log(
+          '<span class="dim">Dữ liệu lưu không khớp chữ ký (đã chỉnh sửa ngoài game): dùng bản sao lưu gần nhất nếu có.</span>',
+        ),
+        toast("Phát hiện chỉnh sửa file lưu")),
+      loginCheck(),
+      dotGift(),
+      actDot(),
+      typeof autoMapCheck == "function" && (syncMaxStage(), S.mode !== "quest" && S.autoMap !== !1 && autoMapCheck()));
+    {
+      let t = 0,
+        i = 0;
+      for (const a of S.inv.concat(Object.values(S.eq || {}), S.epBox || [])) {
+        const s = vioDedup(a);
+        s && ((t += s), i++);
+      }
+      t &&
+        ((R.dirty = !0),
+        log(
+          `Sửa ${i} món Tím bị trùng dòng: gỡ ${t} dòng từ dòng trùng đầu tiên trở đi, trả lại đá thuộc tính để khảm lại.`,
+        ));
+    }
+    if (window.SET_PURGED) {
+      const t = window.SET_PURGED.reduce((i, a) => i + a, 0);
+      ((window.SET_PURGED = null), log(`Đã xóa ${t} món thuộc bộ không còn trong game (Đằng Long, Tinh Sương…).`));
+    }
+  }
+  if (
+    (document.addEventListener("visibilitychange", () => {
+      (document.hidden
+        ? S.fac && save()
+        : S.fac && Date.now() - S.last > 6e4 && ((R.dirty = !0), recalc(), showOffline(offlineGains()), refresh()),
+        (lastT = performance.now()));
+    }),
+    window.addEventListener("pagehide", () => {
+      S.fac && save();
+    }),
+    window.addEventListener("keydown", (t) => {
+      t.key === "Escape" && !$("#modal").classList.contains("hidden") && closeModal();
+    }),
+    typeof chatInit == "function")
+  )
+    try {
+      chatInit();
+    } catch {}
+  if (typeof netInit == "function")
+    try {
+      netInit();
+    } catch {}
   requestAnimationFrame(frame);
-  requestWakeLock();
 }
-init();
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+(init(),
+  "serviceWorker" in navigator &&
+    location.protocol.startsWith("http") &&
+    navigator.serviceWorker.register("sw.js").catch(() => {}));
+const APP_V = 339;
+function appVerCheck() {
+  fetch("ver.json?t=" + Date.now(), { cache: "no-store" })
+    .then((n) => (n.ok ? n.json() : null))
+    .then((n) => {
+      if (!(!n || !(+n.v > APP_V))) {
+        try {
+          save();
+        } catch {}
+        // js/deploy.js: keeps the place (S.resume) and refuses to loop when ver.json runs ahead of APP_V
+        (typeof toast == "function" && toast("Có bản cập nhật mới — đang tải lại…"),
+          setTimeout(() => (typeof deployReload == "function" ? deployReload("ver") : location.reload()), 3e3));
+      }
+    })
+    .catch(() => {});
+}
+setInterval(appVerCheck, 300 * 1e3);
+// also when the tab comes back after a while (phones keep tabs asleep for hours)
+document.addEventListener("visibilitychange", () => {
+  document.hidden || Date.now() - (window.__verAt || 0) < 6e4 || ((window.__verAt = Date.now()), appVerCheck());
+});

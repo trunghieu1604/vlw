@@ -1,73 +1,133 @@
-/* ======================= CUA HANG BIEN KINH (BuySell.txt + Goods.txt) ======================= */
-'use strict';
-const SHOP_TABS = [['weapon', 'Vũ khí'], ['cloth', 'Trang phục'], ['jewel', 'Trang sức'], ['med', 'Dược phẩm'], ['horse', 'Ngựa'], ['sell', 'Bán đồ']];
-const POT_STACK = 10;
-let shopTab = 'weapon';
-/* v151: gia ngua ~1 gio treo may o cap yeu cau (truoc 5k-100k co dinh: 2-7 phut treo) */
-const HORSE_PRICE = { 1: 100000, 2: 100000, 3: 300000, 4: 300000, 5: 400000, 6: 400000, 7: 700000, 8: 700000, 9: 1000000, 10: 2000000 };
-if (J.shops && J.shops.horse) for (const g of J.shops.horse.items) if (g.g !== 1 && HORSE_PRICE[g.lvl]) g.price = HORSE_PRICE[g.lvl];
-
-function shopPrice(g) {
-  if (g.g === 1) { const p = potionOf(g); return Math.round((g.price || (p ? p.price : 50)) * (1 + S.lvl / 25)); } // nhu potPrice
-  const b = baseRow(g.d, g.k, g.lvl); return g.price || (b ? b.price : 100);
-}
-function potionOf(g) { return J.potions.find(p => p.kind === (g.d === 2 ? 'both' : g.d === 1 ? 'mana' : 'life') && p.tier === g.lvl); }
-/* he cua mon trang trong cua hang: theo bang neu co, khong thi chon 1 lan / mon va giu nguyen (xem truoc dung voi mon mua duoc) */
-const shopSeries = (g, it) => g.s >= 0 ? g.s : (g._s === undefined ? (g._s = it.s) : g._s);
-function goodsItem(g) { // mon mau de xem truoc (trang, khong thuoc tinh ma thuat)
-  const it = makeItem(g.d, g.k, g.lvl, 0); if (!it) return null;
-  S.uid--; it.uid = -1; it.s = shopSeries(g, it); return it;
-}
-function potStock(kind) { S.potStock = S.potStock || { life: {}, mana: {} }; return S.potStock[kind] || (S.potStock[kind] = {}); }
-function stockCount(kind) { return Object.values(potStock(kind)).reduce((a, b) => a + b, 0); }
-function takeStock(kind) { // thuoc da mua: dung loai tot nhat con trong tui truoc khi mua moi
-  const st = potStock(kind), tiers = Object.keys(st).map(Number).filter(t => st[t] > 0).sort((a, b) => b - a);
-  if (!tiers.length) return null;
-  const p = J.potions.find(x => x.kind === kind && x.tier === tiers[0]); if (!p) return null;
-  st[tiers[0]]--; return p;
-}
-function buyGoods(g) {
-  const price = shopPrice(g) * (g.g === 1 ? POT_STACK : 1);
-  if (S.gold < price) { toast('Không đủ ngân lượng'); return; }
-  if (g.g === 1) {
-    const p = potionOf(g); if (!p) return;
-    S.gold -= price; const st = potStock(p.kind); st[p.tier] = (st[p.tier] || 0) + POT_STACK;
-    toast(`Mua ${POT_STACK} ${p.n}`); uiSfx('use');
-  } else {
-    if (S.inv.length >= INV_MAX) { toast('Hành trang đầy'); return; }
-    const it = makeItem(g.d, g.k, g.lvl, 0); if (!it) return;
-    it.s = shopSeries(g, it);
-    S.gold -= price; addItem(it, true, true, true); toast(`Mua ${it.n}`); uiSfx('dropOther');
+"use strict";
+const SHOP_TABS = [
+    ["weapon", "Vũ khí"],
+    ["cloth", "Trang phục"],
+    ["jewel", "Trang sức"],
+    ["med", "Dược phẩm"],
+    ["sell", "Bán đồ"],
+  ],
+  POT_STACK = 10;
+let shopTab = "weapon";
+const HORSE_PRICE = { 1: 1e5, 2: 1e5, 3: 3e5, 4: 3e5, 5: 4e5, 6: 4e5, 7: 7e5, 8: 7e5, 9: 1e6, 10: 2e6 };
+if (J.shops && J.shops.horse)
+  for (const t of J.shops.horse.items) t.g !== 1 && HORSE_PRICE[t.lvl] && (t.price = HORSE_PRICE[t.lvl]);
+function shopPrice(t) {
+  if (t.g === 1) {
+    const o = potionOf(t);
+    return Math.round((t.price || (o ? o.price : 50)) * (1 + S.lvl / 25));
   }
-  save(); shopModal();
+  const s = baseRow(t.d, t.k, t.lvl);
+  return t.price || (s ? s.price : 100);
+}
+function potionOf(t) {
+  return J.potions.find((s) => s.kind === (t.d === 2 ? "both" : t.d === 1 ? "mana" : "life") && s.tier === t.lvl);
+}
+const shopSeries = (t, s) => (t.s >= 0 ? t.s : t._s === void 0 ? (t._s = s.s) : t._s);
+function goodsItem(t) {
+  const s = makeItem(t.d, t.k, t.lvl, 0);
+  return s ? (S.uid--, (s.uid = -1), (s.s = shopSeries(t, s)), s) : null;
+}
+function potStock(t) {
+  return ((S.potStock = S.potStock || { life: {}, mana: {} }), S.potStock[t] || (S.potStock[t] = {}));
+}
+function stockCount(t) {
+  return Object.values(potStock(t)).reduce((s, o) => s + o, 0);
+}
+function takeStock(t) {
+  const s = potStock(t),
+    o = Object.keys(s)
+      .map(Number)
+      .filter((n) => s[n] > 0)
+      .sort((n, l) => l - n);
+  if (!o.length) return null;
+  const e = J.potions.find((n) => n.kind === t && n.tier === o[0]);
+  return e ? (s[o[0]]--, e) : null;
+}
+function buyGoods(t) {
+  const s = shopPrice(t) * (t.g === 1 ? 10 : 1);
+  if (S.gold < s) {
+    toast("Không đủ ngân lượng");
+    return;
+  }
+  if (t.g === 1) {
+    const o = potionOf(t);
+    if (!o) return;
+    S.gold -= s;
+    const e = potStock(o.kind);
+    ((e[o.tier] = (e[o.tier] || 0) + 10), toast(`Mua 10 ${o.n}`), uiSfx("use"));
+  } else {
+    if (S.inv.length >= INV_MAX) {
+      toast("Hành trang đầy");
+      return;
+    }
+    const o = makeItem(t.d, t.k, t.lvl, 0);
+    if (!o) return;
+    ((o.s = shopSeries(t, o)), (S.gold -= s), addItem(o, !0, !0, !0), toast(`Mua ${o.n}`), uiSfx("dropOther"));
+  }
+  (save(), shopModal());
 }
 function shopModal() {
-  const f = FAC[S.fac], tabs = SHOP_TABS.filter(([k]) => k === 'sell' || (J.shops[k] && J.shops[k].items.length));
-  if (!tabs.find(t => t[0] === shopTab)) shopTab = tabs[0][0];
-  let body = '';
-  if (shopTab === 'sell') {
-    const bad = S.inv.filter(i => !lootMatch(i) && !sellProtected(i));
-    body = `<p class="desc">Bán món trong hành trang. Món không khớp bộ lọc: ${bad.length} (${fmt(bad.reduce((a, i) => a + itemValue(i), 0))} lượng). Đồ bộ / Tím / Bạch Kim không bị bán hàng loạt.</p>
+  const t = FAC[S.fac],
+    s = SHOP_TABS.filter(([e]) => e === "sell" || (J.shops[e] && J.shops[e].items.length));
+  s.find((e) => e[0] === shopTab) || (shopTab = s[0][0]);
+  let o = "";
+  if (shopTab === "sell") {
+    const e = S.inv.filter((n) => !lootMatch(n) && !sellProtected(n));
+    o = `<p class="desc">Bán món trong hành trang. Món không khớp bộ lọc: ${e.length} (${fmtL(e.reduce((n, l) => n + itemValue(l), 0))} lượng). Đồ bộ / Tím không bị bán hàng loạt.</p>
       <div class="btnrow"><button class="btn red" id="bSellBad">Bán đồ không khớp lọc</button></div>
-      <div class="invgrid">${S.inv.map(itemCell).join('')}</div>`;
+      <div class="invgrid">${S.inv.map(itemCell).join("")}</div>`;
   } else {
-    const list = J.shops[shopTab].items.filter(g => { if (g.g === 1) return true; const it = goodsItem(g); return !it || sexOk(it); }).slice().sort((a, b) => (a.d - b.d) || (a.k - b.k) || (a.lvl - b.lvl));
-    body = `<div class="shoplist">${list.map((g, i) => {
-      if (g.g === 1) {
-        const p = potionOf(g); if (!p) return '';
-        return `<button class="shoprow" data-i="${i}"><img src="${esc(p.ic || '')}" alt=""><span><b>${esc(p.n)}</b><small>Hồi ${fmt(p.total)} ${p.kind === 'mana' ? 'nội lực' : 'sinh lực'}${p.kind === 'both' ? ` + ${fmt(p.mtotal)} nội lực` : ''} trong ${p.dur}s · còn ${potStock(p.kind)[p.tier] || 0}</small></span><em>${fmt(shopPrice(g) * POT_STACK)} / ${POT_STACK}</em></button>`;
-      }
-      const it = goodsItem(g); if (!it) return '';
-      const own = shopTab === 'weapon' && f && weaponFits(it);
-      return `<button class="shoprow${reqOk(it) ? '' : ' bad'}${own ? ' own' : ''}" data-i="${i}"><img src="${esc(it.ic)}" alt=""><span><b>${esc(it.n)}</b><small>Cấp ${it.lvl}${it.s >= 0 ? ' · hệ ' + SERIES[it.s] : ''}${own ? ' · đúng loại vũ khí môn phái' : ''}</small></span><em>${fmt(shopPrice(g))}</em></button>`;
-    }).join('')}</div>`;
-    R.shopList = list;
+    const e = J.shops[shopTab].items
+      .filter((n) => {
+        if (n.g === 1) return !0;
+        const l = goodsItem(n);
+        return !l || sexOk(l);
+      })
+      .slice()
+      .sort((n, l) => n.d - l.d || n.k - l.k || n.lvl - l.lvl);
+    ((o = `<div class="shoplist">${e
+      .map((n, l) => {
+        if (n.g === 1) {
+          const i = potionOf(n);
+          return i
+            ? `<button class="shoprow" data-i="${l}"><img src="${esc(i.ic || "")}" alt=""><span><b>${esc(i.n)}</b><small>Hồi ${fmt(i.total)} ${i.kind === "mana" ? "nội lực" : "sinh lực"}${i.kind === "both" ? ` + ${fmt(i.mtotal)} nội lực` : ""} trong ${i.dur}s · còn ${potStock(i.kind)[i.tier] || 0}</small></span><em>${fmt(shopPrice(n) * 10)} / 10</em></button>`
+            : "";
+        }
+        const c = goodsItem(n);
+        if (!c) return "";
+        const r = shopTab === "weapon" && t && weaponFits(c);
+        return `<button class="shoprow${reqOk(c) ? "" : " bad"}${r ? " own" : ""}" data-i="${l}"><img src="${esc(c.ic)}" alt=""><span><b>${esc(c.n)}</b><small>Cấp ${c.lvl}${c.s >= 0 ? " · hệ " + SERIES[c.s] : ""}${r ? " · đúng loại vũ khí môn phái" : ""}</small></span><em>${fmt(shopPrice(n))}</em></button>`;
+      })
+      .join("")}</div>`),
+      (R.shopList = e));
   }
-  modal(`<h3>Cửa hàng ${esc(W.town.n)} <small>${fmt(S.gold)} lượng</small></h3>
-    <div class="dtabs">${tabs.map(([k, n]) => `<button data-t="${k}" class="${k === shopTab ? 'on' : ''}">${n}</button>`).join('')}</div>${body}`, () => {
-    document.querySelectorAll('#mBody .dtabs button').forEach(b => b.onclick = () => { shopTab = b.dataset.t; shopModal(); });
-    document.querySelectorAll('#mBody .shoprow').forEach(b => b.onclick = () => buyGoods(R.shopList[+b.dataset.i]));
-    const sb = $('#bSellBad'); if (sb) sb.onclick = () => { sellUnmatched(); save(); shopModal(); };
-    document.querySelectorAll('.mbox .invgrid .it').forEach(b => b.onclick = () => { const it = findItem(b.dataset.uid); if (it) { sell(it); shopTab = 'sell'; shopModal(); } });
-  });
+  modal(
+    `<h3>Cửa hàng ${esc(W.town.n)} <small>${fmtL(S.gold)} lượng</small></h3>
+    <div class="dtabs">${s.map(([e, n]) => `<button data-t="${e}" class="${e === shopTab ? "on" : ""}">${n}</button>`).join("")}${typeof npcTownShopId == "function" && npcTownShopId() ? '<button id="bNpcJx">Cửa hàng JX1</button>' : ""}</div>${o}`,
+    () => {
+      (document.querySelectorAll("#mBody .dtabs button").forEach(
+        (n) =>
+          (n.onclick = () => {
+            ((shopTab = n.dataset.t), shopModal());
+          }),
+      ),
+        document
+          .querySelectorAll("#mBody .shoprow")
+          .forEach((n) => (n.onclick = () => buyGoods(R.shopList[+n.dataset.i]))));
+      const jx = $("#bNpcJx"); // JX1 merchants of this town (js/npcshop.js)
+      jx && (jx.onclick = () => npcTownShop("general"));
+      const e = $("#bSellBad");
+      (e &&
+        (e.onclick = () => {
+          (sellUnmatched(), save(), shopModal());
+        }),
+        document.querySelectorAll(".mbox .invgrid .it").forEach(
+          (n) =>
+            (n.onclick = () => {
+              const l = findItem(n.dataset.uid);
+              l && (sell(l), (shopTab = "sell"), shopModal());
+            }),
+        ));
+    },
+  );
 }

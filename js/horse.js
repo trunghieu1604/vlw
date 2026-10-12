@@ -1,170 +1,488 @@
-/* ======================= MA TRUONG: THUAN DUONG NGUA + SO NGUA =======================
-   Ngua (o 'horse', mua o cua hang hoac roi tu trum / pho ban) co them cap thuan duong 0..20 luu tren chinh mon do (it.hlv, it.hxp):
-   - moi cap +4% cac chi so duong cua ngua (toc do, sinh luc, ...), phat ne tranh (adddefense_v am cua ngua thuong) giam 5% / cap -> cap 20 het phat
-   - ngua len cap khi dang cuoi va ha quai (thuong 1, tinh anh 3, trum 10 diem) hoac cho an bang ngan luong
-   - chuyen thuan duong sang ngua moi: giu 80% cap
-   So ngua: moi loai ngua tung cuoi ha quai +1% sinh luc toi da (toi da 10%).
-   Toc do di chuyen (fastwalkrun_p) con rut ngan thoi gian cho giua cac dot quai (mountHaste). */
-'use strict';
-const HORSE_MAX = 20, HORSE_UP = 0.04, HORSE_PEN = 0.05, HORSE_FEED_XP = 25, HORSE_KEEP = 0.8, HBOOK_MAX = 10;
-/* v150: ngua hiem hon - trum bai (3 phut / con) 0.3%, Trum Hoang Kim 2%, pho ban x0.4, Boss tuan hang S 15% */
-const HORSE_DROP = { boss: 0.003, gb: 0.02, dg: 0.4, wbS: 0.15 };
-const HORSE_RARE = [5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21];
-const isHorse = it => !!it && it.d === 10;
-const horseLv = it => (it && it.hlv) | 0;
-const horseNeed = lv => 40 + lv * 35;
-/* Gia tri thuoc tinh goc cua ngua sau thuan duong */
-function horseAdj(it, v) {
-  if (!isHorse(it)) return v;
-  const lv = horseLv(it);
-  return v >= 0 ? v * (1 + HORSE_UP * lv) : v * Math.max(0, 1 - HORSE_PEN * lv);
-}
-const horseBook = () => S.hbook || (S.hbook = {});
-const horseBookCount = () => Object.keys(horseBook()).length;
-function horseAttr(A) { const n = Math.min(HBOOK_MAX, horseBookCount()); if (n) addAttr(A, 'lifemax_p', [n, 0, 0]); }
-function horseKindName(k) { const b = horseBook()[k]; if (typeof b === 'string') return b; if (isNaN(+k)) return k; const g = J.items[10]; const r = g && g.list.find(x => x.k === +k); return r ? r.n.replace(/\s+\d+$/, '') : 'Ngựa'; }
-
-function horseGainXp(n, quiet) {
-  const it = S.eq.horse; if (!isHorse(it)) return false;
-  const book = horseBook(), key = it.n.replace(/\s+\d+$/, '');
-  if (!book[key]) { if (book[it.k] === key) delete book[it.k]; book[key] = key; R.dirty = true; if (!quiet && !R.quiet) log(`Sổ ngựa: thêm <b>${esc(key)}</b> (${horseBookCount()} loài, +${Math.min(HBOOK_MAX, horseBookCount())}% sinh lực)`); }
-  if (horseLv(it) >= HORSE_MAX) return false;
-  it.hxp = (it.hxp || 0) + n; let up = false;
-  while (horseLv(it) < HORSE_MAX && it.hxp >= horseNeed(horseLv(it))) { it.hxp -= horseNeed(horseLv(it)); it.hlv = horseLv(it) + 1; up = true; }
-  if (horseLv(it) >= HORSE_MAX) it.hxp = 0;
-  if (up) {
-    R.dirty = true; invDirty = true;
-    if (!R.quiet) { log(`<b class="up">${esc(it.n)}</b> thuần dưỡng lên cấp ${it.hlv}`); if (!quiet) addText(H.x, H.y - 70, `Ngựa cấp ${it.hlv}`, '#ffd24a', 12); }
-    if (typeof recSet === 'function') recSet('horseLv', it.hlv, { n: it.n });
+"use strict";
+const HORSE_MAX = 20,
+  HORSE_UP = 0.04,
+  HORSE_PEN = 0.05,
+  HORSE_FEED_XP = 100,
+  HORSE_KEEP = 0.8,
+  HBOOK_MAX = 10,
+  HORSE_DROP = { boss: 0.003, gb: 0.02, dg: 0.4, wbS: 0.15 },
+  HORSE_RARE = [5, 6, 7, 8, 9, 11, 13, 19, 20, 21, 22],
+  isHorse = (n) => !!n && n.d === 10,
+  horseLv = (n) => (n && n.hlv) | 0,
+  horseNeed = (n) => 40 + n * 35,
+  HORSE_KILL_K = 1 / 3;
+if (typeof J != "undefined" && J.items && J.items[10] && J.items[10].list) {
+  for (const h of J.items[10].list) {
+    if (h.n === "Sư tử" || h.k === 22) {
+      h.req = (h.req || []).map((r) => (r[0] === 36 ? [36, 1] : r));
+    }
   }
-  return up;
 }
-const horseFeedCost = it => Math.round((300 + S.lvl * 80) * (1 + horseLv(it) * 0.2));
-function horseFeed(times = 1) {
-  const it = S.eq.horse; if (!isHorse(it)) return { ok: false, msg: 'Chưa cưỡi ngựa' };
-  let n = 0, spent = 0;
-  for (; n < times && horseLv(it) < HORSE_MAX; n++) { const c = horseFeedCost(it); if (S.gold < c) break; S.gold -= c; spent += c; horseGainXp(HORSE_FEED_XP, true); }
-  if (!n) return { ok: false, msg: horseLv(it) >= HORSE_MAX ? 'Ngựa đã thuần dưỡng tối đa' : 'Không đủ ngân lượng' };
-  save(); return { ok: true, msg: `Cho ăn ${n} lần (−${fmt(spent)} lượng) · cấp ${horseLv(it)}` };
+function horseAdj(n, s) {
+  if (!isHorse(n)) return s;
+  const t = horseLv(n);
+  return s >= 0 ? s * (1 + 0.04 * t) : s * Math.max(0, 1 - 0.05 * t);
 }
-const horseMoveCost = () => Math.round(2000 * (1 + S.lvl / 10));
-function horseTransfer(to) {
-  const from = S.eq.horse;
-  if (!isHorse(from) || !isHorse(to) || from === to || !(S.inv.includes(to) || stable().includes(to))) return { ok: false, msg: 'Chọn một ngựa trong hành trang' };
-  const lv = Math.floor(horseLv(from) * HORSE_KEEP); if (lv <= horseLv(to)) return { ok: false, msg: 'Ngựa nhận đã có cấp cao hơn hoặc bằng' };
-  if (!payGold(horseMoveCost())) return { ok: false, msg: 'Không đủ ngân lượng' };
-  to.hlv = lv; to.hxp = 0; from.hlv = 0; from.hxp = 0;
-  R.dirty = true; invDirty = true; save();
-  return { ok: true, msg: `Chuyển thuần dưỡng: ${to.n} cấp ${lv}` };
+const horseBook = () => S.hbook || (S.hbook = {}),
+  horseBookCount = () => Object.keys(horseBook()).length,
+  HC_TIERS = [
+    ["Thường", "#b08a5a", 1],
+    ["Tốt", "#5fd46a", 1],
+    ["Quý", "#5fb8ff", 2],
+    ["Thần", "#c77dff", 3],
+    ["Danh mã", "#ff9a3c", 4],
+    ["Bảo mã", "#ff5a5a", 5],
+    ["Chí tôn", "#ffd24a", 6],
+  ],
+  HC_KIND = {
+    5: 3,
+    14: 3,
+    15: 3,
+    17: 3,
+    22: 3,
+    23: 3,
+    24: 3,
+    25: 3,
+    6: 4,
+    8: 4,
+    9: 5,
+    11: 5,
+    13: 5,
+    31: 5,
+    32: 5,
+    7: 6,
+    16: 6,
+    18: 6,
+    19: 6,
+    20: 6,
+    21: 6,
+    30: 6,
+  },
+  hcKey = (n) => (n.n || "").replace(/\s+\d+$/, "").toLowerCase();
+function hcTier(n) {
+  return isHorse(n) ? (n.k <= 4 ? (n.lvl <= 4 ? 0 : n.lvl <= 8 ? 1 : 2) : (HC_KIND[n.k] ?? -1)) : -1;
 }
-/* Ngua roi ra: loai thuong (0..4) hoac hiem; bac cao nhat ma nhan vat cuoi duoc ngay */
-function horseRoll(rare) {
-  const g = J.items[10]; if (!g) return null;
-  const lvReq = r => (r.req.find(q => q[0] === 36) || [0, 0])[1];
-  const kinds = rare ? HORSE_RARE : [0, 1, 2, 3, 4];
-  const ok = kinds.map(k => g.list.filter(r => r.k === k && sexReqOk(r.req) && lvReq(r) <= eqLevel())).filter(l => l.length);
-  if (!ok.length) return rare ? horseRoll(false) : null;
-  const rows = pick(ok), row = rows.reduce((b, r) => (r.lvl > b.lvl ? r : b));
-  const it = makeItem(10, row.k, row.lvl, 0); if (!it) return null;
-  if (rare) { it.r = 2; it.rareH = 1; }                   // ngua hiem: vien Vang (nhu JX1, mau Tim chi danh cho do kham Huyen Tinh)
-  return it;
+let HC_ALL = null;
+function hcAll() {
+  if (HC_ALL) return HC_ALL;
+  const n = J.items[10],
+    s = new Map();
+  for (const t of n ? n.list : []) {
+    const e = hcTier(Object.assign({}, t, { d: 10 })),
+      o = hcKey(t);
+    e >= 0 && !s.has(o) && s.set(o, [t.n.replace(/\s+\d+$/, ""), e]);
+  }
+  return (HC_ALL = s);
 }
-function horseOnKill(e) {
-  horseGainXp(e.cls === 'boss' ? 10 : e.cls === 'elite' ? 3 : 1);
-  if (e.cls !== 'boss' || R.dg || S.lvl < 20) return;
-  if (Math.random() < (e.goldBoss ? HORSE_DROP.gb : HORSE_DROP.boss)) { const it = e.goldBoss ? rareHorse() : horseRoll(false); if (it) { dropToGround(it, e); log(`🐎 <b style="color:${RAR_COL[it.r]}">${esc(it.n)}</b> rơi ra!`); } }
+function hcOwned() {
+  const n = new Map();
+  for (const s of stable().concat(isHorse(S.eq.horse) ? [S.eq.horse] : [])) {
+    const t = hcTier(s);
+    t >= 0 && n.set(hcKey(s), t);
+  }
+  return n;
+}
+function hcBonus() {
+  const n = hcOwned();
+  let s = 0;
+  for (const t of n.values()) s += HC_TIERS[t][2];
+  return { n: n.size, hp: n.size, xp: s };
+}
+function horseFixReq(n) {
+  if (!isHorse(n) || !n.req) return;
+  const s = n.req.find((e) => e[0] === 36);
+  if (!s) return;
+  let t = null;
+  if (n.thanma) {
+    const e = typeof tmDef == "function" && tmDef(n.thanma);
+    e && (t = e[4]);
+  } else {
+    const e = J.items[10] && J.items[10].list.find((r) => r.k === n.k && r.lvl === n.lvl),
+      o = e && e.req.find((r) => r[0] === 36);
+    o && (t = o[1]);
+  }
+  t != null && s[1] !== t && (s[1] = t);
+}
+function horseAttr(n) {
+  for (const t of stable().concat(S.inv.filter(isHorse), isHorse(S.eq.horse) ? [S.eq.horse] : [])) horseFixReq(t);
+  const s = hcBonus();
+  (s.hp && addAttr(n, "lifemax_p", [s.hp, 0, 0]), s.xp && addAttr(n, "expenhance_p", [s.xp, 0, 0]));
+}
+function horseKindName(n) {
+  const s = horseBook()[n];
+  if (typeof s == "string") return s;
+  if (isNaN(+n)) return n;
+  const t = J.items[10],
+    e = t && t.list.find((o) => o.k === +n);
+  return e ? e.n.replace(/\s+\d+$/, "") : "Ngựa";
+}
+function horseGainXp(n, s) {
+  const t = S.eq.horse;
+  if (!isHorse(t)) return !1;
+  const e = horseBook(),
+    o = t.n.replace(/\s+\d+$/, "");
+  if ((e[o] || (e[t.k] === o && delete e[t.k], (e[o] = o)), horseLv(t) >= 20)) return !1;
+  t.hxp = (t.hxp || 0) + n;
+  let r = !1;
+  for (; horseLv(t) < 20 && t.hxp >= horseNeed(horseLv(t));)
+    ((t.hxp -= horseNeed(horseLv(t))), (t.hlv = horseLv(t) + 1), (r = !0));
+  return (
+    horseLv(t) >= 20 && (t.hxp = 0),
+    r &&
+      ((R.dirty = !0),
+      (invDirty = !0),
+      R.quiet ||
+        (log(`<b class="up">${esc(t.n)}</b> thuần dưỡng lên cấp ${t.hlv}`),
+        s || addText(H.x, H.y - 70, `Ngựa cấp ${t.hlv}`, "#ffd24a", 12)),
+      typeof recSet == "function" && recSet("horseLv", t.hlv, { n: t.n })),
+    r
+  );
+}
+const horseFeedCost = (n) => 3 + Math.floor(horseLv(n) / 2);
+function horseFeed(n = 1) {
+  const s = S.eq.horse;
+  if (!isHorse(s)) return { ok: !1, msg: "Chưa cưỡi ngựa" };
+  let t = 0,
+    e = 0;
+  for (; t < n && horseLv(s) < 20; t++) {
+    const o = horseFeedCost(s);
+    if ((S.knb | 0) < o) break;
+    ((S.knb = (S.knb | 0) - o), (e += o), horseGainXp(100, !0));
+  }
+  return t
+    ? (save(), { ok: !0, msg: `Cho ăn ${t} lần (−${e} KNB) · cấp ${horseLv(s)}` })
+    : { ok: !1, msg: horseLv(s) >= 20 ? "Ngựa đã thuần dưỡng tối đa" : "Không đủ Kim Nguyên Bảo" };
+}
+const horseMoveCost = () => Math.round(2e3 * (1 + S.lvl / 10));
+function horseTransfer(n) {
+  const s = S.eq.horse;
+  if (!isHorse(s) || !isHorse(n) || s === n || !(S.inv.includes(n) || stable().includes(n)))
+    return { ok: !1, msg: "Chọn một ngựa trong hành trang" };
+  const t = Math.floor(horseLv(s) * 0.8);
+  return t <= horseLv(n)
+    ? { ok: !1, msg: "Ngựa nhận đã có cấp cao hơn hoặc bằng" }
+    : payGold(horseMoveCost())
+      ? ((n.hlv = t),
+        (n.hxp = 0),
+        (s.hlv = 0),
+        (s.hxp = 0),
+        (R.dirty = !0),
+        (invDirty = !0),
+        save(),
+        { ok: !0, msg: `Chuyển thuần dưỡng: ${n.n} cấp ${t}` })
+      : { ok: !1, msg: "Không đủ ngân lượng" };
+}
+function horseRoll(n) {
+  const s = J.items[10];
+  if (!s) return null;
+  const t = (c) => (c.req.find((l) => l[0] === 36) || [0, 0])[1],
+    o = (n ? HORSE_RARE : [0, 1, 2, 3, 4])
+      .map((c) => s.list.filter((l) => l.k === c && sexReqOk(l.req) && t(l) <= eqLevel()))
+      .filter((c) => c.length);
+  if (!o.length) return n ? horseRoll(!1) : null;
+  const r = pick(o),
+    h = r.reduce((c, l) => (l.lvl > c.lvl ? l : c)),
+    a = makeItem(10, h.k, h.lvl, 0);
+  return a ? (n && ((a.r = 2), (a.rareH = 1)), a) : null;
+}
+const HB_TIERS = [
+    ["Thường", 0.56, 0, 0],
+    ["Tốt", 0.315, 1, 1],
+    ["Quý", 0.06, 2, 2],
+    ["Thần", 0.03, 3, 3],
+    ["Danh mã", 0.02, 3, 4],
+    ["Bảo mã", 0.01, 4, 5],
+    ["Chí tôn", 0.005, 4, 6],
+  ],
+  HB_DROP = { boss: 0.02, gb: 0.25, dg: 0.5 },
+  horseBoxHave = () => matHave("misc", "rngua");
+function horseBoxGive(n, s) {
+  (matAdd("misc", "rngua", n),
+    (invDirty = !0),
+    s && !R.quiet && log(`🎁 ${s}: nhận <b style="color:#ffd24a">${n} Rương Ngựa</b> (Kỳ Trân Các › Thú cưỡi › Dùng)`));
+}
+function horseBoxOpen() {
+  const n = J.items[10];
+  if (!n) return "Rương trống";
+  let s = Math.random(),
+    t = HB_TIERS.length - 1;
+  for (let u = 0; u < HB_TIERS.length; u++) {
+    if (s < HB_TIERS[u][1]) {
+      t = u;
+      break;
+    }
+    s -= HB_TIERS[u][1];
+  }
+  const [e, , o, r] = HB_TIERS[t],
+    h = n.list.filter((u) => hcTier(Object.assign({}, u, { d: 10 })) === r && sexReqOk(u.req));
+  if (!h.length) return "Rương trống";
+  const a = {};
+  for (const u of h) (a[u.n.replace(/\s+\d+$/, "").toLowerCase()] ||= []).push(u);
+  const c = pick(pick(Object.values(a))),
+    l = makeItem(10, c.k, c.lvl, 0);
+  return l
+    ? ((l.r = o),
+      t >= 2 && ((l.rareH = 1), (l.lock = 1)),
+      (l.hbt = t),
+      horseFixReq(l),
+      addItem(l, !0, !0, !0),
+      t >= 2 &&
+        log(
+          `🐎 <b style="color:#ffd24a">Rương Ngựa: ngựa ${e}!</b> Nhận <b style="color:${RAR_COL[l.r]}">${esc(l.n)}</b> (tự khóa 🔒)`,
+        ),
+      `Rương Ngựa (${e}): ${l.n}`)
+    : "Rương trống";
+}
+function horseBoxUse(n = 1) {
+  const s = [];
+  let t = 0;
+  for (; t < n && !(horseBoxHave() < 1); t++) {
+    if (S.inv.length >= INV_MAX) {
+      s.push("Hành trang đầy");
+      break;
+    }
+    (matAdd("misc", "rngua", -1), s.push(horseBoxOpen()));
+  }
+  if (!t) {
+    toast(horseBoxHave() < 1 ? "Không có Rương Ngựa" : "Hành trang đầy");
+    return;
+  }
+  (log(
+    `🎁 Mở ${t} Rương Ngựa: ${esc(
+      s
+        .filter((e) => e !== "Hành trang đầy")
+        .map((e) => e.replace(/^Rương Ngựa /, ""))
+        .join(" · "),
+    )}`,
+  ),
+    toast(t > 1 ? `Mở ${t} Rương Ngựa` : s[0]),
+    uiSfx("learn"),
+    (R.dirty = !0),
+    (invDirty = !0),
+    save(),
+    refresh());
+}
+function horseOnKill(n) {
+  (horseGainXp((n.cls === "boss" ? 10 : n.cls === "elite" ? 3 : 1) * HORSE_KILL_K),
+    !(n.cls !== "boss" && !n.goldBoss) &&
+      Math.random() < (n.goldBoss ? HB_DROP.gb : HB_DROP.boss) &&
+      horseBoxGive(1, n.goldBoss ? "Trùm Hoàng Kim" : "Hạ trùm"));
 }
 const mountHaste = () => clamp(R.P ? R.P.speed : 1, 1, 1.8);
-
-/* ---------- hieu ung phi ngua: bui duoi chan khi di chuyen ---------- */
-function drawMount(c, dt) {
-  if (!S.eq.horse || !R.mounted || S.lowFx) { R.dust = null; return; }
-  const D = R.dust || (R.dust = []);
-  if (H.moving && R.deadT <= 0) { R.dustT = (R.dustT || 0) - dt; if (R.dustT <= 0) { R.dustT = 0.07; D.push({ x: H.x + rnd(-8, 8), y: H.y + rnd(-2, 3), life: 0.55 }); } }
-  for (const d of D) { d.life -= dt; const a = clamp(d.life / 0.55, 0, 1); c.globalAlpha = a * 0.45; c.fillStyle = (lookOn() && R.look && R.look.dust) || '#b89c6c'; c.beginPath(); c.ellipse(d.x, d.y, 4 + (1 - a) * 9, 2 + (1 - a) * 3, 0, 0, 7); c.fill(); }
-  c.globalAlpha = 1; R.dust = D.filter(d => d.life > 0);
-}
-
-/* ---------- Ma Truong: noi chua ngua (S.stable) ---------- */
-const STABLE_MAX = 30;
-const stable = () => S.stable || (S.stable = []);
-function stableIn(it) {
-  if (!isHorse(it) || !S.inv.includes(it)) return { ok: false, msg: 'Chọn ngựa trong hành trang' };
-  if (stable().length >= STABLE_MAX) return { ok: false, msg: `Mã Trường đầy (${STABLE_MAX})` };
-  S.inv = S.inv.filter(x => x !== it); stable().push(it); invDirty = true; save();
-  return { ok: true, msg: 'Đã đưa ' + it.n + ' vào Mã Trường' };
-}
-function stableOut(it) {
-  const st = stable(); if (!st.includes(it)) return { ok: false, msg: 'Không có trong Mã Trường' };
-  if (S.inv.length >= INV_MAX) return { ok: false, msg: 'Hành trang đầy' };
-  S.stable = st.filter(x => x !== it); S.inv.unshift(it); invDirty = true; save();
-  return { ok: true, msg: 'Lấy ' + it.n + ' ra hành trang' };
-}
-/* cuoi ngua tu Ma Truong / hanh trang: ngua dang cuoi ve Ma Truong (day thi ve hanh trang) */
-function stableRide(it) {
-  if (!isHorse(it)) return { ok: false, msg: 'Không phải ngựa' };
-  if (!reqOk(it)) return { ok: false, msg: 'Chưa đủ điều kiện: ' + reqProblems(it).join('; ') };
-  const old = S.eq.horse;
-  S.stable = stable().filter(x => x !== it); S.inv = S.inv.filter(x => x !== it);
-  S.eq.horse = it;
-  if (old && old !== it) { if (stable().length < STABLE_MAX) stable().push(old); else S.inv.unshift(old); }
-  R.dirty = true; invDirty = true; R.rideCd = 0; if (typeof setMount === 'function') setMount(true, true); save();
-  return { ok: true, msg: 'Cưỡi ' + it.n };
-}
-/* o Ngua o the Nhan vat: chon ngua trong Ma Truong / hanh trang de cuoi */
-function horsePickModal() {
-  const cur = S.eq.horse, list = stable().map(h => [h, 'st']).concat(S.inv.filter(isHorse).map(h => [h, 'inv']));
-  const row = ([h, w]) => `<div class="qrow"><span><b style="color:${RAR_COL[h.r]}">${esc(h.n)}</b><small>${w === 'st' ? 'Mã Trường' : 'Hành trang'} · cấp yêu cầu ${(h.req.find(q => q[0] === 36) || [0, 0])[1]} · thuần dưỡng ${horseLv(h)} · ${esc(horseStatLine(h))}</small></span>
-    <span class="btnrow"><button class="btn sm" data-hr="${h.uid}" ${reqOk(h) ? '' : 'disabled'}>Cưỡi</button></span></div>`;
-  modal(`<h3>Chọn ngựa <small>${stable().length}/${STABLE_MAX} trong Mã Trường</small></h3>
-    ${cur ? `<div class="card"><b style="color:${RAR_COL[cur.r]}">${esc(cur.n)}</b> <small class="dim">đang dùng · thuần dưỡng ${horseLv(cur)}</small><p class="small">${esc(horseStatLine(cur))}</p>
-      <div class="btnrow"><button class="btn" id="hpInfo">Chi tiết</button><button class="btn" id="hpBack" ${stable().length < STABLE_MAX ? '' : 'disabled'}>Cất vào Mã Trường</button></div></div>` : ''}
-    ${list.length ? list.map(row).join('') : '<p class="dim small">Chưa có ngựa nào khác. Ngựa nhặt được nằm trong hành trang, bấm vào ngựa → "Cất vào Mã Trường".</p>'}
-    <div class="btnrow"><button class="btn" id="hpStable">Mở Mã Trường</button></div>`, () => {
-    document.querySelectorAll('#mBody [data-hr]').forEach(b => b.onclick = () => { const h = list.map(x => x[0]).find(x => x.uid === +b.dataset.hr); const r = stableRide(h); toast(r.msg); if (r.ok) { uiSfx('equipCloth'); refresh(); } horsePickModal(); });
-    const bi = $('#hpInfo'); if (bi) bi.onclick = () => itemModal(cur, 'horse');
-    const bb = $('#hpBack'); if (bb) bb.onclick = () => { delete S.eq.horse; stable().push(cur); R.mounted = false; R.dirty = true; invDirty = true; save(); refresh(); horsePickModal(); };
-    const bs = $('#hpStable'); if (bs) bs.onclick = () => { if (typeof actModal === 'function') actModal('horse'); };
-  });
-}
-
-/* ---------- giao dien ---------- */
-function horseStatLine(it) {
-  const parts = [];
-  for (const [id, mn, mx] of it.base) {
-    const nm = attrName(id); if (nm === 'staminamax_v') continue;
-    const v = Math.round(horseAdj(it, (mn + mx) / 2 * enhMul(it)));
-    parts.push(attrText(nm, [v, 0, v]));
+function drawMount(n, s) {
+  if (!S.eq.horse || !R.mounted || S.lowFx) {
+    R.dust = null;
+    return;
   }
-  return parts.join(' · ');
+  const t = R.dust || (R.dust = []);
+  H.moving &&
+    R.deadT <= 0 &&
+    ((R.dustT = (R.dustT || 0) - s),
+    R.dustT <= 0 && ((R.dustT = 0.07), t.push({ x: H.x + rnd(-8, 8), y: H.y + rnd(-2, 3), life: 0.55 })));
+  const e = lookOn() && R.look,
+    o = (e && e.dust) || "#b89c6c",
+    r = (e && e.hlv) || 0,
+    h = R.clock || performance.now() / 1e3;
+  if (r >= 2 && R.deadT <= 0) {
+    const a = 0.5 + 0.5 * Math.sin(h * 3),
+      c = n.createRadialGradient(H.x, H.y, 2, H.x, H.y, 34);
+    (c.addColorStop(0, o),
+      c.addColorStop(1, "rgba(0,0,0,0)"),
+      (n.globalAlpha = 0.22 + 0.16 * a),
+      (n.fillStyle = c),
+      n.beginPath(),
+      n.ellipse(H.x, H.y + 1, 34, 13, 0, 0, 7),
+      n.fill(),
+      r >= 3 &&
+        ((R.hsT = (R.hsT || 0) - s),
+        R.hsT <= 0 && ((R.hsT = 0.12), t.push({ x: H.x + rnd(-22, 22), y: H.y + rnd(-4, 4), life: 0.9, up: !0 }))));
+  }
+  for (const a of t) {
+    if (((a.life -= s), a.up)) {
+      const l = clamp(a.life / 0.9, 0, 1);
+      ((n.globalAlpha = l * 0.85),
+        (n.fillStyle = o),
+        n.beginPath(),
+        n.arc(a.x, a.y - (1 - l) * 46, 1.6 + l * 1.4, 0, 7),
+        n.fill());
+      continue;
+    }
+    const c = clamp(a.life / 0.55, 0, 1);
+    ((n.globalAlpha = c * (r ? 0.6 : 0.45)),
+      (n.fillStyle = o),
+      n.beginPath(),
+      n.ellipse(a.x, a.y, 4 + (1 - c) * 9, 2 + (1 - c) * 3, 0, 0, 7),
+      n.fill());
+  }
+  ((n.globalAlpha = 1), (R.dust = t.filter((a) => a.life > 0)));
+}
+const STABLE_MAX = 60,
+  stable = () => S.stable || (S.stable = []);
+function stableIn(n) {
+  return !isHorse(n) || !S.inv.includes(n)
+    ? { ok: !1, msg: "Chọn ngựa trong hành trang" }
+    : stable().length >= STABLE_MAX
+      ? { ok: !1, msg: `Mã Trường đầy (${STABLE_MAX})` }
+      : ((S.inv = S.inv.filter((s) => s !== n)),
+        stable().push(n),
+        (invDirty = !0),
+        (R.dirty = !0),
+        save(),
+        { ok: !0, msg: "Đã đưa " + n.n + " vào Mã Trường" });
+}
+function stableOut(n) {
+  const s = stable();
+  return s.includes(n)
+    ? S.inv.length >= INV_MAX
+      ? { ok: !1, msg: "Hành trang đầy" }
+      : ((S.stable = s.filter((t) => t !== n)),
+        S.inv.unshift(n),
+        (invDirty = !0),
+        (R.dirty = !0),
+        save(),
+        { ok: !0, msg: "Lấy " + n.n + " ra hành trang" })
+    : { ok: !1, msg: "Không có trong Mã Trường" };
+}
+function stableRide(n) {
+  if (!isHorse(n)) return { ok: !1, msg: "Không phải ngựa" };
+  if (!reqOk(n)) return { ok: !1, msg: "Chưa đủ điều kiện: " + reqProblems(n).join("; ") };
+  const s = S.eq.horse;
+  return (
+    (S.stable = stable().filter((t) => t !== n)),
+    (S.inv = S.inv.filter((t) => t !== n)),
+    (S.eq.horse = n),
+    s && s !== n && (stable().length < STABLE_MAX ? stable().push(s) : S.inv.unshift(s)),
+    (R.dirty = !0),
+    (invDirty = !0),
+    (R.rideCd = 0),
+    typeof setMount == "function" && setMount(!0, !0),
+    save(),
+    { ok: !0, msg: "Cưỡi " + n.n }
+  );
+}
+function horsePickModal() {
+  const n = S.eq.horse,
+    s = stable()
+      .map((e) => [e, "st"])
+      .concat(S.inv.filter(isHorse).map((e) => [e, "inv"])),
+    t = ([
+      e,
+      o,
+    ]) => `<div class="qrow"><span><b style="color:${RAR_COL[e.r]}">${esc(e.n)}</b><small>${o === "st" ? "Mã Trường" : "Hành trang"} · cấp yêu cầu ${(e.req.find((r) => r[0] === 36) || [0, 0])[1]} · thuần dưỡng ${horseLv(e)} · ${esc(horseStatLine(e))}</small></span>
+    <span class="btnrow"><button class="btn sm" data-hr="${e.uid}" ${reqOk(e) ? "" : "disabled"}>Cưỡi</button></span></div>`;
+  modal(
+    `<h3>Chọn ngựa <small>${stable().length}/${STABLE_MAX} trong Mã Trường</small></h3>
+    ${
+      n
+        ? `<div class="card"><b style="color:${RAR_COL[n.r]}">${esc(n.n)}</b> <small class="dim">đang dùng · thuần dưỡng ${horseLv(n)}</small><p class="small">${esc(horseStatLine(n))}</p>
+      <div class="btnrow"><button class="btn" id="hpInfo">Chi tiết</button><button class="btn" id="hpBack" ${stable().length < STABLE_MAX ? "" : "disabled"}>Cất vào Mã Trường</button></div></div>`
+        : ""
+    }
+    ${s.length ? s.map(t).join("") : '<p class="dim small">Chưa có ngựa nào khác. Ngựa nhặt được nằm trong hành trang, bấm vào ngựa → "Cất vào Mã Trường".</p>'}
+    <div class="btnrow"><button class="btn" id="hpStable">Mở Mã Trường</button></div>`,
+    () => {
+      document.querySelectorAll("#mBody [data-hr]").forEach(
+        (h) =>
+          (h.onclick = () => {
+            const a = s.map((l) => l[0]).find((l) => l.uid === +h.dataset.hr),
+              c = stableRide(a);
+            (toast(c.msg), c.ok && (uiSfx("equipCloth"), refresh()), horsePickModal());
+          }),
+      );
+      const e = $("#hpInfo");
+      e && (e.onclick = () => itemModal(n, "horse"));
+      const o = $("#hpBack");
+      o &&
+        (o.onclick = () => {
+          (delete S.eq.horse,
+            stable().push(n),
+            (R.mounted = !1),
+            (R.dirty = !0),
+            (invDirty = !0),
+            save(),
+            refresh(),
+            horsePickModal());
+        });
+      const r = $("#hpStable");
+      r &&
+        (r.onclick = () => {
+          typeof actModal == "function" && actModal("horse");
+        });
+    },
+  );
+}
+function horseStatLine(n) {
+  const s = [];
+  for (const [t, e, o] of n.base) {
+    const r = attrName(t);
+    if (r === "staminamax_v") continue;
+    const h = Math.round(horseAdj(n, ((e + o) / 2) * enhMul(n)));
+    s.push(attrText(r, [h, 0, h]));
+  }
+  return s.join(" · ");
 }
 function stableBody() {
-  const it = S.eq.horse, inv = S.inv.filter(isHorse), bn = horseBookCount(), st = stable();
-  const cur = isHorse(it) ? (() => {
-    const lv = horseLv(it), need = horseNeed(lv), pct = lv >= HORSE_MAX ? 100 : Math.round((it.hxp || 0) / need * 100);
-    return `<div class="card"><div class="idet"><div class="pic r${it.r}">${it.ic ? `<img src="${esc(it.ic)}" alt="">` : ''}</div><div><h4 style="color:${RAR_COL[it.r]}">${esc(it.n)}</h4>
-      <small class="dim">Thuần dưỡng cấp <b>${lv}/${HORSE_MAX}</b> · chỉ số +${Math.round(lv * HORSE_UP * 100)}% · phạt né tránh −${Math.min(100, Math.round(lv * HORSE_PEN * 100))}%</small></div></div>
-      <div class="bar xpb"><i style="width:${pct}%"></i><span>${lv >= HORSE_MAX ? 'Tối đa' : `${Math.floor(it.hxp || 0)} / ${need}`}</span></div>
-      <p class="small">${esc(horseStatLine(it))}</p>
-      <div class="btnrow"><button class="btn" id="hFeed" ${lv < HORSE_MAX && S.gold >= horseFeedCost(it) ? '' : 'disabled'}>Cho ăn (${fmt(horseFeedCost(it))} lượng, +${HORSE_FEED_XP})</button><button class="btn" id="hFeed10" ${lv < HORSE_MAX && S.gold >= horseFeedCost(it) ? '' : 'disabled'}>Cho ăn ×10</button></div></div>`;
-  })() : `<div class="card"><p class="desc">Chưa cưỡi ngựa. Ngựa mua ở cửa hàng Biện Kinh (thẻ Ngựa, từ cấp 20) hoặc rơi hiếm từ trùm. Thần mã có thuộc tính: xem thẻ <b>Thần mã</b>.</p></div>`;
-  const hrow = (h, w) => `<div class="qrow"><span><b style="color:${RAR_COL[h.r]}">${esc(h.n)}</b><small>cấp yêu cầu ${(h.req.find(q => q[0] === 36) || [0, 0])[1]} · thuần dưỡng ${horseLv(h)} · ${esc(horseStatLine(h))}</small></span><small></small>
-    <span class="btnrow"><button class="btn sm" data-ride="${h.uid}" ${reqOk(h) ? '' : 'disabled'}>Cưỡi</button>${isHorse(it) && Math.floor(horseLv(it) * HORSE_KEEP) > horseLv(h) ? `<button class="btn sm" data-mv="${h.uid}">Chuyển cấp (${fmt(horseMoveCost())})</button>` : ''}${w === 'st' ? `<button class="btn sm" data-sout="${h.uid}">Lấy ra</button>` : `<button class="btn sm" data-sin="${h.uid}">Cất vào Mã Trường</button>`}</span></div>`;
-  const list = inv.map(h => hrow(h, 'inv')).join(''), slist = st.map(h => hrow(h, 'st')).join('');
-  const kinds = Object.keys(horseBook()).map(k => `<span class="chip2">${esc(horseKindName(k))}</span>`).join('');
-  return `<p class="desc">Ngựa đang cưỡi lên cấp khi hạ quái (thường 1, tinh anh 3, trùm 10) hoặc cho ăn. Mỗi cấp +${HORSE_UP * 100}% chỉ số ngựa, giảm ${HORSE_PEN * 100}% phạt né tránh. Tốc độ chạy của ngựa chỉ tính khi đang cưỡi (phím M / Auto tự lên ngựa khi di chuyển).</p>
-    ${cur}
-    <h4 class="rech">Ngựa trong Mã Trường <small class="dim">${st.length}/${STABLE_MAX}</small></h4>${slist || '<p class="dim small">Trống. Ngựa nhặt được nằm trong hành trang: bấm "Cất vào Mã Trường".</p>'}
-    <h4 class="rech">Ngựa trong hành trang</h4>${list || '<p class="dim small">Không có ngựa nào khác. Chuyển thuần dưỡng sang ngựa mới giữ 80% cấp.</p>'}
-    <h4 class="rech">Sổ ngựa <small class="dim">${bn} loài · +${Math.min(HBOOK_MAX, bn)}% sinh lực (tối đa ${HBOOK_MAX}%)</small></h4><div class="chips">${kinds || '<small class="dim">Cưỡi ngựa hạ quái để ghi vào sổ</small>'}</div>`;
+  const n = S.eq.horse,
+    s = S.inv.filter(isHorse),
+    t = stable(),
+    e = isHorse(n)
+      ? (() => {
+          const i = horseLv(n),
+            f = horseNeed(i),
+            g = i >= 20 ? 100 : Math.round(((n.hxp || 0) / f) * 100);
+          return `<div class="card"><div class="idet"><div class="pic r${n.r}">${n.ic ? `<img src="${esc(n.ic)}" alt="">` : ""}</div><div><h4 style="color:${RAR_COL[n.r]}">${esc(n.n)}</h4>
+      <small class="dim">Thuần dưỡng cấp <b>${i}/20</b> · chỉ số +${Math.round(i * 0.04 * 100)}% · phạt né tránh −${Math.min(100, Math.round(i * 0.05 * 100))}%</small></div></div>
+      <div class="bar xpb"><i style="width:${g}%"></i><span>${i >= 20 ? "Tối đa" : `${Math.floor(n.hxp || 0)} / ${f}`}</span></div>
+      <p class="small">${esc(horseStatLine(n))}</p>
+      <div class="btnrow"><button class="btn" id="hFeed" ${i < 20 && (S.knb | 0) >= horseFeedCost(n) ? "" : "disabled"}>Cho ăn (${horseFeedCost(n)} KNB, +100)</button><button class="btn" id="hFeed10" ${i < 20 && (S.knb | 0) >= horseFeedCost(n) ? "" : "disabled"}>Cho ăn ×10</button></div></div>`;
+        })()
+      : '<div class="card"><p class="desc">Chưa cưỡi ngựa. Ngựa chỉ có từ <b>Rương Ngựa</b> (Kỳ Trân Các › Thú cưỡi 20 KNB, hoặc rơi từ trùm / phó bản): Thường 56% · Tốt 31,5% · Quý 6% · Thần 3% · Danh mã 2% · Bảo mã 1% · Chí tôn 0,5%.</p></div>',
+    o = (
+      i,
+      f,
+    ) => `<div class="qrow"><span><b style="color:${RAR_COL[i.r]}">${esc(i.n)}</b><small>cấp yêu cầu ${(i.req.find((g) => g[0] === 36) || [0, 0])[1]} · thuần dưỡng ${horseLv(i)} · ${esc(horseStatLine(i))}</small></span><small></small>
+    <span class="btnrow"><button class="btn sm" data-ride="${i.uid}" ${reqOk(i) ? "" : "disabled"}>Cưỡi</button>${isHorse(n) && Math.floor(horseLv(n) * 0.8) > horseLv(i) ? `<button class="btn sm" data-mv="${i.uid}">Chuyển cấp (${fmtL(horseMoveCost())})</button>` : ""}${f === "st" ? `<button class="btn sm" data-sout="${i.uid}">Lấy ra</button>` : `<button class="btn sm" data-sin="${i.uid}">Cất vào Mã Trường</button>`}</span></div>`,
+    r = s.map((i) => o(i, "inv")).join(""),
+    h = t.map((i) => o(i, "st")).join(""),
+    a = hcOwned(),
+    c = hcAll(),
+    l = hcBonus(),
+    u = HC_TIERS.map(([i, f, g], p) => {
+      const m = [...c].filter(([, d]) => d[1] === p),
+        b = m.filter(([d]) => a.has(d)).length;
+      return `<div class="hct"><b style="color:${f}">${i}</b> <small class="dim">${b}/${m.length} · mỗi loài +1% sinh lực, +${g}% EXP</small><div class="chips">${m.map(([d, v]) => `<span class="chip2${a.has(d) ? " hc-on" : ""}" title="${a.has(d) ? "Đã có" : "Chưa có"}">${a.has(d) ? "✓ " : ""}${esc(v[0])}</span>`).join("")}</div></div>`;
+    }).join("");
+  return `<p class="desc">Ngựa đang cưỡi lên cấp khi hạ quái (thường 1, tinh anh 3, trùm 10) hoặc cho ăn. Mỗi cấp +${0.04 * 100}% chỉ số ngựa, giảm ${0.05 * 100}% phạt né tránh. Tốc độ chạy của ngựa chỉ tính khi đang cưỡi (phím M / Auto tự lên ngựa khi di chuyển).</p>
+    ${e}
+    <h4 class="rech">Ngựa trong Mã Trường <small class="dim">${t.length}/${STABLE_MAX}</small></h4>${h || '<p class="dim small">Trống. Ngựa nhặt được nằm trong hành trang: bấm "Cất vào Mã Trường".</p>'}
+    <h4 class="rech">Ngựa trong hành trang</h4>${r || '<p class="dim small">Không có ngựa nào khác. Chuyển thuần dưỡng sang ngựa mới giữ 80% cấp.</p>'}
+    <h4 class="rech">Bộ sưu tập Mã Trường <small class="dim">${l.n}/${c.size} loài · <b class="gold">+${l.hp}% sinh lực · +${l.xp}% EXP</b></small></h4>
+    <p class="dim small">Mỗi loài ngựa nằm trong Mã Trường (hoặc đang cưỡi) được cộng 1 lần. Ngựa trùng loài không cộng thêm.</p>${u}`;
 }
-function bindStable(reopen) {
-  const on = (id, fn) => { const el = $(id); if (el) el.onclick = fn; };
-  const done = r => { toast(r.msg); if (r.ok) uiSfx('learn'); reopen(); };
-  on('#hFeed', () => done(horseFeed(1))); on('#hFeed10', () => done(horseFeed(10)));
-  const find = uid => S.inv.concat(stable()).find(x => x.uid === +uid);
-  document.querySelectorAll('#mBody [data-ride]').forEach(b => b.onclick = () => { const h = find(b.dataset.ride); if (h) { const r = stableRide(h); toast(r.msg); refresh(); } reopen(); });
-  document.querySelectorAll('#mBody [data-mv]').forEach(b => b.onclick = () => done(horseTransfer(find(b.dataset.mv))));
-  document.querySelectorAll('#mBody [data-sin]').forEach(b => b.onclick = () => done(stableIn(find(b.dataset.sin))));
-  document.querySelectorAll('#mBody [data-sout]').forEach(b => b.onclick = () => done(stableOut(find(b.dataset.sout))));
+function bindStable(n) {
+  const s = (o, r) => {
+      const h = $(o);
+      h && (h.onclick = r);
+    },
+    t = (o) => {
+      (toast(o.msg), o.ok && uiSfx("learn"), n());
+    };
+  (s("#hFeed", () => t(horseFeed(1))), s("#hFeed10", () => t(horseFeed(10))));
+  const e = (o) => S.inv.concat(stable()).find((r) => r.uid === +o);
+  (document.querySelectorAll("#mBody [data-ride]").forEach(
+    (o) =>
+      (o.onclick = () => {
+        const r = e(o.dataset.ride);
+        if (r) {
+          const h = stableRide(r);
+          (toast(h.msg), refresh());
+        }
+        n();
+      }),
+  ),
+    document.querySelectorAll("#mBody [data-mv]").forEach((o) => (o.onclick = () => t(horseTransfer(e(o.dataset.mv))))),
+    document.querySelectorAll("#mBody [data-sin]").forEach((o) => (o.onclick = () => t(stableIn(e(o.dataset.sin))))),
+    document
+      .querySelectorAll("#mBody [data-sout]")
+      .forEach((o) => (o.onclick = () => t(stableOut(e(o.dataset.sout))))));
 }

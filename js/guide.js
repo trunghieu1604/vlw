@@ -1,171 +1,368 @@
-/* ======================= HUONG DAN + THONG TIN GIAI THICH =======================
-   1 huong dan nguoi moi (5 buoc) + goi y theo ngu canh · 2 danh sach "viec can lam" o the Giang ho · 3 chi tiet luc chien
-   4 goi y cong diem co xem truoc · 5 bach khoa (vung / quai, bo Hoang Kim, nguyen lieu ren) */
-'use strict';
-
-/* ---------- 1. huong dan ---------- */
+"use strict";
 const TUT = [
-  ['Hành tẩu tự động', 'Nhân vật tự đánh quái, nhặt đồ, uống thuốc. Ở thẻ Giang hồ chọn ⚔ Luyện công (đánh ở bãi hợp cấp, tự đổi bãi khi lên cấp) hoặc 📜 Làm nhiệm vụ (tự làm Dã Tẩu, Sát Thủ, đi thuyền, tự chuyển bản đồ). Bạn không cần bấm gì để chơi. Kéo joystick bên trái để tự điều khiển khi muốn; bấm ⚙ Tự động để quay lại.', 'log'],
-  ['Trang bị và nhặt đồ', 'Đồ rơi trên đất, nhân vật tự nhặt món khớp bộ lọc (thẻ Hành trang). Món mạnh hơn được tự mặc (có thể tắt ở thẻ Khác). Bấm vào một món để xem so sánh và lý do thay đổi sức mạnh.', 'inv'],
-  ['Điểm tiềm năng và võ công', 'Mỗi cấp bạn nhận điểm tiềm năng (thẻ Nhân vật) và điểm kỹ năng (thẻ Võ công). Dùng nút + để cộng, − để rút lại, i để xem kỹ năng làm gì, và "Gợi ý" để xem trước cách cộng hiệu quả.', 'skill'],
-  ['Rèn đồ', 'Thẻ Lò rèn, ba chặng: Tím (luyện Huyền Tinh, lấy thuộc tính, chế phôi, khảm nạm), Hoàng Kim (gom mảnh từ trùm) và Bạch Kim. Bật "Tự động rèn đồ" ở thẻ Khác nếu không muốn bấm tay.', 'forge'],
-  ['Ép đồ Tím', 'Thẻ Lò rèn → 💎 Lò Ép Đồ:\n1. Tinh luyện: 3 nhẫn / dây chuyền / ngọc bội + 1.000 lượng → 1 Huyền Tinh; 3 viên cùng cấp → 1 viên cấp +1.\n2. Lấy thuộc tính: đồ xanh + 1 Huyền Tinh + 5.000 → 1 đá thuộc tính đúng dòng bạn chọn (món nguồn mất).\n3. Chế tạo phôi: đồ trắng / xanh + 1 Huyền Tinh + 10.000 → đồ Tím trống, số dòng theo cấp Huyền Tinh (cấp 3 ≈ 5 dòng).\n4. Khảm nạm: khảm lần lượt dòng 1 → 6, mỗi dòng 1 đá + 1 Huyền Tinh + 10.000.\nDòng 1/3/5 hiện (Nguyên Khoáng, không phân hệ) · dòng 2/4/6 ẩn (Nguyên Thạch, phải đúng hệ món). Mỗi thuộc tính chỉ 1 lần trên 1 món. Phụ liệu (Thủy Tinh hoặc 5 Phúc Duyên): +15% thành công.', 'forge'],
-  ['Đá thuộc tính và Huyền Tinh ở đâu', 'ĐÁ THUỘC TÍNH:\n• Lấy thuộc tính từ đồ xanh (nguồn chính, chọn được thuộc tính).\n• Quái rơi: trùm 20%, tinh anh 3%, quái thường 0,3% (thường hợp hệ / loại đồ đang mặc).\n• Phần thưởng phó bản.\n• Tách dòng cuối của đồ Tím để lấy lại đá.\nHUYỀN TINH:\n• Quái rơi: trùm 45%, tinh anh 8%, quái thường 1%.\n• Dã Tẩu: 35% mỗi nhiệm vụ, mỗi 10 nhiệm vụ 3 viên. Sát Thủ: mỗi lần hạ 1 viên. Phó bản.\n• Luyện từ 3 trang sức thừa.\nMẸO: Hành trang → 💎 Đồ để ép Tím: bật tự nhặt đồ trắng, trang sức thừa, đồ xanh có dòng cấp cao; tự cất vào Rương ép hoặc Kho chung.', 'forge'],
-  ['Quà và sao lưu', 'Nút 🎁: điểm danh, mốc cấp, thành tựu, rương Phúc Duyên, sự kiện. Tháp thử thách và Đồng hành ở thẻ Nhiệm vụ › Hoạt động; Chuyển sinh ở thẻ Nhân vật. Game chạy trên máy bạn: hãy vào thẻ Khác → Tải file lưu để sao lưu và chơi trên thiết bị khác.', 'more'],
+  [
+    "Hành tẩu tự động",
+    "Nhân vật tự đánh quái, nhặt đồ, uống thuốc. Ở thẻ Giang hồ chọn ⚔ Luyện công (đánh ở bãi hợp cấp, tự đổi bãi khi lên cấp) hoặc 📜 Làm nhiệm vụ (tự làm Dã Tẩu, Sát Thủ, đi thuyền, tự chuyển bản đồ). Bạn không cần bấm gì để chơi. Kéo joystick bên trái để tự điều khiển khi muốn; bấm ⚙ Tự động để quay lại.",
+    "log",
+  ],
+  [
+    "Trang bị và nhặt đồ",
+    "Đồ rơi trên đất, nhân vật tự nhặt món khớp bộ lọc (thẻ Hành trang). Món mạnh hơn được tự mặc (có thể tắt ở thẻ Khác). Bấm vào một món để xem so sánh và lý do thay đổi sức mạnh.",
+    "inv",
+  ],
+  [
+    "Điểm tiềm năng và võ công",
+    'Mỗi cấp bạn nhận điểm tiềm năng (thẻ Nhân vật) và điểm kỹ năng (thẻ Võ công). Dùng nút + để cộng, − để rút lại, i để xem kỹ năng làm gì, và "Gợi ý" để xem trước cách cộng hiệu quả.',
+    "skill",
+  ],
+  [
+    "Rèn đồ",
+    'Thẻ Lò rèn, ba chặng: Tím (luyện Huyền Tinh, lấy thuộc tính, chế phôi, khảm nạm), Hoàng Kim Bộ chung / Môn phái (gom mảnh từ trùm). Bật "Tự động rèn đồ" ở thẻ Khác nếu không muốn bấm tay.',
+    "forge",
+  ],
+  [
+    "Ép đồ Tím",
+    `Thẻ Lò rèn → 💎 Lò Ép Đồ:
+1. Tinh luyện: 3 nhẫn / dây chuyền / ngọc bội + 1.000 lượng → 1 Huyền Tinh; 3 viên cùng cấp → 1 viên cấp +1.
+2. Lấy thuộc tính: đồ xanh + 1 Huyền Tinh + 5.000 → 1 đá thuộc tính đúng dòng bạn chọn (món nguồn mất).
+3. Chế tạo phôi: đồ trắng / xanh + 1 Huyền Tinh + 10.000 → đồ Tím trống, số dòng theo cấp Huyền Tinh (cấp 3 ≈ 5 dòng).
+4. Khảm nạm: khảm lần lượt dòng 1 → 6, mỗi dòng 1 đá + 1 Huyền Tinh + 10.000.
+Dòng 1/3/5 hiện (Nguyên Khoáng, không phân hệ) · dòng 2/4/6 ẩn (Nguyên Thạch, phải đúng hệ món). Mỗi thuộc tính chỉ 1 lần trên 1 món. Phụ liệu (Thủy Tinh hoặc 5 Phúc Duyên): +15% thành công.`,
+    "forge",
+  ],
+  [
+    "Đá thuộc tính và Huyền Tinh ở đâu",
+    `ĐÁ THUỘC TÍNH:
+• Lấy thuộc tính từ đồ xanh (nguồn chính, chọn được thuộc tính).
+• Quái rơi: trùm 20%, tinh anh 3%, quái thường 0,3% (thường hợp hệ / loại đồ đang mặc).
+• Phần thưởng phó bản.
+HUYỀN TINH:
+• Quái rơi: trùm 45%, tinh anh 8%, quái thường 1%.
+• Dã Tẩu: 35% mỗi nhiệm vụ, mỗi 10 nhiệm vụ 3 viên. Sát Thủ: mỗi lần hạ 1 viên. Phó bản.
+• Luyện từ 3 trang sức thừa.
+MẸO: Hành trang → 💎 Đồ để ép Tím: bật tự nhặt đồ trắng, trang sức thừa, đồ xanh có dòng cấp cao; tự cất vào Kho Rèn hoặc Kho chung.`,
+    "forge",
+  ],
+  [
+    "Quà và sao lưu",
+    "Nút 🎁: điểm danh, mốc cấp, thành tựu, rương Phúc Duyên, sự kiện. Tháp thử thách ở thẻ Nhiệm vụ › Hoạt động; đồ đệ (nhân vật đi theo, mỗi người một hành trang, chuyển đồ bằng nút «Chuyển cho…») ở các thẻ 1 2 3 4 của bảng Nhân vật / Võ công / Hành trang; Chuyển sinh ở thẻ Nhân vật. Game chạy trên máy bạn: hãy vào thẻ Khác → Tải file lưu để sao lưu và chơi trên thiết bị khác.",
+    "more",
+  ],
 ];
-function tutorialModal(i = 0) {
-  const t = TUT[i]; if (!t) { S.tut = 1; closeModal(true); save(); return; }
-  if (t[2] && curTab !== t[2] && S.fac) showTab(t[2]);
-  modal(`<h3>${esc(t[0])} <small>${i + 1}/${TUT.length}</small></h3><p class="desc">${esc(t[1]).replace(/\n/g, '<br>')}</p>
-    <div class="btnrow">${i > 0 ? '<button class="btn" id="tPrev">Trước</button>' : ''}<button class="btn" id="tNext">${i === TUT.length - 1 ? 'Bắt đầu chơi' : 'Tiếp'}</button><button class="btn" id="tSkip">Bỏ qua</button></div>`, () => {
-    const p = $('#tPrev'); if (p) p.onclick = () => tutorialModal(i - 1);
-    $('#tNext').onclick = () => tutorialModal(i + 1);
-    $('#tSkip').onclick = () => { S.tut = 1; closeModal(true); save(); };
-  });
-  S.tut = 1;   // da thay: khong tu hien lai (van mo lai duoc o the Khac)
+function tutorialModal(n = 0) {
+  const i = TUT[n];
+  if (!i) {
+    ((S.tut = 1), closeModal(!0), save());
+    return;
+  }
+  (i[2] && curTab !== i[2] && S.fac && showTab(i[2]),
+    modal(
+      `<h3>${esc(i[0])} <small>${n + 1}/${TUT.length}</small></h3><p class="desc">${esc(i[1]).replace(/\n/g, "<br>")}</p>
+    <div class="btnrow">${n > 0 ? '<button class="btn" id="tPrev">Trước</button>' : ""}<button class="btn" id="tNext">${n === TUT.length - 1 ? "Bắt đầu chơi" : "Tiếp"}</button><button class="btn" id="tSkip">Bỏ qua</button></div>`,
+      () => {
+        const a = $("#tPrev");
+        (a && (a.onclick = () => tutorialModal(n - 1)),
+          ($("#tNext").onclick = () => tutorialModal(n + 1)),
+          ($("#tSkip").onclick = () => {
+            ((S.tut = 1), closeModal(!0), save());
+          }));
+      },
+    ),
+    (S.tut = 1));
 }
-/* Goi y theo ngu canh: moi goi y chi hien mot lan */
 const HINTS = {
   pts: 'Bạn có điểm tiềm năng chưa cộng: mở thẻ Nhân vật (nút "Gợi ý" cho cách cộng hiệu quả).',
-  skill: 'Có điểm kỹ năng: mở thẻ Võ công, bấm i để xem kỹ năng làm gì.',
-  forge: 'Bạn vừa nhặt nguyên liệu rèn (Huyền Tinh / khoáng). thẻ Lò rèn → 💎 Lò Ép Đồ (Huyền Tinh, đá thuộc tính, đồ Tím), hoặc bật "Tự động rèn đồ" ở thẻ Khác.',
-  gift: 'Có quà chờ nhận ở nút 🎁.',
-  full: 'Hành trang gần đầy: chỉnh bộ lọc nhặt đồ ở thẻ Hành trang để bớt đồ thừa.',
+  skill: "Có điểm kỹ năng: mở thẻ Võ công, bấm i để xem kỹ năng làm gì.",
+  forge:
+    'Bạn vừa nhặt nguyên liệu rèn (Huyền Tinh / khoáng). thẻ Lò rèn → 💎 Lò Ép Đồ (Huyền Tinh, đá thuộc tính, đồ Tím), hoặc bật "Tự động rèn đồ" ở thẻ Khác.',
+  gift: "Có quà chờ nhận ở nút 🎁.",
+  full: "Hành trang gần đầy: chỉnh bộ lọc nhặt đồ ở thẻ Hành trang để bớt đồ thừa.",
 };
-function hint(key) {
+function hint(n) {
   if (!S || !S.fac || R.quiet) return;
-  const h = S.hints || (S.hints = {}); if (h[key] || !HINTS[key]) return;
-  h[key] = 1; toast(HINTS[key]); log(`<span class="dim">Gợi ý: ${esc(HINTS[key])}</span>`);
+  const i = S.hints || (S.hints = {});
+  i[n] || !HINTS[n] || ((i[n] = 1), toast(HINTS[n]), log(`<span class="dim">Gợi ý: ${esc(HINTS[n])}</span>`));
 }
 function checkHints() {
-  if (!S || !S.fac) return;
-  if (S.attrPts > 0 && S.lvl >= 2) hint('pts');
-  else if (S.skPts > 0 && FAC[S.fac].skills.some(id => canLearn(SK[id]))) hint('skill');
-  else if (Object.keys(mats().ht).length || Object.keys(mats().ore).length) hint('forge');
-  else if (S.inv.length >= INV_MAX - 5) hint('full');
+  !S ||
+    !S.fac ||
+    (S.attrPts > 0 && S.lvl >= 2
+      ? hint("pts")
+      : S.skPts > 0 && FAC[S.fac].skills.some((n) => canLearn(SK[n]))
+        ? hint("skill")
+        : Object.keys(mats().ht).length || Object.keys(mats().ore).length
+          ? hint("forge")
+          : S.inv.length >= INV_MAX - 5 && hint("full"));
 }
-
-/* ---------- 2. viec can lam ---------- */
 function todoList() {
-  const out = [];
-  if (!S || !S.fac) return out;
-  if (isNovice()) out.push({ k: 'join', t: S.lvl >= NOVICE_LV ? '⚑ Gia nhập môn phái' : `Cấp ${NOVICE_LV}: gia nhập môn phái`, go: () => joinModal() });
-  if (S.attrPts > 0) out.push({ k: 'attr', t: `${S.attrPts} điểm tiềm năng`, go: () => showTab('char') });
-  if (S.skPts > 0 && FAC[S.fac].skills.some(id => canLearn(SK[id]))) out.push({ k: 'skill', t: `${S.skPts} điểm kỹ năng`, go: () => showTab('skill') });
-  const better = S.inv.filter(it => betterThanEquipped(it)).length;
-  if (better) out.push({ k: 'gear', t: `${better} món mạnh hơn đồ đang mặc`, go: () => showTab('inv') });
-  if (typeof dgPending === 'function' && dgPending()) out.push({ k: 'wb', t: 'Rương Boss tuần chờ nhận', go: () => actModal('wb') });
-  ghTodo(out);
-  if (S.fac && typeof hasRealName === 'function' && !hasRealName()) out.push({ k: 'name', t: '✏ Đặt tên nhân vật', go: () => nameModal() });
-  if (giftPending()) out.push({ k: 'gift', t: 'Có quà chờ nhận', go: () => giftModal(true) });
-  const fr = forgeReadyCounts(), fn = fr.shard + fr.up + fr.ench + fr.fuse;
-  if (fn && !S.autoForge) out.push({ k: 'forge', t: `Rèn đồ: ${[fr.shard && 'ghép mảnh', fr.ench && 'khảm', fr.fuse && 'hợp Huyền Tinh', fr.up && 'thăng cấp'].filter(Boolean).join(', ')}`, go: () => (fr.ench || fr.fuse || fr.up ? epModal(fr.ench ? 'kham' : 'tl') : htModal()) });
-  if (S.inv.length >= INV_MAX - 3) out.push({ k: 'full', t: 'Hành trang gần đầy', go: () => showTab('inv') });
-  if (S.lvl >= 5 && !(typeof netOn === 'function' && netOn()) && Date.now() - (S.bakAt || 0) > 7 * 86400000) out.push({ k: 'bak', t: 'Nên tải file sao lưu', go: () => showTab('more') });
-  return out;
+  const n = [];
+  if (!S || !S.fac) return n;
+  (isNovice() &&
+    n.push({
+      k: "join",
+      t: S.lvl >= NOVICE_LV ? "⚑ Gia nhập môn phái" : `Cấp ${NOVICE_LV}: gia nhập môn phái`,
+      go: () => joinModal(),
+    }),
+    S.attrPts > 0 && n.push({ k: "attr", t: `${S.attrPts} điểm tiềm năng`, go: () => showTab("char") }),
+    S.skPts > 0 &&
+      FAC[S.fac].skills.some((t) => canLearn(SK[t])) &&
+      n.push({ k: "skill", t: `${S.skPts} điểm kỹ năng`, go: () => showTab("skill") }));
+  const i = S.inv.filter((t) => betterThanEquipped(t)).length;
+  (i && n.push({ k: "gear", t: `${i} món mạnh hơn đồ đang mặc`, go: () => showTab("inv") }),
+    typeof dgPending == "function" &&
+      dgPending() &&
+      n.push({ k: "wb", t: "Rương Boss tuần chờ nhận", go: () => actModal("wb") }),
+    ghTodo(n),
+    S.fac &&
+      typeof hasRealName == "function" &&
+      !hasRealName() &&
+      n.push({ k: "name", t: "✏ Đặt tên nhân vật", go: () => nameModal() }),
+    giftPending() && n.push({ k: "gift", t: "Có quà chờ nhận", go: () => giftModal(!0) }));
+  const a = forgeReadyCounts();
+  return (
+    a.shard + a.up + a.ench + a.fuse &&
+      !S.autoForge &&
+      n.push({
+        k: "forge",
+        t: `Rèn đồ: ${[a.shard && "ghép mảnh", a.ench && "khảm", a.fuse && "hợp Huyền Tinh", a.up && "thăng cấp"].filter(Boolean).join(", ")}`,
+        go: () => (a.ench || a.fuse || a.up ? epModal(a.ench ? "kham" : "tl") : htModal()),
+      }),
+    S.inv.length >= INV_MAX - 3 && n.push({ k: "full", t: "Hành trang gần đầy", go: () => showTab("inv") }),
+    S.lvl >= 5 &&
+      !(typeof netOn == "function" && netOn()) &&
+      Date.now() - (S.bakAt || 0) > 7 * 864e5 &&
+      n.push({ k: "bak", t: "Nên tải file sao lưu", go: () => showTab("more") }),
+    n
+  );
 }
 function todoHTML() {
-  const l = todoList(); if (!l.length) return '';
-  return `<div class="todo" id="todoBox"><b>Việc cần làm</b>${l.map((x, i) => `<button class="chip2 todochip" data-i="${i}">${esc(x.t)}</button>`).join('')}</div>`;
+  const n = todoList();
+  return n.length
+    ? `<div class="todo" id="todoBox"><b>Việc cần làm</b>${n.map((i, a) => `<button class="chip2 todochip" data-i="${a}">${esc(i.t)}</button>`).join("")}</div>`
+    : "";
 }
 function bindTodo() {
-  const l = todoList();
-  document.querySelectorAll('#todoBox .todochip').forEach(b => b.onclick = () => { const x = l[+b.dataset.i]; if (x) x.go(); });
+  const n = todoList();
+  document.querySelectorAll("#todoBox .todochip").forEach(
+    (i) =>
+      (i.onclick = () => {
+        const a = n[+i.dataset.i];
+        a && a.go();
+      }),
+  );
 }
-
-/* ---------- 3. chi tiet luc chien ---------- */
 function powerBreakdown() {
-  const P = R.P, L = S.lvl, eDef = 8 + 3.2 * L, eAr = 30 + 9 * L, a = P.main;
-  const hit = a.useAR ? hitPercent(P.ar, eDef, a.ignore) / 100 : 1, dodge = 1 - hitPercent(eAr, P.def) / 100;
-  const avgRes = ELEM.reduce((t, e) => t + P.res[e], 0) / ELEM.length;
-  const info = { power: power(P), dps: a.dps * hit, hit, dodge, avgRes, ehp: P.life / Math.max(0.2, 1 - avgRes / 100) / Math.max(0.3, 1 - dodge), main: a.n };
-  const full = power(calc(S.eq)), slots = [];
-  for (const [k, vi] of SLOTS) { const it = S.eq[k]; if (!it) continue; const eq = Object.assign({}, S.eq); delete eq[k]; slots.push({ n: vi, name: it.n, v: full / Math.max(1, power(calc(eq))) - 1 }); }
-  const attrs = [];
-  for (const k of Object.keys(ATTR_VI)) {
-    const sv = S.attr[k]; if (!sv) continue;
-    S.attr[k] = 0; let p0; try { p0 = power(calc(S.eq)); } finally { S.attr[k] = sv; }
-    attrs.push({ n: ATTR_VI[k], pts: sv, v: full / Math.max(1, p0) - 1 });
+  const n = R.P,
+    i = S.lvl,
+    a = 8 + 3.2 * i,
+    c = 30 + 9 * i,
+    t = n.main,
+    h = t.useAR ? hitPercent(n.ar, a, t.ignore) / 100 : 1,
+    s = 1 - hitPercent(c, n.def) / 100,
+    l = ELEM.reduce((o, e) => o + n.res[e], 0) / ELEM.length,
+    r = {
+      power: power(n),
+      dps: t.dps * h,
+      hit: h,
+      dodge: s,
+      avgRes: l,
+      ehp: n.life / Math.max(0.2, 1 - l / 100) / Math.max(0.3, 1 - s),
+      main: t.n,
+    },
+    g = power(calc(S.eq)),
+    u = [];
+  for (const [o, e] of SLOTS) {
+    const m = S.eq[o];
+    if (!m) continue;
+    const p = Object.assign({}, S.eq);
+    (delete p[o], u.push({ n: e, name: m.n, v: g / Math.max(1, power(calc(p))) - 1 }));
   }
-  return { info, slots: slots.sort((a, b) => b.v - a.v), attrs: attrs.sort((a, b) => b.v - a.v) };
+  const d = [];
+  for (const o of Object.keys(ATTR_VI)) {
+    const e = S.attr[o];
+    if (!e) continue;
+    S.attr[o] = 0;
+    let m;
+    try {
+      m = power(calc(S.eq));
+    } finally {
+      S.attr[o] = e;
+    }
+    d.push({ n: ATTR_VI[o], pts: e, v: g / Math.max(1, m) - 1 });
+  }
+  return { info: r, slots: u.sort((o, e) => e.v - o.v), attrs: d.sort((o, e) => e.v - o.v) };
 }
 function powerModal() {
-  const b = powerBreakdown(), i = b.info, pc = v => (v * 100).toFixed(1) + '%', row = (n, v, d) => `<span>${esc(n)}${d ? ` <small class="dim">${esc(d)}</small>` : ''}</span><span class="${v > 0.0005 ? 'cp' : 'dim'}">${v > 0 ? '+' : ''}${pc(v)}</span>`;
+  const n = powerBreakdown(),
+    i = n.info,
+    a = (t) => (t * 100).toFixed(1) + "%",
+    c = (t, h, s) =>
+      `<span>${esc(t)}${s ? ` <small class="dim">${esc(s)}</small>` : ""}</span><span class="${h > 5e-4 ? "cp" : "dim"}">${h > 0 ? "+" : ""}${a(h)}</span>`;
   modal(`<h3>Lực chiến ${fmt(R.power)}</h3>
     <p class="desc">Lực chiến = DPS thực tế<sup>0,7</sup> × máu hiệu dụng<sup>0,3</sup>, tính so với quái cùng cấp (${S.lvl}), rồi quy đổi theo môn phái để cùng cấp, chưa mặc đồ thì các phái ngang nhau. Mỗi dòng dưới đây là mức lực chiến sẽ <b>mất</b> nếu bỏ đi thành phần đó.</p>
     <div class="card stats"><span>Chiêu chính</span><span>${esc(i.main)}</span><span>DPS thực tế</span><span>${fmt(i.dps)}</span><span>Tỉ lệ trúng quái cùng cấp</span><span>${Math.round(i.hit * 100)}%</span>
       <span>Máu hiệu dụng</span><span>${fmt(i.ehp)}</span><span>Kháng trung bình</span><span>${Math.round(i.avgRes)}%</span><span>Quái bị né</span><span>${Math.round(i.dodge * 100)}%</span></div>
-    <h3>Từ trang bị</h3><div class="card stats">${b.slots.map(s => row(s.n, s.v, s.name)).join('') || '<span class="dim">Chưa mặc gì</span>'}</div>
-    <h3>Từ điểm tiềm năng đã cộng</h3><div class="card stats">${b.attrs.map(a => row(a.n, a.v, a.pts + ' điểm')).join('') || '<span class="dim">Chưa cộng điểm</span>'}</div>`);
+    <h3>Từ trang bị</h3><div class="card stats">${n.slots.map((t) => c(t.n, t.v, t.name)).join("") || '<span class="dim">Chưa mặc gì</span>'}</div>
+    <h3>Từ điểm tiềm năng đã cộng</h3><div class="card stats">${n.attrs.map((t) => c(t.n, t.v, t.pts + " điểm")).join("") || '<span class="dim">Chưa cộng điểm</span>'}</div>`);
 }
-
-/* ---------- 4. goi y cong diem (xem truoc, chua ap dung) ---------- */
-function snapPts() { return { sk: Object.assign({}, S.sk), skPts: S.skPts, attr: Object.assign({}, S.attr), attrPts: S.attrPts, main: S.main, mainLock: S.mainLock }; }
-function restorePts(s) { S.sk = Object.assign({}, s.sk); S.skPts = s.skPts; S.attr = Object.assign({}, s.attr); S.attrPts = s.attrPts; S.main = s.main; S.mainLock = s.mainLock; R.dirty = true; recalc(); }
-/* Cong diem tiem nang tham lam theo luc chien (khong dong den vu khi / trang bi) */
+function snapPts() {
+  return {
+    sk: Object.assign({}, S.sk),
+    skPts: S.skPts,
+    attr: Object.assign({}, S.attr),
+    attrPts: S.attrPts,
+    main: S.main,
+    mainLock: S.mainLock,
+  };
+}
+function restorePts(n) {
+  ((S.sk = Object.assign({}, n.sk)),
+    (S.skPts = n.skPts),
+    (S.attr = Object.assign({}, n.attr)),
+    (S.attrPts = n.attrPts),
+    (S.main = n.main),
+    (S.mainLock = n.mainLock),
+    (R.dirty = !0),
+    recalc());
+}
 function spendAttrsGreedy() {
-  let n = fillGearReq();                                     // du yeu cau do dang mac truoc (sau chuyen sinh / Tay Tuy)
-  while (S.attrPts > 0) {
-    const base = power(calc()); let best = 'vit', bg = -Infinity;
-    for (const k of ['str', 'dex', 'vit', 'eng']) { S.attr[k]++; const g = power(calc()) - base; S.attr[k]--; if (g > bg) { bg = g; best = k; } }
-    S.attr[best]++; S.attrPts--; n++;
+  let n = fillGearReq();
+  for (; S.attrPts > 0;) {
+    const i = power(calc());
+    let a = "vit",
+      c = -1 / 0;
+    for (const t of ["str", "dex", "vit", "eng"]) {
+      S.attr[t]++;
+      const h = power(calc()) - i;
+      (S.attr[t]--, h > c && ((c = h), (a = t)));
+    }
+    (S.attr[a]++, S.attrPts--, n++);
   }
-  if (n) R.dirty = true; return n;
+  return (n && (R.dirty = !0), n);
 }
 function suggestPlan() {
-  const s0 = snapPts(), p0 = power(calc()), plan = { skills: [], attrs: [], gainSk: 0, gainAt: 0 }, skl0 = JSON.stringify(S.skL || {});
-  R.sim = 1; R.buffAssume = true;
+  const n = snapPts(),
+    i = power(calc()),
+    a = { skills: [], attrs: [], gainSk: 0, gainAt: 0 },
+    c = JSON.stringify(S.skL || {});
+  ((R.sim = 1), (R.buffAssume = !0));
   try {
     if (S.skPts > 0) {
-      const before = Object.assign({}, S.sk); autoSpendSkills();
-      for (const id in S.sk) { const d = S.sk[id] - (before[id] || 0); if (d > 0) plan.skills.push({ id: +id, n: SK[id].n, d, to: S.sk[id], max: SK[id].max }); }
-      plan.gainSk = power(calc()) / Math.max(1, p0) - 1;
+      const t = Object.assign({}, S.sk);
+      autoSpendSkills();
+      for (const h in S.sk) {
+        const s = S.sk[h] - (t[h] || 0);
+        s > 0 && a.skills.push({ id: +h, n: SK[h].n, d: s, to: S.sk[h], max: SK[h].max });
+      }
+      a.gainSk = power(calc()) / Math.max(1, i) - 1;
     }
-    restorePts(s0);
-    if (S.attrPts > 0) {
-      const before = Object.assign({}, S.attr); spendAttrsGreedy();
-      for (const k of Object.keys(ATTR_VI)) { const d = S.attr[k] - before[k]; if (d > 0) plan.attrs.push({ k, n: ATTR_VI[k], d }); }
-      plan.gainAt = power(calc()) / Math.max(1, p0) - 1;
+    if ((restorePts(n), S.attrPts > 0)) {
+      const t = Object.assign({}, S.attr);
+      spendAttrsGreedy();
+      for (const h of Object.keys(ATTR_VI)) {
+        const s = S.attr[h] - t[h];
+        s > 0 && a.attrs.push({ k: h, n: ATTR_VI[h], d: s });
+      }
+      a.gainAt = power(calc()) / Math.max(1, i) - 1;
     }
-  } finally { R.buffAssume = false; restorePts(s0); R.sim = 0; S.skL = JSON.parse(skl0); }
-  return plan;
+  } finally {
+    ((R.buffAssume = !1), restorePts(n), (R.sim = 0), (S.skL = JSON.parse(c)));
+  }
+  return a;
 }
 function suggestModal() {
-  const p = suggestPlan(), pc = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
-  const sk = p.skills.length ? `<div class="card"><b>Võ công</b> <small class="cp">lực chiến ${pc(p.gainSk)}</small>${p.skills.map(x => `<div>${esc(x.n)}: +${x.d} → ${x.to}/${x.max}</div>`).join('')}<div class="btnrow"><button class="btn" id="sgSk">Áp dụng</button></div></div>` : '';
-  const gp = gearReqPlan(), gtxt = gp.total ? `<div class="card"><b>Đủ điểm cho đồ đang mặc</b> <small class="dim">cần ${gp.total} điểm · đang có ${S.attrPts}${gp.total > S.attrPts ? ` · thiếu ${gp.total - S.attrPts} (≈ ${Math.ceil((gp.total - S.attrPts) / PTS_PER_LEVEL)} cấp nữa)` : ''}</small>${gp.list.map(x => `<div class="small">${esc(x.it.n)} <span class="dim">(cấp ${x.lv})</span>: ${Object.entries(x.d).map(([k, v]) => `${ATTR_VI[k]} +${v}`).join(', ')}</div>`).join('')}<div class="dim small">Gợi ý tiềm năng bên dưới cộng phần này trước, phần còn lại theo lực chiến.</div></div>` : '';
-  const at = p.attrs.length ? `<div class="card"><b>Tiềm năng</b> <small class="cp">lực chiến ${pc(p.gainAt)}</small>${p.attrs.map(x => `<div>${x.n}: +${x.d}</div>`).join('')}<div class="btnrow"><button class="btn" id="sgAt">Áp dụng</button></div></div>` : '';
-  modal(`<h3>Gợi ý cộng điểm</h3><p class="desc">Xem trước, chưa cộng gì. Gợi ý chọn cách tăng lực chiến nhiều nhất với trang bị hiện tại. Bạn vẫn rút điểm được bằng nút −.</p>${sk}${gtxt}${at}${!sk && !at ? '<p class="dim">Bạn không có điểm nào để cộng.</p>' : ''}`, () => {
-    const a = $('#sgSk'); if (a) a.onclick = () => { autoSpendSkills(); recalc(); save(); refresh(); suggestModal(); };
-    const b = $('#sgAt'); if (b) b.onclick = () => { spendAttrsGreedy(); recalc(); save(); refresh(); suggestModal(); };
-  });
+  const n = suggestPlan(),
+    i = (s) => (s >= 0 ? "+" : "") + (s * 100).toFixed(1) + "%",
+    a = n.skills.length
+      ? `<div class="card"><b>Võ công</b> <small class="cp">sức mạnh ${i(n.gainSk)}</small>${n.skills.map((s) => `<div>${esc(s.n)}: +${s.d} → ${s.to}/${s.max}</div>`).join("")}<div class="btnrow"><button class="btn" id="sgSk">Áp dụng</button></div></div>`
+      : "",
+    c = gearReqPlan(),
+    t = c.total
+      ? `<div class="card"><b>Đủ điểm cho đồ đang mặc</b> <small class="dim">cần ${c.total} điểm · đang có ${S.attrPts}${c.total > S.attrPts ? ` · thiếu ${c.total - S.attrPts} (≈ ${Math.ceil((c.total - S.attrPts) / PTS_PER_LEVEL)} cấp nữa)` : ""}</small>${c.list
+          .map(
+            (s) =>
+              `<div class="small">${esc(s.it.n)} <span class="dim">(cấp ${s.lv})</span>: ${Object.entries(s.d)
+                .map(([l, r]) => `${ATTR_VI[l]} +${r}`)
+                .join(", ")}</div>`,
+          )
+          .join(
+            "",
+          )}<div class="dim small">Gợi ý tiềm năng bên dưới cộng phần này trước, phần còn lại theo lực chiến.</div></div>`
+      : "",
+    h = n.attrs.length
+      ? `<div class="card"><b>Tiềm năng</b> <small class="cp">sức mạnh ${i(n.gainAt)}</small>${n.attrs.map((s) => `<div>${s.n}: +${s.d}</div>`).join("")}<div class="btnrow"><button class="btn" id="sgAt">Áp dụng</button></div></div>`
+      : "";
+  modal(
+    `<h3>Gợi ý cộng điểm</h3><p class="desc">Xem trước, chưa cộng gì. Gợi ý chọn cách tăng sức mạnh nhiều nhất với trang bị hiện tại. Bạn vẫn rút điểm được bằng nút −.</p>${a}${t}${h}${!a && !h ? '<p class="dim">Bạn không có điểm nào để cộng.</p>' : ""}`,
+    () => {
+      const s = $("#sgSk");
+      s &&
+        (s.onclick = () => {
+          (autoSpendSkills(), recalc(), save(), refresh(), suggestModal());
+        });
+      const l = $("#sgAt");
+      l &&
+        (l.onclick = () => {
+          (spendAttrsGreedy(), recalc(), save(), refresh(), suggestModal());
+        });
+    },
+  );
 }
-
-/* ---------- 5. bach khoa ---------- */
-let codexTab = 'zone';
-function codexModal(tab) {
-  if (tab) codexTab = tab;
-  const tabs = [['zone', 'Vùng và quái'], ['set', 'Bộ Hoàng Kim'], ['mat', 'Nguyên liệu rèn']];
-  let body = '';
-  if (codexTab === 'zone') {
-    body = ZONES.map((z, i) => { const open = S.maxStage >= i * ZONE_STAGES + 1, nm = z.m.filter(t => MON[t]).map(t => esc(MON[t].n)).join(', ');
-      return `<div class="card${open ? '' : ' lock'}"><b>${esc(z.n)}</b> <small class="dim">cấp ${z.lo}–${z.hi}${open ? '' : ' · chưa tới'}</small><br><small>Trùm: <b class="boss">${esc((MON[z.boss] || {}).n || '?')}</b></small><br><small class="dim">Quái: ${nm}</small><br><small>Ngũ hành: ${z.sw.map((w, k) => w ? `<span style="color:${SERIES_COL[k]}">${SERIES[k]}</span>` : '').filter(Boolean).join(' ') || '—'}</small></div>`; }).join('');
-  } else if (codexTab === 'set') {
-    const fid = FAC[S.fac] ? FAC[S.fac].id : -1, groups = new Map();
-    for (const r of J.sets.gold) { if (!sexReqOk(r.req) || !setRowOk(r)) continue; const f = reqOfRow(r, 39); if (f !== fid && f !== -1) continue; (groups.get(r.grp) || groups.set(r.grp, []).get(r.grp)).push(r); }
-    const list = [...groups.values()].sort((a, b) => reqOfRow(a[0], 36) - reqOfRow(b[0], 36));
-    body = `<p class="desc">Bộ Hoàng Kim của phái bạn (${list.length} bộ). Mặc đủ số món của một bộ sẽ mở hết dòng ẩn của mọi trang bị. Bạch Kim chế từ 2 món Hoàng Kim giống nhau.</p>` +
-      list.map(g => { const r0 = g[0], need = r0.n2 || 99; return `<div class="card"><b>${esc(r0.n.split(' ').slice(0, 2).join(' '))}…</b> <small class="dim">cấp ${reqOfRow(r0, 36)} · ${g.length} món · đủ ${need} món mở dòng ẩn</small><br><small class="dim">${g.map(r => esc(r.n)).join(' · ')}</small></div>`; }).join('') || '<p class="dim">Không có.</p>';
+let codexTab = "zone";
+function codexModal(n) {
+  n && (codexTab = n);
+  const i = [
+    ["zone", "Vùng và quái"],
+    ["set", "Bộ Hoàng Kim"],
+    ["mat", "Nguyên liệu rèn"],
+  ];
+  let a = "";
+  if (codexTab === "zone")
+    a = ZONES.map((c, t) => {
+      const h = S.maxStage >= t * ZONE_STAGES + 1,
+        s = c.m
+          .filter((l) => MON[l])
+          .map((l) => esc(MON[l].n))
+          .join(", ");
+      return `<div class="card${h ? "" : " lock"}"><b>${esc(c.n)}</b> <small class="dim">cấp ${c.lo}–${c.hi}${h ? "" : " · chưa tới"}</small><br><small>Trùm: <b class="boss">${esc((MON[c.boss] || {}).n || "?")}</b></small><br><small class="dim">Quái: ${s}</small><br><small>Ngũ hành: ${
+        c.sw
+          .map((l, r) => (l ? `<span style="color:${SERIES_COL[r]}">${SERIES[r]}</span>` : ""))
+          .filter(Boolean)
+          .join(" ") || "—"
+      }</small></div>`;
+    }).join("");
+  else if (codexTab === "set") {
+    const c = FAC[S.fac] ? FAC[S.fac].id : -1,
+      t = new Map();
+    for (const s of J.sets.gold) {
+      if (!sexReqOk(s.req) || !setRowOk(s)) continue;
+      const l = reqOfRow(s, 39);
+      (l !== c && l !== -1) || (t.get(s.grp) || t.set(s.grp, []).get(s.grp)).push(s);
+    }
+    const h = [...t.values()].sort((s, l) => reqOfRow(s[0], 36) - reqOfRow(l[0], 36));
+    a =
+      `<p class="desc">Bộ Hoàng Kim của phái bạn (${h.length} bộ). Mặc đủ số món của một bộ sẽ mở hết dòng ẩn của mọi trang bị.</p>` +
+        h
+          .map((s) => {
+            const l = s[0],
+              r = l.n2 || 99;
+            return `<div class="card"><b>${esc(l.n.split(" ").slice(0, 2).join(" "))}…</b> <small class="dim">cấp ${reqOfRow(l, 36)} · ${s.length} món · đủ ${r} món mở dòng ẩn</small><br><small class="dim">${s.map((g) => esc(g.n)).join(" · ")}</small></div>`;
+          })
+          .join("") || '<p class="dim">Không có.</p>';
   } else {
-    const d = k => `${Math.round(DROP[k].boss * 1000) / 10}% trùm · ${Math.round(DROP[k].elite * 1000) / 10}% tinh anh · ${Math.round(DROP[k].normal * 10000) / 100}% quái thường`;
-    body = `<div class="card"><b>Chuỗi rèn</b><br><small>Tím (Lò rèn → Lò Ép Đồ): tinh luyện Huyền Tinh (3 trang sức + ${fmt(fuseCost())}; 3 viên cùng cấp → 1, thất bại mất 1 viên) → lấy thuộc tính từ đồ xanh thành đá (5.000) → chế tạo phôi Tím trống (10.000, số dòng theo cấp Huyền Tinh) → khảm nạm lần lượt từng dòng (10.000; dòng ẩn đúng hệ; không trùng thuộc tính).<br>Hoàng Kim: gom mảnh từ trùm (9 / 6 / 4 mảnh) ghép thành món bộ.<br>Bạch Kim: 2 Hoàng Kim giống nhau + Thủy Tinh Trắng + Thần Bí Khoáng Thạch (${PLAT_MAKE.rate}% thành công), rồi thăng +1…+10.</small></div>
-      <div class="card"><b>Huyền Tinh Khoáng Thạch</b> <small class="dim">đang có ${Object.values(mats().ht).reduce((a, b) => a + b, 0)}</small><br><small>Rơi: ${d('ht')} · Dã Tẩu (35% mỗi nhiệm vụ, mỗi 10 nhiệm vụ 3 viên) · Sát Thủ · phó bản · luyện 3 nhẫn / dây chuyền / ngọc bội (Lò rèn → Tinh luyện)</small></div>
-      <div class="card"><b>Đá thuộc tính (dòng 1–6)</b> <small class="dim">đang có ${Object.values(mats().ore).reduce((a, b) => a + b, 0)}</small><br><small>Dòng 1/3/5: Huyền Thiết · Mật Ngân · Chu Sa Nguyên Khoáng (không phân hệ) · dòng 2/4/6: Khổng Tước · Phù Dung · Chung Nhũ Nguyên Thạch (đúng hệ món)</small><br>
-        <small>Nguồn: <b>Lấy thuộc tính</b> từ đồ xanh (Lò rèn → Lò Ép Đồ, chọn được thuộc tính) · quái rơi: ${d('ore')} · phần thưởng phó bản · tách dòng đồ Tím</small></div>
-      <div class="card"><b>Mảnh Hoàng Kim</b> <small class="dim">đang gom ${Object.keys(mats().shard).length} loại</small><br><small>Rơi: ${d('shard')}</small></div>
-      <div class="card"><b>Thủy Tinh Trắng / Thần Bí Khoáng Thạch</b> <small class="dim">${matHave('misc', 'wc')} / ${matHave('misc', 'mys')}</small><br><small>Quái cấp ≥ 60 hoặc trùm. Rơi: ${d('wc')}</small></div>`;
+    const c = (t) =>
+      `${Math.round(DROP[t].boss * 1e3) / 10}% trùm · ${Math.round(DROP[t].elite * 1e3) / 10}% tinh anh · ${Math.round(DROP[t].normal * 1e4) / 100}% quái thường`;
+    a = `<div class="card"><b>Chuỗi rèn</b><br><small>Tím (Lò rèn → Lò Ép Đồ): tinh luyện Huyền Tinh (3 trang sức + ${fmtL(fuseCost())}; 3 viên cùng cấp → 1, thất bại mất 1 viên) → lấy thuộc tính từ đồ xanh thành đá (5.000) → chế tạo phôi Tím trống (10.000, số dòng theo cấp Huyền Tinh) → khảm nạm lần lượt từng dòng (10.000; dòng ẩn đúng hệ; không trùng thuộc tính).<br>Hoàng Kim: gom mảnh từ trùm (9 / 6 / 4 mảnh) ghép thành món bộ.</small></div>
+      <div class="card"><b>Huyền Tinh Khoáng Thạch</b> <small class="dim">đang có ${Object.values(mats().ht).reduce((t, h) => t + h, 0)}</small><br><small>Rơi: ${c("ht")} · Dã Tẩu (35% mỗi nhiệm vụ, mỗi 10 nhiệm vụ 3 viên) · Sát Thủ · phó bản · luyện 3 nhẫn / dây chuyền / ngọc bội (Lò rèn → Tinh luyện)</small></div>
+      <div class="card"><b>Đá thuộc tính (dòng 1–6)</b> <small class="dim">đang có ${Object.values(mats().ore).reduce((t, h) => t + h, 0)}</small><br><small>Dòng 1/3/5: Huyền Thiết · Mật Ngân · Chu Sa Nguyên Khoáng (không phân hệ) · dòng 2/4/6: Khổng Tước · Phù Dung · Chung Nhũ Nguyên Thạch (đúng hệ món)</small><br>
+        <small>Nguồn: <b>Lấy thuộc tính</b> từ đồ xanh (Lò rèn → Lò Ép Đồ, chọn được thuộc tính) · quái rơi: ${c("ore")} · phần thưởng phó bản · tách dòng đồ Tím</small></div>
+      <div class="card"><b>Mảnh Hoàng Kim</b> <small class="dim">đang gom ${Object.keys(mats().shard).length} loại</small><br><small>Rơi: ${c("shard")}</small></div>
+      <div class="card"><b>Thủy Tinh Trắng / Thần Bí Khoáng Thạch</b> <small class="dim">${matHave("misc", "wc")} / ${matHave("misc", "mys")}</small><br><small>Quái cấp ≥ 60 hoặc trùm. Rơi: ${c("wc")}</small></div>`;
   }
-  modal(`<h3>Bách khoa</h3><div class="dtabs">${tabs.map(([k, n]) => `<button data-c="${k}" class="${k === codexTab ? 'on' : ''}">${n}</button>`).join('')}</div><div class="codex">${body}</div>`, () => {
-    document.querySelectorAll('#mBody .dtabs [data-c]').forEach(b => b.onclick = () => codexModal(b.dataset.c));
-  });
+  modal(
+    `<h3>Bách khoa</h3><div class="dtabs">${i.map(([c, t]) => `<button data-c="${c}" class="${c === codexTab ? "on" : ""}">${t}</button>`).join("")}</div><div class="codex">${a}</div>`,
+    () => {
+      document.querySelectorAll("#mBody .dtabs [data-c]").forEach((c) => (c.onclick = () => codexModal(c.dataset.c)));
+    },
+  );
 }

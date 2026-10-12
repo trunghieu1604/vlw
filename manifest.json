@@ -1,1 +1,36 @@
-{"name":"Võ Lâm Web","short_name":"VL Web","start_url":"./index.html","display":"standalone","orientation":"portrait","background_color":"#0e1412","theme_color":"#0e1412","icons":[{"src":"favicon.jpg","sizes":"any","type":"image/jpeg"}]}
+{
+  "name": "Võ Lâm Idle",
+  "short_name": "Võ Lâm",
+  "description": "Võ Lâm Truyền Kỳ Web Idle",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e1412",
+  "theme_color": "#0e1412",
+  "icons": [
+    {
+      "src": "favicon.jpg",
+      "sizes": "315x315",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/p/shaolin.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ]
+}

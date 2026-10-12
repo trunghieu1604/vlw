@@ -1,139 +1,287 @@
-/* ======================= DON KHO =======================
-   Mot nut don ca Hanh trang + Ruong ep (kho ren) + Kho chung khi day:
-   - Trang suc thua (nhan / day chuyen / ngoc boi) -> luyen Huyen Tinh (trang suc trong Kho chung chuyen sang Ruong ep truoc)
-   - Ban do trang, do xanh / vang khong khop bo loc, (tuy chon) Hoang Kim khong thuoc bo dang giu
-   Khong bao gio dung: mon khoa 🔒, do Tim / phoi, Bach Kim, Than ma, do dang mac, do tot hon do dang mac, do can tra Da Tau. */
-'use strict';
-const DK = { inv: true, box: true, st: false, jew: true, white: true, blue: true, gold: false, lv: 10 };
-const dkSafe = it => !!it && !it.lock && !it.vio && !it.plv && !it.thanma && !(typeof dtNeed === 'function' && dtNeed(it)) && !Object.values(S.eq).includes(it);
-const dkJew = it => verVio() && FUSE_SLOTS.includes(it.d) && !it.set;
-function dkCat(it, own) {                    // own: mon cua nhan vat (hanh trang / ruong ep) -> kiem tra tot hon do dang mac
-  if (!dkSafe(it) || (it.lvl || 1) > DK.lv) return '';
-  if (own && !it.set && typeof betterThanEquipped === 'function' && betterThanEquipped(it)) return '';
-  if (DK.jew && dkJew(it)) return 'jew';
-  if (it.set) return DK.gold && !setKept(it) && !it.enh ? 'gold' : '';
-  if (lootMatch(it)) return '';
-  if ((it.r || 0) === 0) return DK.white ? 'white' : '';
-  return DK.blue ? 'blue' : '';
+"use strict";
+const DK = { inv: !0, box: !0, st: !1, jew: !0, white: !0, blue: !0, gold: !1, vio: !1, lv: 10 },
+  dkSafe = (n) =>
+    !!n &&
+    !n.lock &&
+    !n.plv &&
+    !n.thanma &&
+    !(typeof dtNeed == "function" && dtNeed(n)) &&
+    !Object.values(S.eq).includes(n),
+  dkJew = (n) => verVio() && FUSE_SLOTS.includes(n.d) && !n.set;
+function dkCat(n, i) {
+  return !dkSafe(n) ||
+    (n.lvl || 1) > DK.lv ||
+    (i && !n.set && typeof betterThanEquipped == "function" && betterThanEquipped(n))
+    ? ""
+    : n.vio
+      ? DK.vio && !n.enh
+        ? "vio"
+        : ""
+      : DK.jew && dkJew(n)
+        ? "jew"
+        : n.set
+          ? DK.gold && !setKept(n) && !n.enh
+            ? "gold"
+            : ""
+          : lootMatch(n)
+            ? ""
+            : (n.r || 0) === 0
+              ? DK.white
+                ? "white"
+                : ""
+              : DK.blue
+                ? "blue"
+                : "";
 }
 function dkPlan() {
-  const p = { inv: [], box: [], st: [], jew: 0, stJew: [], gold: 0 };
-  const add = (where, it, own) => { const c = dkCat(it, own); if (!c) return; if (c === 'jew') { if (where === 'st') p.stJew.push(it); else p.jew++; return; } p[where].push(it); p.gold += itemValue(it); };
-  if (DK.inv) for (const it of S.inv) add('inv', it, true);
-  if (DK.box) for (const it of epBox()) add('box', it, true);
-  if (DK.st) { const { st, err } = stashRead(); if (!err) for (const it of st.items) add('st', it, false); }
-  return p;
+  const n = { inv: [], box: [], st: [], jew: 0, stJew: [], gold: 0 },
+    i = (t, o, e) => {
+      const s = dkCat(o, e);
+      if (s) {
+        if (s === "jew") {
+          t === "st" ? n.stJew.push(o) : n.jew++;
+          return;
+        }
+        (n[t].push(o), (n.gold += itemValue(o)));
+      }
+    };
+  if (DK.inv) for (const t of S.inv) i("inv", t, !0);
+  if (DK.box) for (const t of epBox()) i("box", t, !0);
+  if (DK.st) {
+    const { st: t, err: o } = stashRead();
+    if (!o) for (const e of t.items) i("st", e, !1);
+  }
+  return n;
 }
 function dkRun() {
-  const res = { moved: 0, fused: 0, sold: 0, gold: 0, msg: [] };
-  // 1. trang suc trong Kho chung -> Ruong ep (de luyen)
+  const n = { moved: 0, fused: 0, sold: 0, gold: 0, msg: [] };
   if (DK.st && DK.jew && verVio()) {
-    const r = stashTx(st => {
-      const take = st.items.filter(it => dkCat(it, false) === 'jew').slice(0, Math.max(0, EP_BOX_MAX - epBox().length));
-      if (!take.length) return { ok: false };
-      st.items = st.items.filter(x => !take.includes(x)); for (const x of take) epBox().push(x);
-      return { ok: true, from: 'stash', n: take.length, undo: () => { for (const x of take) { const i = epBox().indexOf(x); if (i >= 0) epBox().splice(i, 1); } } };
+    const t = stashTx((o) => {
+      const e = o.items.filter((s) => dkCat(s, !1) === "jew").slice(0, Math.max(0, EP_BOX_MAX - epBox().length));
+      if (!e.length) return { ok: !1 };
+      o.items = o.items.filter((s) => !e.includes(s));
+      for (const s of e) epBox().push(s);
+      return {
+        ok: !0,
+        from: "stash",
+        n: e.length,
+        undo: () => {
+          for (const s of e) {
+            const l = epBox().indexOf(s);
+            l >= 0 && epBox().splice(l, 1);
+          }
+        },
+      };
     });
-    if (r && r.ok) res.moved = r.n;
+    t && t.ok && (n.moved = t.n);
   }
-  // 2. luyen Huyen Tinh tu trang suc thua (hanh trang + ruong ep)
   if (DK.jew && verVio()) {
-    const got = {};
-    for (let g = 0; g < 200; g++) {
-      const pool = fusePool().filter(x => (x.lvl || 1) <= DK.lv && (DK.inv || !S.inv.includes(x)) && (DK.box || DK.st || !epBox().includes(x))).slice(0, 3);
-      if (pool.length < 3 || S.gold < fuseCost()) break;
-      const r = fuse(pool); if (!r.ok) break; res.fused++; got[r.lvl] = (got[r.lvl] || 0) + 1;
+    const t = {};
+    for (let o = 0; o < 200; o++) {
+      const e = fusePick(
+        fusePool().filter(
+          (l) => (l.lvl || 1) <= DK.lv && (DK.inv || !S.inv.includes(l)) && (DK.box || DK.st || !epBox().includes(l)),
+        ),
+      );
+      if (e.length < 3 || S.gold < fuseCost()) break;
+      const s = fuse(e);
+      if (!s.ok) break;
+      (n.fused++, (t[s.lvl] = (t[s.lvl] || 0) + 1));
     }
-    if (res.fused) res.msg.push(`luyện ${res.fused} Huyền Tinh (${Object.entries(got).map(([l, c]) => `${c}×c${l}`).join(', ')})`);
+    n.fused &&
+      n.msg.push(
+        `luyện ${n.fused} Huyền Tinh (${Object.entries(t)
+          .map(([o, e]) => `${e}×c${o}`)
+          .join(", ")})`,
+      );
   }
-  // 3. ban do trong hanh trang + ruong ep
-  const p = dkPlan();
-  for (const [where, list] of [['inv', p.inv], ['box', p.box]]) for (const it of list) {
-    const arr = where === 'inv' ? S.inv : epBox(), i = arr.indexOf(it); if (i < 0) continue;
-    arr.splice(i, 1); const v = itemValue(it); S.gold += v; res.gold += v; res.sold++;
-  }
-  // 4. ban do trong Kho chung (ghi kho truoc, roi cong ngan luong)
-  if (DK.st && p.st.length) {
-    const r = stashTx(st => {
-      const keep = [], sold = []; for (const it of st.items) (dkCat(it, false) && dkCat(it, false) !== 'jew' ? sold : keep).push(it);
-      if (!sold.length) return { ok: false };
-      const v = sold.reduce((a, x) => a + itemValue(x), 0); st.items = keep; S.gold += v;
-      return { ok: true, from: 'stash', n: sold.length, v, undo: () => { S.gold -= v; } };
+  const i = dkPlan();
+  for (const [t, o] of [
+    ["inv", i.inv],
+    ["box", i.box],
+  ])
+    for (const e of o) {
+      const s = t === "inv" ? S.inv : epBox(),
+        l = s.indexOf(e);
+      if (l < 0) continue;
+      s.splice(l, 1);
+      const d = itemValue(e);
+      ((S.gold += d), (n.gold += d), n.sold++);
+    }
+  if (DK.st && i.st.length) {
+    const t = stashTx((o) => {
+      const e = [],
+        s = [];
+      for (const d of o.items) (dkCat(d, !1) && dkCat(d, !1) !== "jew" ? s : e).push(d);
+      if (!s.length) return { ok: !1 };
+      const l = s.reduce((d, c) => d + itemValue(c), 0);
+      return (
+        (o.items = e),
+        (S.gold += l),
+        {
+          ok: !0,
+          from: "stash",
+          n: s.length,
+          v: l,
+          undo: () => {
+            S.gold -= l;
+          },
+        }
+      );
     });
-    if (r && r.ok) { res.sold += r.n; res.gold += r.v; }
+    t && t.ok && ((n.sold += t.n), (n.gold += t.v));
   }
-  if (res.moved) res.msg.unshift(`chuyển ${res.moved} trang sức từ Kho chung sang Rương ép`);
-  if (res.sold) res.msg.push(`bán ${res.sold} món (+${fmt(res.gold)} lượng)`);
-  invDirty = true; R.dirty = true; save();
-  return res;
+  return (
+    n.moved && n.msg.unshift(`chuyển ${n.moved} trang sức từ Kho chung sang Kho Rèn`),
+    n.sold && n.msg.push(`bán ${n.sold} món (+${fmtL(n.gold)} lượng)`),
+    (invDirty = !0),
+    (R.dirty = !0),
+    save(),
+    n
+  );
 }
-/* ---------- DON HET: ban toan bo (ke ca Tim, Hoang Kim, Bach Kim, ngua) - chi giu mon khoa 🔒, do dang mac, do can cho Da Tau ---------- */
-const dkAllSafe = it => !!it && !it.lock && !Object.values(S.eq).includes(it) && !(typeof dtNeed === 'function' && dtNeed(it));
+const dkAllSafe = (n) =>
+  !!n && !n.lock && !Object.values(S.eq).includes(n) && !(typeof dtNeed == "function" && dtNeed(n));
 function dkAllPlan() {
-  const p = { inv: [], box: [], st: [], gold: 0, kind: {} };
-  const add = (w, it) => { if (!dkAllSafe(it)) return; p[w].push(it); p.gold += itemValue(it); const k = it.thanma || (typeof isHorse === 'function' && isHorse(it)) ? 'Ngựa' : it.vio ? 'Tím' : RAR_VI[it.r || 0] || 'Thường'; p.kind[k] = (p.kind[k] || 0) + 1; };
-  if (DK.inv) for (const it of S.inv) add('inv', it);
-  if (DK.box) for (const it of epBox()) add('box', it);
-  if (DK.st) { const { st, err } = stashRead(); if (!err) for (const it of st.items) add('st', it); }
-  return p;
+  const n = { inv: [], box: [], st: [], gold: 0, kind: {} },
+    i = (t, o) => {
+      if (!dkAllSafe(o)) return;
+      (n[t].push(o), (n.gold += itemValue(o)));
+      const e =
+        o.thanma || (typeof isHorse == "function" && isHorse(o))
+          ? "Ngựa"
+          : o.vio
+            ? "Tím"
+            : RAR_VI[o.r || 0] || "Thường";
+      n.kind[e] = (n.kind[e] || 0) + 1;
+    };
+  if (DK.inv) for (const t of S.inv) i("inv", t);
+  if (DK.box) for (const t of epBox()) i("box", t);
+  if (DK.st) {
+    const { st: t, err: o } = stashRead();
+    if (!o) for (const e of t.items) i("st", e);
+  }
+  return n;
 }
 function dkAllRun() {
-  const p = dkAllPlan(); let n = 0, g = 0;
-  for (const [arr, list] of [[S.inv, p.inv], [epBox(), p.box]]) for (const it of list) { const i = arr.indexOf(it); if (i < 0) continue; arr.splice(i, 1); const v = itemValue(it); S.gold += v; g += v; n++; }
-  if (DK.st && p.st.length) {
-    const r = stashTx(st => {
-      const keep = [], sold = []; for (const it of st.items) (dkAllSafe(it) ? sold : keep).push(it);
-      if (!sold.length) return { ok: false };
-      const v = sold.reduce((a, x) => a + itemValue(x), 0); st.items = keep; S.gold += v;
-      return { ok: true, from: 'stash', n: sold.length, v, undo: () => { S.gold -= v; } };
+  const n = dkAllPlan();
+  let i = 0,
+    t = 0;
+  for (const [o, e] of [
+    [S.inv, n.inv],
+    [epBox(), n.box],
+  ])
+    for (const s of e) {
+      const l = o.indexOf(s);
+      if (l < 0) continue;
+      o.splice(l, 1);
+      const d = itemValue(s);
+      ((S.gold += d), (t += d), i++);
+    }
+  if (DK.st && n.st.length) {
+    const o = stashTx((e) => {
+      const s = [],
+        l = [];
+      for (const c of e.items) (dkAllSafe(c) ? l : s).push(c);
+      if (!l.length) return { ok: !1 };
+      const d = l.reduce((c, h) => c + itemValue(h), 0);
+      return (
+        (e.items = s),
+        (S.gold += d),
+        {
+          ok: !0,
+          from: "stash",
+          n: l.length,
+          v: d,
+          undo: () => {
+            S.gold -= d;
+          },
+        }
+      );
     });
-    if (r && r.ok) { n += r.n; g += r.v; }
+    o && o.ok && ((i += o.n), (t += o.v));
   }
-  invDirty = true; R.dirty = true; save();
-  return { n, g };
+  return ((invDirty = !0), (R.dirty = !0), save(), { n: i, g: t });
 }
 function donHetModal() {
-  const p = dkAllPlan(), tot = p.inv.length + p.box.length + p.st.length;
-  const where = [DK.inv && `Hành trang ${p.inv.length}`, DK.box && `Rương ép ${p.box.length}`, DK.st && `Kho chung ${p.st.length}`].filter(Boolean).join(' · ');
-  const hi = ['Tím', 'Hoàng Kim', 'Bạch Kim', 'Ngựa'].filter(k => p.kind[k]);
-  modal(`<h3>⚠ Dọn hết</h3>
-    <div class="card warnc"><b class="bad">Lưu ý: bán TOÀN BỘ ${tot} món, không lấy lại được.</b>
-      <div class="small">Không xét bộ lọc, cấp, độ hiếm: bán cả đồ Tím / phôi, Hoàng Kim, Bạch Kim, ngựa, trang sức.</div>
+  const n = dkAllPlan(),
+    i = n.inv.length + n.box.length + n.st.length,
+    t = [
+      DK.inv && `Hành trang ${n.inv.length}`,
+      DK.box && `Kho Rèn ${n.box.length}`,
+      DK.st && `Kho chung ${n.st.length}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    o = ["Tím", "Hoàng Kim", "Bạch Kim", "Ngựa"].filter((e) => n.kind[e]);
+  modal(
+    `<h3>⚠ Dọn hết</h3>
+    <div class="card warnc"><b class="bad">Lưu ý: bán TOÀN BỘ ${i} món, không lấy lại được.</b>
+      <div class="small">Không xét bộ lọc, cấp, độ hiếm: bán cả đồ Tím / phôi, Hoàng Kim, ngựa, trang sức.</div>
       <div class="small">Chỉ giữ: món khóa 🔒, đồ đang mặc, đồ cần cho Dã Tẩu.</div></div>
-    <table class="dktbl small"><tr><th>Nơi</th><td>${where || '—'}</td></tr>
-      <tr><th>Loại</th><td>${Object.entries(p.kind).map(([k, c]) => `${k} ${c}`).join(' · ') || '—'}</td></tr>
-      <tr><th>Nhận</th><td><b>+${fmt(p.gold)} lượng</b></td></tr></table>
-    ${hi.length ? `<p class="small bad">Có ${hi.map(k => `${p.kind[k]} ${k}`).join(', ')}: hãy khóa 🔒 món muốn giữ trước khi dọn.</p>` : ''}
-    <div class="btnrow"><button class="btn red" id="dhGo" ${tot ? '' : 'disabled'}>Xác nhận dọn hết ${tot} món</button><button class="btn" id="dhNo">Quay lại</button></div>`, () => {
-    $('#dhNo').onclick = () => donKhoModal();
-    $('#dhGo').onclick = () => { const r = dkAllRun(); const t = r.n ? `Dọn hết: bán ${r.n} món (+${fmt(r.g)} lượng)` : 'Không có gì để dọn'; toast(t); log(`<span class="dim">🧹 ${t}.</span>`); refresh(); donKhoModal(); };
-  });
+    <table class="dktbl small"><tr><th>Nơi</th><td>${t || "—"}</td></tr>
+      <tr><th>Loại</th><td>${
+        Object.entries(n.kind)
+          .map(([e, s]) => `${e} ${s}`)
+          .join(" · ") || "—"
+      }</td></tr>
+      <tr><th>Nhận</th><td><b>+${fmtL(n.gold)} lượng</b></td></tr></table>
+    ${o.length ? `<p class="small bad">Có ${o.map((e) => `${n.kind[e]} ${e}`).join(", ")}: hãy khóa 🔒 món muốn giữ trước khi dọn.</p>` : ""}
+    <div class="btnrow"><button class="btn red" id="dhGo" ${i ? "" : "disabled"}>Xác nhận dọn hết ${i} món</button><button class="btn" id="dhNo">Quay lại</button></div>`,
+    () => {
+      (($("#dhNo").onclick = () => donKhoModal()),
+        ($("#dhGo").onclick = () => {
+          const e = dkAllRun(),
+            s = e.n ? `Dọn hết: bán ${e.n} món (+${fmtL(e.g)} lượng)` : "Không có gì để dọn";
+          (toast(s), log(`<span class="dim">🧹 ${s}.</span>`), refresh(), donKhoModal());
+        }));
+    },
+  );
 }
 function donKhoModal() {
-  const { st, err } = stashRead(), p = dkPlan();
-  const jewSt = p.stJew.length, jewAll = p.jew + jewSt, fuseN = Math.floor(jewAll / 3);
-  const ck = (k, t) => `<label class="small" style="display:block"><input type="checkbox" data-dk="${k}" ${DK[k] ? 'checked' : ''}> ${t}</label>`;
-  const row = (n, c, m) => `<tr><td>${n}</td><td>${c}</td><td>${m}</td></tr>`;
-  modal(`<h3>🧹 Dọn kho</h3>
+  const { st: n, err: i } = stashRead(),
+    t = dkPlan(),
+    o = t.stJew.length,
+    e = t.jew + o,
+    s = Math.floor(e / 3),
+    l = (c, h) =>
+      `<label class="small" style="display:block"><input type="checkbox" data-dk="${c}" ${DK[c] ? "checked" : ""}> ${h}</label>`,
+    d = (c, h, a) => `<tr><td>${c}</td><td>${h}</td><td>${a}</td></tr>`;
+  modal(
+    `<h3>🧹 Dọn kho</h3>
     <div class="card"><b>Dọn ở đâu</b>
-      ${ck('inv', `Hành trang <small class="dim">${S.inv.length}/${INV_MAX}</small>`)}
-      ${ck('box', `Rương ép <small class="dim">${epBox().length}/${EP_BOX_MAX}</small>`)}
-      ${ck('st', `Kho chung <small class="dim">${err ? 'không đọc được' : `${st.items.length}/${STASH_MAX}`} · dùng chung 3 nhân vật, xét theo bộ lọc của nhân vật này</small>`)}</div>
+      ${l("inv", `Hành trang <small class="dim">${S.inv.length}/${INV_MAX}</small>`)}
+      ${l("box", `Kho Rèn <small class="dim">${epBox().length}/${EP_BOX_MAX}</small>`)}
+      ${l("st", `Kho chung <small class="dim">${i ? "không đọc được" : `${n.items.length}/${STASH_MAX}`} · dùng chung 3 nhân vật, xét theo bộ lọc của nhân vật này</small>`)}</div>
     <div class="card"><b>Dọn gì</b>
-      ${verVio() ? ck('jew', 'Nhẫn / dây chuyền / ngọc bội thừa → luyện Huyền Tinh') : ''}
-      ${ck('white', 'Bán đồ trắng')}
-      ${ck('blue', 'Bán đồ xanh không khớp bộ lọc nhặt đồ')}
-      ${ck('gold', 'Bán Hoàng Kim không thuộc bộ đang giữ (bộ phái khác / ngoài danh sách giữ, chưa cường hóa)')}
-      <div class="row small">Chỉ dọn món cấp ≤ <select id="dkLv">${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${DK.lv === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></div></div>
+      ${verVio() ? l("jew", "Nhẫn / dây chuyền / ngọc bội thừa → luyện Huyền Tinh") : ""}
+      ${l("white", "Bán đồ trắng")}
+      ${l("blue", "Bán đồ xanh không khớp bộ lọc nhặt đồ")}
+      ${verVio() ? l("vio", "Bán đồ Tím / phôi Tím (không tốt hơn đồ đang mặc, chưa cường hóa)") : ""}
+      ${l("gold", "Bán Hoàng Kim không thuộc bộ đang giữ (bộ phái khác / ngoài danh sách giữ, chưa cường hóa)")}
+      <div class="row small">Chỉ dọn món cấp ≤ <select id="dkLv">${Array.from({ length: 10 }, (c, h) => `<option value="${h + 1}" ${DK.lv === h + 1 ? "selected" : ""}>${h + 1}</option>`).join("")}</select></div></div>
     <table class="dktbl small"><tr><th>Nơi</th><th>Bán</th><th>Trang sức luyện</th></tr>
-      ${row('Hành trang', DK.inv ? p.inv.length : '—', '')}${row('Rương ép', DK.box ? p.box.length : '—', '')}${row('Kho chung', DK.st ? p.st.length : '—', DK.st ? jewSt : '—')}
-      ${row('<b>Tổng</b>', `<b>${p.inv.length + p.box.length + p.st.length}</b> (+${fmt(p.gold)} lượng)`, DK.jew && verVio() ? `<b>${jewAll}</b> → ~${fuseN} Huyền Tinh (${fmt(fuseCost())}/lần)` : '—')}</table>
-    <p class="dim small">Luôn giữ: món khóa 🔒, đồ Tím / phôi, Bạch Kim, Thần Mã, đồ đang mặc hoặc tốt hơn đồ đang mặc, đồ cần cho Dã Tẩu.</p>
-    <div class="btnrow"><button class="btn red" id="dkGo">Dọn ngay</button><button class="btn red" id="dkAll" title="Bán toàn bộ, chỉ giữ món khóa">⚠ Dọn hết</button><button class="btn" id="dkNo">Đóng</button></div>`, () => {
-    document.querySelectorAll('#mBody [data-dk]').forEach(c => c.onchange = () => { DK[c.dataset.dk] = c.checked; donKhoModal(); });
-    $('#dkLv').onchange = e => { DK.lv = +e.target.value; donKhoModal(); };
-    $('#dkNo').onclick = () => closeModal();
-    $('#dkAll').onclick = () => donHetModal();
-    $('#dkGo').onclick = () => { const r = dkRun(); const t = r.msg.length ? 'Dọn kho: ' + r.msg.join(', ') : 'Không có gì để dọn'; toast(t); log(`<span class="dim">🧹 ${t}.</span>`); refresh(); donKhoModal(); };
-  });
+      ${d("Hành trang", DK.inv ? t.inv.length : "—", "")}${d("Kho Rèn", DK.box ? t.box.length : "—", "")}${d("Kho chung", DK.st ? t.st.length : "—", DK.st ? o : "—")}
+      ${d("<b>Tổng</b>", `<b>${t.inv.length + t.box.length + t.st.length}</b> (+${fmtL(t.gold)} lượng)`, DK.jew && verVio() ? `<b>${e}</b> → ~${s} Huyền Tinh (${fmtL(fuseCost())}/lần)` : "—")}</table>
+    <p class="dim small">Luôn giữ: món khóa 🔒, ${DK.vio ? "" : "đồ Tím / phôi, "}Thần Mã, đồ đang mặc hoặc tốt hơn đồ đang mặc, đồ cần cho Dã Tẩu.</p>
+    <div class="btnrow"><button class="btn red" id="dkGo">Dọn ngay</button><button class="btn red" id="dkAll" title="Bán toàn bộ, chỉ giữ món khóa">⚠ Dọn hết</button><button class="btn" id="dkNo">Đóng</button></div>`,
+    () => {
+      (document.querySelectorAll("#mBody [data-dk]").forEach(
+        (c) =>
+          (c.onchange = () => {
+            ((DK[c.dataset.dk] = c.checked), donKhoModal());
+          }),
+      ),
+        ($("#dkLv").onchange = (c) => {
+          ((DK.lv = +c.target.value), donKhoModal());
+        }),
+        ($("#dkNo").onclick = () => closeModal()),
+        ($("#dkAll").onclick = () => donHetModal()),
+        ($("#dkGo").onclick = () => {
+          const c = dkRun(),
+            h = c.msg.length ? "Dọn kho: " + c.msg.join(", ") : "Không có gì để dọn";
+          (toast(h), log(`<span class="dim">🧹 ${h}.</span>`), refresh(), donKhoModal());
+        }));
+    },
+  );
 }

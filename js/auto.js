@@ -1,163 +1,258 @@
-/* ======================= TU DONG REN DO (giam so lan bam) =======================
-   Bat o the Khac (S.autoForge, mac dinh TAT). Chay moi 30 giay choi va khi vao lai game, dung dung ham ren thu cong (recipes.js)
-   nen giu nguyen luat, ti le va rui ro. Thu tu: ghep manh Hoang Kim -> kham Tim vao do dang thieu dong -> hop Huyen Tinh tu do thua
-   -> thang cap Huyen Tinh du 3 vien. Khong dung nguyen lieu cua Bach Kim, khong thang cap khoang (rui ro vo). */
-'use strict';
+"use strict";
 const AUTO_FORGE_MAX = { fuse: 5, ench: 6, up: 8 };
 function enchaseTargets() {
-  const worn = Object.values(S.eq).filter(Boolean), pool = worn.concat(S.inv, epBox());
-  const useful = it => { const w = worn.find(x => x.d === it.d); return !w || (!w.set && it.lvl >= w.lvl) ? 1 : 0; };   // phoi thay duoc do dang mac (khong de Hoang Kim)
-  return pool.filter(it => !it.set && it.d >= 0 && it.d <= 9 && it.vio && (it.mag || []).length < vioSlots(it) && (worn.includes(it) || reqOk(it)))
-    .sort((a, b) => (worn.includes(b) - worn.includes(a)) || (useful(b) - useful(a)) || (b.mag.length - a.mag.length) || (b.lvl - a.lvl));
+  const t = Object.values(S.eq).filter(Boolean),
+    i = t.concat(S.inv, epBox()),
+    n = (e) => {
+      const o = t.find((s) => s.d === e.d);
+      return !o || (!o.set && e.lvl >= o.lvl) ? 1 : 0;
+    };
+  return i
+    .filter(
+      (e) =>
+        !e.set && e.d >= 0 && e.d <= 9 && e.vio && (e.mag || []).length < vioSlots(e) && (t.includes(e) || reqOk(e)),
+    )
+    .sort((e, o) => t.includes(o) - t.includes(e) || n(o) - n(e) || o.mag.length - e.mag.length || o.lvl - e.lvl);
 }
-/* Tim mot cap (mon, cap Huyen Tinh, khoang) kham duoc ngay, hoac null */
 function findEnchase() {
-  const hts = Object.keys(mats().ht).map(Number).sort((a, b) => b - a), ores = Object.keys(mats().ore);
-  if (!hts.length || !ores.length) return null;
-  for (const it of enchaseTargets()) {
-    const n = it.mag.length;
-    for (const key of ores) {
-      if (oreParse(key).place !== n) continue;
-      for (const ht of hts) if (typeof enchaseCheck(it, ht, key) !== 'string') return { it, ht, key };
-    }
+  const t = Object.keys(mats().ht)
+      .map(Number)
+      .sort((n, e) => e - n),
+    i = Object.keys(mats().ore);
+  if (!t.length || !i.length) return null;
+  for (const n of enchaseTargets()) {
+    const e = n.mag.length;
+    for (const o of i)
+      if (oreParse(o).place === e) {
+        for (const s of t) if (typeof enchaseCheck(n, s, o) != "string") return { it: n, ht: s, key: o };
+      }
   }
   return null;
 }
 const forgeReadyCounts = () => ({
-  shard: Object.keys(mats().shard).filter(n => SHARDS[n] && matHave('shard', n) >= SHARDS[n]).length,
-  up: Object.keys(mats().ht).map(Number).filter(l => l < HT_MAX && matHave('ht', l) >= 3).length,
-  ench: findEnchase() ? 1 : 0,
-  fuse: fusePool().length >= 3 && S.gold >= fuseCost() * 2 ? 1 : 0,
-});
-/* TU HOP HUYEN TINH (S.autoFuse, mac dinh BAT, tat o the Lo ren): moi 30 giay hop trang suc thua (nhan / day chuyen / ngoc boi
-   trong tui + Ruong ep; khong manh hon do dang mac, khong khoa, khong giu cho Da Tau) thanh Huyen Tinh, 3 mon yeu nhat moi lan. */
-const AUTO_FUSE_MAX = 10;
-function autoFuse(quiet) {
-  if (!S || !S.fac || S.autoFuse === false || !verVio()) return 0;
-  let n = 0; const got = {};
-  for (let g = 0; g < AUTO_FUSE_MAX; g++) { const p = fusePool().slice(0, 3); if (p.length < 3 || S.gold < fuseCost() * 2) break; const r = fuse(p); if (!r.ok) break; n++; got[r.lvl] = (got[r.lvl] || 0) + 1; }
-  if (n) { R.dirty = true; invDirty = true; if (!quiet) log(`<span class="dim">💎 Tự hợp ${n} Huyền Tinh từ trang sức (${Object.entries(got).map(([l, c]) => `${c} viên cấp ${l}`).join(', ')}).</span>`); }
-  return n;
-}
-/* Do thua co the hop Huyen Tinh: nhan / day chuyen / ngoc boi trong tui, khong phai do manh hon do dang mac */
-function fusePool() { return S.inv.concat(typeof epBox === 'function' ? epBox() : []).filter(canFuse).filter(x => !betterThanEquipped(x) && !dtNeed(x)).sort((a, b) => itemPower(a) - itemPower(b)); }
-/* Tu che phoi Tim: chua co phoi dang kham do, co Huyen Tinh + ngan luong -> chon o dang mac do thuong (khong phai Tim / Hoang Kim)
-   co mon cung loai cap >= trong tui / Ruong ep, che phoi tu mon do (Huyen Tinh cap cao nhat -> nhieu dong nhat) */
-function autoPhoi() {
-  if (enchaseTargets().length || S.gold < EP_COST.phoi * 3) return false;
-  const hts = Object.keys(mats().ht).map(Number).filter(l => matHave('ht', l) > 0).sort((a, b) => b - a); if (!hts.length) return false;
-  const f = FAC[S.fac];
-  for (const w of Object.values(S.eq).filter(it => it && !it.vio && !it.set && it.d >= 0 && it.d <= 9).sort((a, b) => itemPower(a) - itemPower(b))) {
-    const c = S.inv.concat(epBox()).filter(x => x.d === w.d && (x.d > 1 || x.k === w.k) && x.lvl >= w.lvl && !x.set && !x.vio && !x.lock && !x.thanma && (x.r || 0) <= 2 && !dtNeed(x) && reqOk(x)
-      && !(DETAIL_SLOT[x.d] === 'weapon' && !weaponFits(x))).sort((a, b) => b.lvl - a.lvl)[0];
-    if (!c) continue;
-    if (!S.inv.includes(c)) { if (S.inv.length >= INV_MAX) continue; itemRemove(c); S.inv.push(c); }
-    const r = makePhoi(c, hts[0]); if (r.ok) { invDirty = true; return true; }
+    shard: Object.keys(mats().shard).filter((t) => SHARDS[t] && matHave("shard", t) >= SHARDS[t]).length,
+    up: Object.keys(mats().ht)
+      .map(Number)
+      .filter((t) => t < HT_MAX && matHave("ht", t) >= 3).length,
+    ench: findEnchase() ? 1 : 0,
+    fuse: fusePick(fusePool()).length === 3 && S.gold >= fuseCost() * 2 ? 1 : 0,
+  }),
+  AUTO_FUSE_MAX = 10;
+function autoFuse(t) {
+  if (!S || !S.fac || S.autoFuse === !1 || !verVio()) return 0;
+  let i = 0;
+  const n = {};
+  for (let e = 0; e < AUTO_FUSE_MAX; e++) {
+    const o = fusePick(fusePool());
+    if (o.length < 3 || S.gold < fuseCost() * 2) break;
+    const s = fuse(o);
+    if (!s.ok) break;
+    (i++, (n[s.lvl] = (n[s.lvl] || 0) + 1));
   }
-  return false;
+  return (
+    i &&
+      ((R.dirty = !0),
+      (invDirty = !0),
+      t ||
+        log(
+          `<span class="dim">💎 Tự hợp ${i} Huyền Tinh từ trang sức (${Object.entries(n)
+            .map(([e, o]) => `${o} viên cấp ${e}`)
+            .join(", ")}).</span>`,
+        )),
+    i
+  );
+}
+function fusePool() {
+  return S.inv
+    .concat(typeof epBox == "function" ? epBox() : [])
+    .filter(canFuse)
+    .filter((t) => !betterThanEquipped(t) && !dtNeed(t))
+    .sort((t, i) => itemPower(t) - itemPower(i));
+}
+function autoPhoi() {
+  if (enchaseTargets().length || S.gold < EP_COST.phoi * 3) return !1;
+  const t = Object.keys(mats().ht)
+    .map(Number)
+    .filter((n) => matHave("ht", n) > 0)
+    .sort((n, e) => e - n);
+  if (!t.length) return !1;
+  const i = FAC[S.fac];
+  for (const n of Object.values(S.eq)
+    .filter((e) => e && !e.vio && !e.set && e.d >= 0 && e.d <= 9)
+    .sort((e, o) => itemPower(e) - itemPower(o))) {
+    const e = S.inv
+      .concat(epBox())
+      .filter(
+        (s) =>
+          s.d === n.d &&
+          (s.d > 1 || s.k === n.k) &&
+          s.lvl >= n.lvl &&
+          !s.set &&
+          !s.vio &&
+          !s.lock &&
+          !s.thanma &&
+          (s.r || 0) <= 2 &&
+          !dtNeed(s) &&
+          reqOk(s) &&
+          !(DETAIL_SLOT[s.d] === "weapon" && !weaponFits(s)),
+      )
+      .sort((s, c) => c.lvl - s.lvl)[0];
+    if (!e) continue;
+    if (!S.inv.includes(e)) {
+      if (S.inv.length >= INV_MAX) continue;
+      (itemRemove(e), S.inv.push(e));
+    }
+    if (makePhoi(e, t[0]).ok) return ((invDirty = !0), !0);
+  }
+  return !1;
 }
 function autoForge() {
-  if (!S || !S.fac || !S.autoForge) return null;
-  const st = { shard: 0, ench: 0, fuse: 0, up: 0, fail: 0, phoi: 0 };
-  if (verVio() && autoPhoi()) st.phoi++;
-  for (const x of epBox().slice()) if (x.vio && (x.mag || []).length >= vioSlots(x) && S.inv.length < INV_MAX) { itemRemove(x); S.inv.push(x); invDirty = true; }   // Tim da kham du: ra hanh trang de tu mac
-  for (const n of Object.keys(mats().shard)) if (SHARDS[n] && matHave('shard', n) >= SHARDS[n] && S.inv.length < INV_MAX) { if (combineShards(n).ok) st.shard++; }
-  for (let g = 0; verVio() && g < AUTO_FORGE_MAX.ench; g++) { const f = findEnchase(); if (!f) break; const r = enchase(f.it, f.ht, f.key); if (r.ok) st.ench++; else st.fail++; }
-  for (let g = 0; verVio() && S.autoFuse === false && g < AUTO_FORGE_MAX.fuse; g++) { const p = fusePool().slice(0, 3); if (p.length < 3 || S.gold < fuseCost() * 2 || !fuse(p).ok) break; st.fuse++; }
-  let ups = 0;
-  for (let l = 1; l < HT_MAX; l++) while (matHave('ht', l) >= 3 && ups < AUTO_FORGE_MAX.up) { ups++; const r = upgradeHT(l); if (r.ok) st.up++; else st.fail++; }
-  const parts = [];
-  if (st.phoi) parts.push('chế phôi Tím');
-  if (st.shard) parts.push(`ghép ${st.shard} món Hoàng Kim`);
-  if (st.ench) parts.push(`khảm ${st.ench} dòng Tím`);
-  if (st.fuse) parts.push(`hợp ${st.fuse} Huyền Tinh`);
-  if (st.up) parts.push(`thăng cấp ${st.up} Huyền Tinh`);
-  if (st.fail) parts.push(`${st.fail} lần thất bại`);
-  if (parts.length) { R.dirty = true; invDirty = true; log(`<span class="dim">Tự rèn: ${parts.join(', ')}.</span>`); }
-  return st;
+  return null;
 }
-
-/* ======================= TU MUA VU KHI O BIEN KINH =======================
-   Vu khi roi rat it (3-5 mon / 20 phut dau) nen phai noi cong / doc (Ngu Doc, Con Lon...), co sat thuong chieu nhan theo bac vu khi (weaponTierMul),
-   nhieu khi khong co vu khi moi trong khi ngan luong nam khong. Moi 30 giay choi: neu cua hang ban vu khi DUNG LOAI phai, du cap, du yeu cau
-   (hoac thieu it va dang bat tu cong diem), manh hon vu khi tot nhat dang co it nhat 25% va gia khong qua 60% ngan luong -> mua va mac.
-   Tat o the Khac (S.autoBuy). Khong mua khi dang co do tot hon trong tui. */
-const AUTO_BUY_GAIN = 1.25, AUTO_BUY_BUDGET = 0.6;
+const AUTO_BUY_GAIN = 1.25,
+  AUTO_BUY_BUDGET = 0.6;
 function bestOwnedWeaponDmg() {
-  const f = FAC[S.fac]; let best = 0;
-  for (const it of S.inv.concat(S.eq.weapon ? [S.eq.weapon] : []))
-    if (it.d <= 1 && sexOk(it) && (it.req || []).every(([id, v]) => id !== 36 || S.lvl >= v) && weaponFits(it)) best = Math.max(best, weaponDmg(it));   // tinh ca vu khi dang thieu diem tiem nang (da mua, cho cong diem): khong mua lai
-  return best;
+  const t = FAC[S.fac];
+  let i = 0;
+  for (const n of S.inv.concat(S.eq.weapon ? [S.eq.weapon] : []))
+    n.d <= 1 &&
+      sexOk(n) &&
+      (n.req || []).every(([e, o]) => e !== 36 || S.lvl >= o) &&
+      weaponFits(n) &&
+      (i = Math.max(i, weaponDmg(n)));
+  return i;
 }
 function autoBuyWeapon() {
-  const f = FAC[S.fac]; if (!f || S.autoBuy === false || f.wcode < 0 || !J.shops.weapon) return null;
-  if (S.inv.length >= INV_MAX) return null;
-  const have = bestOwnedWeaponDmg(); let pick = null;
-  for (const g of J.shops.weapon.items) {
-    if (g.g === 1) continue;
-    const it = goodsItem(g); if (!it || it.d > 1 || !weaponFits(it) || !sexOk(it)) continue;
-    const price = shopPrice(g), dmg = weaponDmg(it);
-    if (price > S.gold * AUTO_BUY_BUDGET || dmg < have * AUTO_BUY_GAIN) continue;
-    const lv = (it.req.find(q => q[0] === 36) || [0, 0])[1]; if (lv > eqLevel()) continue;
-    if ((it.req || []).some(([id, v]) => (id === 37 || id === 39) && v >= 0 && !reqOk(it))) continue;
-    const need = Object.values(reqDeficit(it)).reduce((a, b) => a + b, 0);
-    if (need > 0 && !(S.autoPts === true && need <= S.attrPts + PTS_PER_LEVEL * REQ_SAVE_LEVELS)) continue;
-    if (!pick || dmg > pick.dmg) pick = { g, dmg, price, need };
+  const t = FAC[S.fac];
+  if (!t || S.autoBuy === !1 || t.wcode < 0 || !J.shops.weapon || S.inv.length >= INV_MAX) return null;
+  const i = bestOwnedWeaponDmg();
+  let n = null;
+  for (const o of J.shops.weapon.items) {
+    if (o.g === 1) continue;
+    const s = goodsItem(o);
+    if (!s || s.d > 1 || !weaponFits(s) || !sexOk(s)) continue;
+    const c = shopPrice(o),
+      u = weaponDmg(s);
+    if (
+      c > S.gold * AUTO_BUY_BUDGET ||
+      u < i * AUTO_BUY_GAIN ||
+      (s.req.find((l) => l[0] === 36) || [0, 0])[1] > eqLevel() ||
+      (s.req || []).some(([l, r]) => (l === 37 || l === 39) && r >= 0 && !reqOk(s))
+    )
+      continue;
+    const a = Object.values(reqDeficit(s)).reduce((l, r) => l + r, 0);
+    (a > 0 && !(S.autoPts === !0 && a <= S.attrPts + PTS_PER_LEVEL * REQ_SAVE_LEVELS)) ||
+      ((!n || u > n.dmg) && (n = { g: o, dmg: u, price: c, need: a }));
   }
-  if (!pick) return null;
-  const it = makeItem(pick.g.d, pick.g.k, pick.g.lvl, 0); if (!it) return null;
-  it.s = shopSeries(pick.g, it); S.gold -= pick.price;
-  addItem(it, true, true, true);
-  log(`<span class="dim">Tự mua <b>${esc(it.n)}</b> ở Biện Kinh (${fmt(pick.price)} lượng).</span>`);
-  if (S.autoPts === true) autoSpendAttrs();
-  autoEquipAll(); R.dirty = true; invDirty = true;
-  return it;
+  if (!n) return null;
+  const e = makeItem(n.g.d, n.g.k, n.g.lvl, 0);
+  return e
+    ? ((e.s = shopSeries(n.g, e)),
+      (S.gold -= n.price),
+      addItem(e, !0, !0, !0),
+      log(`<span class="dim">Tự mua <b>${esc(e.n)}</b> ở Biện Kinh (${fmtL(n.price)} lượng).</span>`),
+      S.autoPts === !0 && autoSpendAttrs(),
+      autoEquipAll(),
+      (R.dirty = !0),
+      (invDirty = !0),
+      e)
+    : null;
 }
-
-/* ======================= TU RUT PHOI (lay thuoc tinh) THONG MINH =======================
-   Mon xanh / vang khong duoc bo loc thong minh giu -> rut 1 dong ra da: uu tien dong phoi Tim dang can, roi dong cap cao.
-   Khong dung do khoa / bo / Tim / dang mac / nop Da Tau / do nang cap; khong rut khi thieu tien du tru; khong don qua N vien cung loai. */
-const AH_DEF = () => ({ on: false, minLv: 3, htMax: 4, cap: 3, reserve: 50000 });
-function AH() { const a = S.autoHut || (S.autoHut = AH_DEF()); const d = AH_DEF(); for (const k in d) if (a[k] === undefined) a[k] = d[k]; return a; }
-function ahNeeds() {   // vi tri dong ke tiep cua cac phoi Tim dang kham: [{place, s, kind}]
-  return (typeof enchaseTargets === 'function' ? enchaseTargets() : []).slice(0, 3).map(t => ({ place: (t.mag || []).length, s: t.s, kind: itemKind(t), attrs: new Set((t.mag || []).map(m => m.a)) }));
+const AH_DEF = () => ({ on: !1, minLv: 3, htMax: 4, cap: 3, reserve: 5e4 });
+function AH() {
+  const t = S.autoHut || (S.autoHut = AH_DEF()),
+    i = AH_DEF();
+  for (const n in i) t[n] === void 0 && (t[n] = i[n]);
+  return t;
 }
-function ahPick(it, cfg, needs) {   // -> { i, place, need, lvl } hoac null
-  let best = null;
-  for (let i = 0; i < (it.mag || []).length; i++) {
-    const m = it.mag[i], rows = oreRows(m.a); if (!rows.length) continue;
-    const place = hutPlaces(it, i)[0], lvl = hutLevel(m), s = place % 2 ? it.s : -1;
-    const need = needs.some(n => n.place === place && (s < 0 || s === n.s) && !n.attrs.has(m.a) && rows.some(r => (r.w || {})[n.kind] > 0));
-    if (!need && lvl < cfg.minLv) continue;
-    if (matHave('ore', oreKey(place, m.a, lvl, s)) >= cfg.cap && !need) continue;
-    const score = (need ? 1000 : 0) + lvl * 10 + (place % 2 ? 1 : 0);
-    if (!best || score > best.score) best = { i, place, need, lvl, score };
+function ahNeeds() {
+  return (typeof enchaseTargets == "function" ? enchaseTargets() : [])
+    .slice(0, 3)
+    .map((t) => ({
+      place: (t.mag || []).length,
+      s: t.s,
+      d: t.d,
+      k: t.k,
+      attrs: new Set((t.mag || []).map((i) => i.a)),
+    }));
+}
+function ahPick(t, i, n) {
+  let e = null;
+  for (let o = 0; o < (t.mag || []).length; o++) {
+    const s = t.mag[o];
+    if (!hutOk(t, o)) continue;
+    const c = hutPlaces(t, o)[0],
+      u = hutLevel(s),
+      f = c % 2 ? t.s : -1,
+      a = n.some(
+        (r) =>
+          r.place === c &&
+          (f < 0 || f === r.s) &&
+          !r.attrs.has(s.a) &&
+          magicMatchEquip(s.a, r.d, r.k) &&
+          magicMatchSeries(s.a, r.s),
+      );
+    if ((!a && u < i.minLv) || (matHave("ore", oreKey(c, s.a, u, f)) >= i.cap && !a)) continue;
+    const l = (a ? 1e3 : 0) + u * 10 + (c % 2 ? 1 : 0);
+    (!e || l > e.score) && (e = { i: o, place: c, need: a, lvl: u, score: l });
   }
-  return best;
+  return e;
 }
-function ahHt(need, cfg) {
-  const have = Object.keys(mats().ht).map(Number).filter(l => l <= cfg.htMax && matHave('ht', l) > 0).sort((a, b) => a - b);
-  if (!have.length) return 0;
-  if (need) { const hi = have.filter(l => l >= 5); if (hi.length) return hi[0]; }   // dong dang can: Huyen Tinh c5+ cho da +1 cap
-  return have[0];
+function ahHt(t, i) {
+  const n = Object.keys(mats().ht)
+    .map(Number)
+    .filter((e) => e <= i.htMax && matHave("ht", e) > 0)
+    .sort((e, o) => e - o);
+  if (!n.length) return 0;
+  if (t) {
+    const e = n.filter((o) => o >= 5);
+    if (e.length) return e[0];
+  }
+  return n[0];
 }
-function autoHut(max = 10) {
+function autoHut(t = 10) {
   if (!verVio() || R.dg) return 0;
-  const cfg = AH(); if (!cfg.on) return 0;
-  const needs = ahNeeds(), cand = epBox().concat(S.inv).filter(it => canHut(it) && !it.lock && !(typeof dtNeed === 'function' && dtNeed(it)) && !lootMatch(it));
-  let n = 0, ok = 0, fail = 0, sold = 0, gold = 0; const got = [], htUsed = {};
-  for (const it of cand) {
-    if (n >= max || S.gold < cfg.reserve + hutCost(it)) break;
-    const p = ahPick(it, cfg, needs);
-    if (!p) { if (epBox().includes(it) && (it.r === 1 || it.r === 2)) { const v = itemValue(it); itemRemove(it); S.gold += v; gold += v; sold++; } continue; }   // khong dong nao dang rut: ban
-    const ht = ahHt(p.need, cfg); if (!ht) break;
-    const r = hutPhoi(it, p.i, p.place, ht); n++; htUsed[ht] = (htUsed[ht] || 0) + 1;
-    if (r.ok) { ok++; got.push(r.msg.replace(/^Lấy thuộc tính: /, '') + ` (dòng ${p.place + 1})`); } else if (r.lost) fail++; else break;
+  const i = AH();
+  if (!i.on) return 0;
+  const n = ahNeeds(),
+    e = epBox()
+      .concat(S.inv)
+      .filter((r) => canHut(r) && !r.lock && !(typeof dtNeed == "function" && dtNeed(r)) && !lootMatch(r));
+  let o = 0,
+    s = 0,
+    c = 0,
+    u = 0,
+    f = 0;
+  const a = [],
+    l = {};
+  for (const r of e) {
+    if (o >= t || S.gold < i.reserve + hutCost(r)) break;
+    const h = ahPick(r, i, n);
+    if (!h) {
+      if (epBox().includes(r) && (r.r === 1 || r.r === 2)) {
+        const g = itemValue(r);
+        (itemRemove(r), (S.gold += g), (f += g), u++);
+      }
+      continue;
+    }
+    const p = ahHt(h.need, i);
+    if (!p) break;
+    const d = hutPhoi(r, h.i, h.place, p, { wc: 0, mys: 0, fd: 0 });
+    if ((o++, (l[p] = (l[p] || 0) + 1), d.ok))
+      (s++, a.push(d.msg.replace(/^Lấy thuộc tính: /, "") + ` (dòng ${h.place + 1})`));
+    else if (d.lost) c++;
+    else break;
   }
-  if (n || sold) {
-    const ht = Object.entries(htUsed).map(([l, c]) => `${c} Huyền Tinh c${l}`).join(', ');
-    log(`⚗ Tự rút ${n} món: ${ok} đá${got.length ? ` (${got.slice(0, 4).join('; ')}${got.length > 4 ? '…' : ''})` : ''}${fail ? `, ${fail} thất bại` : ''}${ht ? ` · −${ht}` : ''}${sold ? ` · bán ${sold} món không có dòng tốt (+${fmt(gold)} lượng)` : ''}`);
-    invDirty = true; R.dirty = true; save();
+  if (o || u) {
+    const r = Object.entries(l)
+      .map(([h, p]) => `${p} Huyền Tinh c${h}`)
+      .join(", ");
+    (log(
+      `⚗ Tự rút ${o} món: ${s} đá${a.length ? ` (${a.slice(0, 4).join("; ")}${a.length > 4 ? "…" : ""})` : ""}${c ? `, ${c} thất bại` : ""}${r ? ` · −${r}` : ""}${u ? ` · bán ${u} món không có dòng tốt (+${fmtL(f)} lượng)` : ""}`,
+    ),
+      (invDirty = !0),
+      (R.dirty = !0),
+      save());
   }
-  return n;
+  return o;
 }

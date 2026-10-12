@@ -1,367 +1,778 @@
-/* ======================= ROI DO (settings/droprate/*.ini + magicattriblevel.txt) ======================= */
-'use strict';
+"use strict";
 const FACTION_WEAPON_SHARE = 0.5;
-function dropFile(L) {
-  const b = L < 110 ? clamp(Math.floor(L / 10) * 10, 10, 90) : (L < 119 ? 110 : 119);
-  return J.drop['npcdroprate' + b + '.ini'] || J.drop['npcdroprate.ini'];
+function dropFile(n) {
+  const e = n < 110 ? clamp(Math.floor(n / 10) * 10, 10, 90) : n < 119 ? 110 : 119;
+  return J.drop["npcdroprate" + e + ".ini"] || J.drop["npcdroprate.ini"];
 }
-/* Cap vat pham 1..10 theo cap quai, gioi han boi MinItemLevel/MaxItemLevel cua tep roi do */
-function itemTier(L, df) {
-  const m = df.main;
-  return clamp(Math.round(L / 12) + irnd(-1, 1), m.MinItemLevel || 1, m.MaxItemLevel || 10);
+function itemTier(n, e) {
+  const t = e.main,
+    r = t.MinItemLevelScale || 20,
+    o = t.MaxItemLevelScale || 10;
+  let u = Math.min(Math.floor(n / o), t.MaxItemLevel || 10),
+    a = Math.max(Math.floor(n / r), t.MinItemLevel || 1);
+  return (u < a && ([a, u] = [u, a]), clamp(a + (u > a ? Math.floor(Math.random() * (u - a)) : 0), 1, 10));
 }
-function baseRow(detail, particular, tier) {
-  const g = J.items[detail]; if (!g) return null;
-  let rows = g.list.filter(r => r.k === particular);
-  if (!rows.length) return null;
-  const okRows = rows.filter(r => sexReqOk(r.req)); if (okRows.length) rows = okRows;   // uu tien mon dung gioi tinh nhan vat
-  return rows.reduce((b, r) => Math.abs(r.lvl - tier) < Math.abs(b.lvl - tier) ? r : b);
+function baseRow(n, e, t) {
+  const r = J.items[n];
+  if (!r) return null;
+  let o = r.list.filter((a) => a.k === e);
+  if (!o.length) return null;
+  const u = o.filter((a) => sexReqOk(a.req));
+  return (u.length && (o = u), o.reduce((a, l) => (Math.abs(l.lvl - t) < Math.abs(a.lvl - t) ? l : a)));
 }
-/* Thuoc tinh ma thuat theo KItemGenerator::Gen_MagicAttrib + KLibOfBPT (magicattrib.txt, 330 dong):
-   dong i = 0,2,4 la tien to (hien), 1,3,5 la hau to (an, can ngu hanh kich hoat); ung vien = dong cung loai tien/hau to,
-   he yeu cau (-1 = moi he) bang he cua mon do, cap dong <= cap thuoc tinh, ti le roi theo loai trang bi > nDecide,
-   khong trung loai thuoc tinh; chon ngau nhien deu; gia tri ngau nhien trong khoang. */
-function rollLine(it, i, lv, used, lucky = 0) {               // mot dong thuoc tinh o vi tri i (dung chung cho tay luyen giu dong, forge.js)
-  const pre = i % 2 === 0 ? 1 : 0;
-  const decide = Math.floor(Math.random() * 100) / (1 + lucky * 20 / 100);
-  const cand = J.affix.filter(a => a.pre === pre && (a.s < 0 || a.s === it.s) && a.lvl <= lv && (a.w[it.d] || 0) > decide && !used.has(a.a));
-  if (!cand.length) return null;
-  const a = pick(cand); used.add(a.a);
-  const p = a.p.map(([mn, mx]) => mn === -1 && mx === -1 ? -1 : irnd(Math.min(mn, mx), Math.max(mn, mx)));
-  return { a: a.a, p, n: a.n, pre };
+const DROP_SKEW = 1;
+function skewVal(n, e, t) {
+  const r = Math.abs(n) <= Math.abs(e) ? n : e;
+  return Math.round(r + ((r === n ? e : n) - r) * Math.pow(Math.random(), t));
 }
-function rollMagic(it, levels, lucky = 0) {
-  const out = [], used = new Set();
-  for (let i = 0; i < levels.length; i++) { const m = rollLine(it, i, levels[i], used, lucky); if (!m) break; out.push(m); }
-  return out;
+function rollLine(n, e, t, r, o = 0, u = 1) {
+  const a = e % 2 === 0 ? 1 : 0,
+    l = Math.floor(Math.random() * 100) / (1 + (o * 20) / 100),
+    c = J.affix.filter(
+      (i) => i.pre === a && (i.s < 0 || i.s === n.s) && i.lvl <= t && (i.w[n.d] || 0) > l && !r.has(i.a),
+    );
+  if (!c.length) return null;
+  const h = pick(c);
+  r.add(h.a);
+  const s = h.p.map(([i, f]) =>
+    i === -1 && f === -1 ? -1 : u > 1 ? skewVal(i, f, u) : irnd(Math.min(i, f), Math.max(i, f)),
+  );
+  return { a: h.a, p: s, n: h.n, pre: a };
 }
-function magicCount(cls, L = 1) {
-  const r = Math.random() * 100 - (cls === 'boss' ? 35 : cls === 'elite' ? 12 : 0) - (R.P ? R.P.lucky : 0) * 0.5 - Math.min(L, 200) * 0.05;   // quai cap cao: do nhieu dong hon
-  return r < 3 ? irnd(5, 6) : r < 15 ? irnd(3, 4) : r < 50 ? irnd(1, 2) : 0;
-}
-/* cap tung dong thuoc tinh (pnaryMALevel): quanh cap mon do, 1..10 */
-const magicLevels = (n, tier) => Array.from({ length: n }, () => clamp(tier + irnd(-1, 0), 1, 10));
-function rarityOf(n) { return n >= 1 ? 1 : 0; }   // JX1: co dong thuoc tinh = do xanh (khong chia so dong)   // Tim (3) chi tu Huyen Tinh (recipes.js), do roi ngau nhien toi da Vang
-const randomSeries = () => irnd(0, 4); // KItemGenerator: he ngau nhien Kim..Tho neu khong yeu cau he
-
-/* Trang phuc nam / nu nam o cac "particular" khac nhau (vd ao 0..6 nam, 7..13 nu): doi sang loai dung gioi tinh nhan vat */
-function sexPart(detail, part) {
-  const g = J.items[detail]; if (!g) return part;
-  const rows = g.list.filter(r => r.k === part);
-  if (!rows.length || rows.some(r => sexReqOk(r.req))) return part;
-  const alt = [...new Set(g.list.filter(r => sexReqOk(r.req)).map(r => r.k))];
-  return alt.length ? pick(alt) : part;
-}
-function makeItem(detail, particular, tier, nMagic) {
-  const b = baseRow(detail, particular, tier); if (!b) return null;
-  const it = { uid: S.uid++, d: detail, k: particular, p: b.p, n: b.n, ic: b.ic || '', lvl: b.lvl, s: b.s >= 0 ? b.s : randomSeries(),
-    base: b.base.map(x => x.slice()), req: b.req.map(x => x.slice()), price: b.price };
-  it.mag = rollMagic(it, magicLevels(nMagic, b.lvl), R.P ? R.P.lucky : 0);
-  it.r = rarityOf(it.mag.length);
-  return it;
-}
-/* Ti le roi: quai thuong 8% (truoc 10%: qua nhieu do trang thua), nhan voi hieu ung tang roi do + 10% moi lan chuyen sinh */
-const DROP_NORMAL = 0.08;
-const dropMul = () => (1 + (typeof buffP === 'function' ? buffP('drop') : 0)) * (1 + 0.1 * rebornN()) * (1 + Math.min(100, Math.max(0, R.P ? R.P.lucky : 0)) * 0.005);   // may man: +0.5% / diem (toi da +50%)
-/* Roi do khi ha quai: so luong theo loai quai, mon theo RandRate/RandRange cua tep droprate */
-function rollDrops(e) {
-  const df = dropFile(e.L), items = df.items.filter(x => x[0] === 0 && x[1] <= 9);
-  const dm = dropMul(), n = e.cls === 'boss' ? 3 + (Math.random() < dm - 1 ? 1 : 0) : e.cls === 'elite' ? (Math.random() < 0.5 * dm ? 1 : 0) : (Math.random() < DROP_NORMAL * dm * densK(e) ? 1 : 0);
-  const out = [];
-  for (let i = 0; i < n * (e.bonusDrop || 1); i++) {
-    const x = wpick(items, r => r[3]); if (!x) continue;
-    let [detail, part] = [x[1], x[2]];
-    // JX mua vu khi o tiem; game idle khong co tiem -> mot nua so vu khi roi ra dung loai vu khi cua phai
-    const f = FAC[S.fac];
-    if (detail <= 1 && f && !f.novice && Math.random() < FACTION_WEAPON_SHARE) [detail, part] = wantWeaponDP();   // vu khi hop chieu chinh (JX1 EqtLimit)
-    part = sexPart(detail, part);
-    let it = makeItem(detail, part, itemTier(e.L, df), magicCount(e.cls, e.L));
-    for (let t = 0; it && !sexOk(it) && t < 6; t++) it = makeItem(detail, part, itemTier(e.L, df), magicCount(e.cls, e.L));   // khong roi trang phuc khac gioi tinh
-    if (it && sexOk(it)) out.push(it);
+function rollMagic(n, e, t = 0, r = 1) {
+  const o = [],
+    u = new Set();
+  for (let a = 0; a < e.length; a++) {
+    const l = rollLine(n, a, e[a], u, t, r);
+    if (!l) break;
+    o.push(l);
   }
-  // trang suc "cui" (nhan / day chuyen / ngoc boi it dong) roi them de hop Huyen Tinh (Lo Ep Do -> Tinh luyen, hoac tu hop)
-  if (typeof verVio === 'function' && verVio() && Math.random() < (JEWEL_DROP[e.cls] ?? JEWEL_DROP.normal) * dm * densK(e) * (e.bonusDrop || 1)) {
-    const js = items.filter(x => FUSE_SLOTS.includes(x[1])), x = js.length ? wpick(js, r => r[3]) : null;
-    const it = x && makeItem(x[1], x[2], itemTier(e.L, df), irnd(0, 2)); if (it) out.push(it);
+  return o;
+}
+function magicCount(n, e = 1) {
+  const t =
+    Math.random() * 100 -
+    (n === "boss" ? 35 : n === "elite" ? 12 : 0) -
+    (R.P ? R.P.lucky : 0) * 0.5 -
+    Math.min(e, 200) * 0.05;
+  return t < 3 ? irnd(5, 6) : t < 15 ? irnd(3, 4) : t < 50 ? irnd(1, 2) : 0;
+}
+const magicLevels = (n, e) => Array.from({ length: n }, () => clamp(e, 1, 10));
+function rarityOf(n) {
+  return n >= 1 ? 1 : 0;
+}
+const randomSeries = () => irnd(0, 4);
+function sexPart(n, e) {
+  const t = J.items[n];
+  if (!t) return e;
+  const r = t.list.filter((u) => u.k === e);
+  if (!r.length || r.some((u) => sexReqOk(u.req))) return e;
+  const o = [...new Set(t.list.filter((u) => sexReqOk(u.req)).map((u) => u.k))];
+  return o.length ? pick(o) : e;
+}
+function makeItem(n, e, t, r, o) {
+  const u = baseRow(n, e, t);
+  if (!u) return null;
+  const a = {
+    uid: S.uid++,
+    d: n,
+    k: e,
+    p: u.p,
+    n: u.n,
+    ic: u.ic || "",
+    lvl: u.lvl,
+    s: u.s >= 0 ? u.s : o >= 0 && o <= 4 ? o : randomSeries(),
+    base: u.base.map((l) => l.slice()),
+    req: u.req.map((l) => l.slice()),
+    price: u.price,
+  };
+  return (
+    (a.mag = rollMagic(a, magicLevels(r, u.lvl), R.P ? R.P.lucky : 0, DROP_SKEW)),
+    (a.r = rarityOf(a.mag.length)),
+    a
+  );
+}
+// admin console "drops" config (js/gcfg/drops.js); built-in value when no config is loaded
+const dropCfg = (k, d) => (self.GCFG ? GCFG.get("drops", k, d) : d);
+const DROP_NORMAL = 0.08,
+  dropMul = () =>
+    (1 + (typeof buffP == "function" ? buffP("drop") : 0)) *
+    (1 + 0.1 * rebornN()) *
+    (1 + Math.min(100, Math.max(0, R.P ? R.P.lucky : 0)) * 0.005);
+function rollDrops(n) {
+  const e = dropFile(n.L),
+    t = e.items.filter((a) => a[0] === 0 && a[1] <= 9),
+    r = dropMul(),
+    o =
+      n.cls === "boss"
+        ? Math.round(dropCfg("cls.boss.item", 3) * dropCfg("mul.normal", 1)) + (Math.random() < r - 1 ? 1 : 0)
+        : n.cls === "elite"
+          ? Math.random() < dropCfg("cls.elite.item", 0.5) * dropCfg("mul.normal", 1) * r
+            ? 1
+            : 0
+          : Math.random() < dropCfg("cls.normal.item", DROP_NORMAL) * dropCfg("mul.normal", 1) * r * densK(n)
+            ? 1
+            : 0,
+    u = [];
+  for (let a = 0; a < o * (n.bonusDrop || 1); a++) {
+    const l = wpick(t, (f) => f[3]);
+    if (!l) continue;
+    let [c, h] = [l[1], l[2]];
+    const s = FAC[S.fac];
+    (c <= 1 && s && !s.novice && Math.random() < 0.5 && ([c, h] = wantWeaponDP()), (h = sexPart(c, h)));
+    let i = makeItem(c, h, itemTier(n.L, e), magicCount(n.cls, n.L), n.series);
+    for (let f = 0; i && !sexOk(i) && f < 6; f++)
+      i = makeItem(c, h, itemTier(n.L, e), magicCount(n.cls, n.L), n.series);
+    i && sexOk(i) && u.push(i);
   }
-  return out;
-}
-const JEWEL_DROP = { normal: 0.04, elite: 0.35, boss: 1 };   // ti le roi them 1 mon trang suc de hop Huyen Tinh
-function moneyDrop(e) {
-  const m = dropFile(e.L).main;
-  return Math.round((m.MoneyScale || 50) / 10 * e.L * rnd(0.6, 1.4) * (e.cls === 'boss' ? 8 : e.cls === 'elite' ? 2 : 1));
-}
-/* Gia ban theo CHI SO TRANG BI: moi dong thuoc tinh tinh theo do lon so voi muc toi da cua chinh thuoc tinh do trong bang
-   magicattriblevel (vd Sinh luc +80 / toi da 200 = 0.4; Khang tat ca 10 / toi da 15 = 0.67), cong lai thanh diem chi so; chi so goc
-   (sat thuong vu khi, phong thu) so voi mon cung loai tot nhat. Gia = 1540 x diem^2.4 x do hiem x cuong hoa (chi phu thuoc chi so, khong theo cap hay loai do).
-   -> mon chi so cao ban dat gap nhieu lan, mon chi so thap re. Ngua giu gia cu. */
-const VAL_K = 1540, VAL_EXP = 2.4;                               // khop gia trung vi cu o moi cap (do bang mo phong): diem 0.2 ~ 25, 0.8 ~ 900, 1.1 ~ 1900
-const ATTR_MAX = (() => {                                        // muc toi da cua tung thuoc tinh (tham so 1) trong magicattriblevel + dong bo
-  const m = {};
-  const put = (a, p) => { const v = Math.max(Math.abs(p[0] || 0), Math.abs(p[1] || 0)); if (v > 0 && v !== 1 && !(p[0] === -1 && p[1] === -1)) m[a] = Math.max(m[a] || 0, v); };
-  for (const r of J.affixLevel) put(r.a, r.p[0]);
-  for (const k in J.ge) put(J.ge[k].a, J.ge[k].p[0]);
-  return m;
-})();
-const BASE_MAX = {};                                             // chi so goc lon nhat theo loai (detail:particular)
-function baseStat(it) { let v = 0; for (const [id, mn, mx] of it.base || []) if (id === 28 || id === 29 || id === 30) v += (mn + mx) / 2; return v; }
-function baseMax(it) {
-  const k = it.d + ':' + it.k; if (BASE_MAX[k] !== undefined) return BASE_MAX[k];
-  const g = J.items[it.d]; let mx = 0; if (g) for (const r of g.list) if (r.k === it.k) mx = Math.max(mx, baseStat(r));
-  return (BASE_MAX[k] = mx);
-}
-function statScore(it) {
-  let sc = 0;
-  for (const m of (it.mag || []).concat(it.ext || [])) {
-    const nm = attrName(m.a); if (typeof ATTR_NOEFFECT !== 'undefined' && ATTR_NOEFFECT.has(nm)) continue;
-    const mx = ATTR_MAX[m.a], v = Math.abs((m.p || [])[0] || 0);
-    sc += mx ? Math.min(1.5, v / mx) : 0.3;                      // thuoc tinh dang co / khong bang muc: tinh 0.3
+  if (
+    typeof verVio == "function" &&
+    verVio() &&
+    Math.random() < dropCfg("cls." + n.cls + ".jewel", JEWEL_DROP[n.cls] ?? JEWEL_DROP.normal) * dropCfg("mul.jewel", 1) * r * densK(n) * (n.bonusDrop || 1) * dropCfg("vip", VIP_DROP_RATE)
+  ) {
+    const a = t.filter((h) => FUSE_SLOTS.includes(h[1])),
+      l = a.length ? wpick(a, (h) => h[3]) : null,
+      c = l && makeItem(l[1], l[2], itemTier(n.L, e), irnd(0, 2), n.series);
+    c && u.push(c);
   }
-  const bm = baseMax(it); if (bm > 0) sc += baseStat(it) / bm * enhMul(it);   // chi so goc so voi mon cung loai tot nhat (ca cuong hoa)
-  return sc;
+  return u;
 }
-function itemValue(it) {
-  if (it.d === 10) return Math.round((it.price || 100) / 10 * (1 + (it.mag || []).length * 0.8));
-  const rar = it.set ? (it.set.kind === 'platina' ? 2 * (1 + 0.3 * (it.plv || 0)) : 1) : it.vio ? 1.5 : 1;   // do bo: chi so da cao (dong mo rong), Bach Kim them he so
-  return Math.max(1, Math.round(VAL_K * Math.pow(statScore(it) + 0.05, VAL_EXP) * rar * (1 + 0.15 * (it.enh || 0))));
+const JEWEL_DROP = { normal: 0.04, elite: 0.35, boss: 1 };
+// "VIP" drops (Hoàng Kim / Bạch Kim set items in sets.js rollSetDrop + jewellery here): 1/4 of the original rate
+const VIP_DROP_RATE = 0.25;
+function moneyDrop(n) {
+  const e = dropFile(n.L).main;
+  return Math.round(
+    ((e.MoneyScale || 50) / 10) * n.L * rnd(0.6, 1.4) * (n.cls === "boss" ? 8 : n.cls === "elite" ? 2 : 1),
+  );
 }
-function itemPower(it) {
-  let v = it.lvl * 10;
-  for (const [id, mn, mx] of it.base) if (id === 28 || id === 29 || id === 30) v += (mn + mx) / 2;
-  for (const m of it.mag.concat(it.ext || [])) { const nm = attrName(m.a); if (typeof ATTR_NOEFFECT !== 'undefined' && ATTR_NOEFFECT.has(nm)) continue; v += 15 + Math.min(200, Math.abs(m.p[0])) * 0.6; }   // dong khong tac dung: 0 diem
-  return v * enhMul(it);
+const VAL_K = 1540,
+  VAL_EXP = 2.4,
+  ATTR_MAX = (() => {
+    const n = {},
+      e = (t, r) => {
+        const o = Math.max(Math.abs(r[0] || 0), Math.abs(r[1] || 0));
+        o > 0 && o !== 1 && !(r[0] === -1 && r[1] === -1) && (n[t] = Math.max(n[t] || 0, o));
+      };
+    for (const t of J.affixLevel) e(t.a, t.p[0]);
+    for (const t in J.ge) e(J.ge[t].a, J.ge[t].p[0]);
+    return n;
+  })(),
+  BASE_MAX = {};
+function baseStat(n) {
+  let e = 0;
+  for (const [t, r, o] of n.base || []) (t === 28 || t === 29 || t === 30) && (e += (r + o) / 2);
+  return e;
 }
-function slotFor(it) {
-  const s = DETAIL_SLOT[it.d];
-  if (s === 'ring') return !S.eq.ring1 ? 'ring1' : !S.eq.ring2 ? 'ring2' : (itemPower(S.eq.ring1) <= itemPower(S.eq.ring2) ? 'ring1' : 'ring2');
-  return s;
+function baseMax(n) {
+  const e = n.d + ":" + n.k;
+  if (BASE_MAX[e] !== void 0) return BASE_MAX[e];
+  const t = J.items[n.d];
+  let r = 0;
+  if (t) for (const o of t.list) o.k === n.k && (r = Math.max(r, baseStat(o)));
+  return (BASE_MAX[e] = r);
 }
-/* Mot dong thuoc tinh ma thuat -> chu: "+N cap ky nang" ro rang, danh dau dong khong tac dung */
-function magText(m) {
-  const nm = attrName(m.a), p = m.p.map(v => v === -1 ? 0 : v);
-  let t;
-  if (nm === 'allskill_v') {
-    const sid = p[2], s = sid > 0 ? SK[sid] : null;
-    if (!(sid > 0)) t = `Tất cả kỹ năng: +${p[0]} cấp`;
-    else { const mine = FAC[S.fac] && FAC[S.fac].skills.some(x => +x === sid); t = `Kỹ năng ${s ? s.n : '#' + sid}: +${p[0]} cấp${mine ? '' : ' (không thuộc môn phái)'}`; }
-  } else t = attrText(nm, p).split('<enter>')[0];
-  if (typeof ATTR_NOEFFECT !== 'undefined' && ATTR_NOEFFECT.has(nm)) t += ' · không tác dụng trong game';
-  return t;
-}
-function itemLines(it) {
-  const L = [], dmin = it.base.find(b => b[0] === 28), dmax = it.base.find(b => b[0] === 29), k = enhMul(it);
-  if (it.plv) L.push(['h on', `Bạch Kim +${it.plv}: thuộc tính gốc +${Math.round(it.plv * PLAT_STEP * 100)}%`]);
-  if (it.enh) L.push(['h on', `Cường hóa +${it.enh}: thuộc tính gốc +${Math.round((k - 1) * 100)}%`]);
-  if (it.thanma) L.push(['r', 'Thần mã: không phạt né tránh, thần lực luôn hiệu lực']);
-  if (it.d === 10 && typeof horseLv === 'function') L.push(['h on', `Thuần dưỡng cấp ${horseLv(it)}/${HORSE_MAX}: chỉ số ngựa +${Math.round(horseLv(it) * HORSE_UP * 100)}%, phạt né −${Math.min(100, Math.round(horseLv(it) * HORSE_PEN * 100))}%`]);
-  if (dmin) L.push(['b', `Sát thương: ${Math.round(dmin[1] * k)} - ${Math.round((dmax ? dmax[1] : dmin[1]) * k)}`]);
-  for (const [id, mn, mx] of it.base) {
-    const nm = attrName(id); if (id === 28 || id === 29 || nm === 'durability_v' || nm === 'item_purple' || id === 167 || nm === 'staminamax_v') continue;
-    const hv = v => (typeof horseAdj === 'function' ? horseAdj(it, v) : v);
-    L.push(['b', attrText(nm, [Math.round(hv((mn + mx) / 2 * k)), 0, Math.round(hv(mx * k))])]);
+function statScore(n) {
+  let e = 0;
+  for (const r of (n.mag || []).concat(n.ext || [])) {
+    const o = attrName(r.a);
+    if (typeof ATTR_NOEFFECT < "u" && ATTR_NOEFFECT.has(o)) continue;
+    const u = ATTR_MAX[r.a],
+      a = Math.abs((r.p || [])[0] || 0);
+    e += u ? Math.min(1.5, a / u) : 0.3;
   }
-  const act = it.d === 10 ? 3 : typeof hiddenActive === 'function' ? hiddenActive(it) : 0;   // ngua: moi dong luon hieu luc
-  it.mag.forEach((m, i) => {
-    const hidden = i % 2 === 1, on = !hidden || Math.floor(i / 2) < act;
-    L.push([hidden ? (on ? 'h on' : 'h') : 'm', magText(m) + (hidden && !on ? ' (ẩn)' : '')]);
+  const t = baseMax(n);
+  return (t > 0 && (e += (baseStat(n) / t) * enhMul(n)), e);
+}
+function itemValue(n) {
+  if (n.d === 10) return Math.round(((n.price || 100) / 10) * (1 + (n.mag || []).length * 0.8));
+  const e = n.set ? (n.set.kind === "platina" ? 2 * (1 + 0.3 * (n.plv || 0)) : 1) : n.vio ? 1.5 : 1;
+  return Math.max(1, Math.round(VAL_K * Math.pow(statScore(n) + 0.05, VAL_EXP) * e * (1 + 0.15 * (n.enh || 0))));
+}
+function itemPower(n) {
+  let e = n.lvl * 10;
+  for (const [t, r, o] of n.base) (t === 28 || t === 29 || t === 30) && (e += (r + o) / 2);
+  for (const t of n.mag.concat(n.ext || [])) {
+    const r = attrName(t.a);
+    (typeof ATTR_NOEFFECT < "u" && ATTR_NOEFFECT.has(r)) || (e += 15 + Math.min(200, Math.abs(t.p[0])) * 0.6);
+  }
+  return e * enhMul(n);
+}
+function slotFor(n) {
+  const e = DETAIL_SLOT[n.d];
+  return e === "ring"
+    ? S.eq.ring1
+      ? S.eq.ring2 && itemPower(S.eq.ring1) <= itemPower(S.eq.ring2)
+        ? "ring1"
+        : "ring2"
+      : "ring1"
+    : e;
+}
+function magText(n) {
+  const e = attrName(n.a),
+    t = n.p.map((o) => (o === -1 ? 0 : o));
+  let r;
+  return (
+    (r = attrText(e, t).split("<enter>")[0]),
+    typeof ATTR_NOEFFECT < "u" && ATTR_NOEFFECT.has(e) && (r += " · không tác dụng trong game"),
+    r
+  );
+}
+const REQ_NAME = {
+  32: "requirestr",
+  33: "requiredex",
+  34: "requirevit",
+  35: "requireeng",
+  36: "requirelevel",
+  37: "requireseries",
+  38: "requiresex",
+  39: "requiremenpai",
+  46: "require_translife",
+};
+function reqLineOk(n, e) {
+  return n === 36
+    ? eqLevel() >= e
+    : n === 32
+      ? heroAttr("str") >= e
+      : n === 33
+        ? heroAttr("dex") >= e
+        : n === 34
+          ? heroAttr("vit") >= e
+          : n === 35
+            ? heroAttr("eng") >= e
+            : n === 37
+              ? e < 0 || !FAC[S.fac] || heroSeries() === e
+              : n === 38
+                ? e < 0 || (S.sex || 0) === e
+                : n === 39
+                  ? e < 0 || !FAC[S.fac] || FAC[S.fac].id === e
+                  : n === 46
+                    ? rebornN() >= e
+                    : !0;
+}
+function reqLineText(n, e) {
+  return n === 37
+    ? "Thuộc tính ngũ hành: " + (SERIES[e] || e)
+    : n === 38
+      ? "Giới tính: " + (e ? "Nữ" : "Nam")
+      : n === 39
+        ? "Môn phái: " + ((J.factions.find((t) => t.id === e) || J.factions[e] || {}).n || e)
+        : attrText(REQ_NAME[n], [e, 0, 0]);
+}
+function itemLines(n) {
+  const e = [],
+    t = enhMul(n),
+    r = J.items[n.d] && J.items[n.d].list.find((s) => s.k === n.k && s.lvl === n.lvl),
+    o = n.d === 10 ? 1 : enhLineMul(n),
+    u = (s) =>
+      o === 1 || attrName(s.a) === "allskill_v"
+        ? magText(s)
+        : magText(Object.assign({}, s, { p: s.p.map((i, f) => (i === -1 || f > 1 ? i : Math.round(i * o))) }));
+  (n.s >= 0 && e.push(["b", "Ngũ hành thuộc tính: " + SERIES[n.s], SERIES_COL[n.s]]),
+    r && r.d && e.push(["b in", r.d]));
+  const a = (s) => (n.d === 10 && typeof horseAdj == "function" ? horseAdj(n, s) : s);
+  for (const [s, i, f] of n.base) {
+    const d = attrName(s);
+    if (d === "item_purple" || s === 167 || d === "staminamax_v") continue;
+    if (d === "durability_v") {
+      e.push(["b", `Độ bền ${f} / ${f}`]);
+      continue;
+    }
+    const p = Math.round(s === 28 || s === 29 ? i * t : a(((i + f) / 2) * t));
+    e.push(["b", attrText(d, [p, 0, p])]);
+  }
+  for (const [s, i] of n.req)
+    !REQ_NAME[s] ||
+      ((s === 37 || s === 38 || s === 39) && i < 0) ||
+      (s !== 37 && s !== 38 && s !== 39 && !(i > 0)) ||
+      e.push([reqLineOk(s, i) ? "b" : "rq", reqLineText(s, i)]);
+  const l = n.d === 10 ? 3 : typeof hiddenActive == "function" ? hiddenActive(n) : 0;
+  n.mag.forEach((s, i) => {
+    const f = i % 2 === 0 || i >> 1 < l;
+    e.push([f ? "m" : "h", u(s)]);
   });
-  const nh = Math.floor((it.mag || []).length / 2);
-  if (nh && !it.leg && it.d !== 10 && it.s >= 0 && typeof ACCRUE !== 'undefined') {   // kich dong an: trang bi nao, he gi (nhu JX1)
-    const gen = +Object.keys(ACCRUE).find(k => ACCRUE[k] === it.s), slot = slotOfEquipped(it, S.eq) || slotFor(it);
-    const full = typeof enoughToActive === 'function' && enoughToActive(S.eq);
-    L.push(['r', `Kích hoạt thuộc tính ẩn:${it.set ? ' (đủ bộ tự kích hết)' : ''}`]);
-    L.push([full || heroSeries() === gen ? 'h on' : 'h', `  Nhân vật: hệ ${SERIES[gen]}`]);
-    for (const k of ACTIVATED_BY[slot] || []) L.push([full || (S.eq[k] && S.eq[k].s === gen) ? 'h on' : 'h', `  ${SLOT_VI[k]}: hệ ${SERIES[gen]}`]);
+  const c = [];
+  if (
+    (n.plv && c.push(["h on", `Bạch Kim +${n.plv}: thuộc tính gốc +${Math.round(n.plv * PLAT_STEP * 100)}%`]),
+    n.enh &&
+      c.push([
+        "h on",
+        `Cường hóa +${n.enh}: thuộc tính gốc +${Math.round((t - 1) * 100)}%, các dòng thuộc tính +${Math.round((o - 1) * 100)}%`,
+      ]),
+    n.thanma && c.push(["r", "Thần mã: không phạt né tránh, thần lực luôn hiệu lực"]),
+    n.d === 10 &&
+      typeof horseLv == "function" &&
+      c.push([
+        "h on",
+        `Thuần dưỡng cấp ${horseLv(n)}/${HORSE_MAX}: chỉ số ngựa +${Math.round(horseLv(n) * HORSE_UP * 100)}%, phạt né −${Math.min(100, Math.round(horseLv(n) * HORSE_PEN * 100))}%`,
+      ]),
+    Math.floor((n.mag || []).length / 2) && !n.leg && n.d !== 10 && n.s >= 0 && typeof ACCRUE < "u")
+  ) {
+    const s = +Object.keys(ACCRUE).find((d) => ACCRUE[d] === n.s),
+      i = slotOfEquipped(n, S.eq) || slotFor(n),
+      f = typeof enoughToActive == "function" && enoughToActive(S.eq);
+    (c.push(["r", `Kích hoạt thuộc tính ẩn:${n.set ? " (đủ bộ tự kích hết)" : ""}`]),
+      c.push([f || heroSeries() === s ? "h on" : "h", `  Nhân vật: hệ ${SERIES[s]}`]));
+    for (const d of ACTIVATED_BY[i] || [])
+      c.push([f || (S.eq[d] && S.eq[d].s === s) ? "h on" : "h", `  ${SLOT_VI[d]}: hệ ${SERIES[s]}`]);
   }
-  if (it.set) {
-    const ex = typeof goldEnhance === 'function' ? goldEnhance(it, S.eq) : 0, cnt = typeof setCounts === 'function' ? (setCounts(S.eq)[it.set.grp] || 0) : 0;
-    (it.ext || []).forEach((m, i) => L.push([i < ex ? 'h on' : 'h', magText(m) + (i < ex ? ' (bộ)' : ` (mặc ${it.set.n1 * (i + 1)} món cùng bộ)`)]));
-    L.push(['r', `Bộ ${it.set.kind === 'gold' ? 'Hoàng Kim' : 'Bạch Kim'}: đang mặc ${cnt} món · đủ ${it.set.n2} món mở hết dòng ẩn mọi trang bị`]);
-    for (const r of setMembers(it)) L.push(['r', `  ${Object.values(S.eq).some(e => e && e.set && bareName(e.n) === bareName(r.n)) ? '✔' : '·'} ${r.n}`]);
+  if (n.set) {
+    const s = typeof goldEnhance == "function" ? goldEnhance(n, S.eq) : 0,
+      i = (typeof setCounts == "function" && setCounts(S.eq)[n.set.grp]) || 0;
+    ((n.ext || []).forEach((f, d) =>
+      c.push([d < s ? "m" : "h", u(f) + (d < s ? "" : ` (mặc ${n.set.n1 * (d + 1)} món cùng bộ)`)]),
+    ),
+      c.push([
+        "r",
+        `Bộ ${n.set.kind === "gold" ? "Hoàng Kim" : "Bạch Kim"}: đang mặc ${i} món · đủ ${n.set.n2} món mở hết dòng ẩn mọi trang bị`,
+      ]));
+    for (const f of setMembers(n))
+      c.push([
+        "r",
+        `  ${Object.values(S.eq).some((d) => d && d.set && bareName(d.n) === bareName(f.n)) ? "✔" : "·"} ${f.n}`,
+      ]);
   }
-  const REQ = { 36: 'Cấp', 32: 'Sức mạnh', 33: 'Thân pháp', 34: 'Sinh khí', 35: 'Nội công', 37: 'Hệ', 38: 'Giới tính', 39: 'Môn phái' };
-  for (const [id, v] of it.req) if (REQ[id] && (v > 0 || id === 39)) L.push(['r', `Yêu cầu ${REQ[id]}: ${id === 37 ? SERIES[v] : id === 39 ? ((J.factions[v] || {}).n || v) : v}`]);
-  return L;
+  return (c.length && (e.push(["sep", ""]), e.push(...c)), e);
 }
-
-/* ======================= DO ROI TREN DAT + BO LOC ======================= */
-const GROUND_MAX = 40, PICK_R = 26;
-const LOOT_ATTR_GROUPS = [ // thuoc tinh hay loc (ten trong KMagicDesc.cpp)
-  ['Sinh lực', ['lifemax_v', 'lifemax_p', 'lifereplenish_v']], ['Nội lực', ['manamax_v', 'manamax_p', 'manareplenish_v']],
-  ['Sát thương', ['addphysicsdamage_v', 'addphysicsdamage_p', 'addfiredamage_v', 'addcolddamage_v', 'addlightingdamage_v', 'addpoisondamage_v']],
-  ['Kháng', ['physicsres_p', 'poisonres_p', 'coldres_p', 'fireres_p', 'lightingres_p', 'allres_p']],
-  ['Chỉ số', ['strength_v', 'dexterity_v', 'vitality_v', 'energy_v']], ['Kỹ năng', ['allskill_v']],
-  ['Tốc độ', ['attackspeed_v', 'castspeed_v', 'fastwalkrun_p']], ['Hút máu / nội', ['steallifeenhance_p', 'stealmanaenhance_p']],
-  ['Chính xác / né', ['attackratingenhance_v', 'adddefense_v']], ['Sát thương nội công', ['metalskill_v', 'earthskill_v', 'woodskill_v', 'waterskill_v', 'fireskill_v']],
-];
-/* Bo loc mo rong: so dong toi thieu, loai trang bi, chi do mac duoc, he tuong sinh voi nhan vat (mo dong an), vu khi dung loai phai,
-   luon giu do quy (bo / Tim / Bach Kim / ngua hiem). Tap thuoc tinh mong muon duoc dem san (lootMatch goi moi khung hinh cho moi mon tren dat). */
-const LOOT_SLOT_GROUPS = [['weapon', 'Vũ khí'], ['armor', 'Áo'], ['helm', 'Mũ'], ['belt', 'Đai'], ['boot', 'Giày'], ['cuff', 'Hộ uyển'], ['amulet', 'Dây chuyền'], ['ring', 'Nhẫn'], ['pendant', 'Ngọc bội'], ['horse', 'Ngựa']];
-const LOOT_DEF = () => ({ mode: 'smart', minRar: 1, minLvl: 1, groups: [], series: [], auto: true, minMag: 0, slots: [], wear: false, accrue: false, facW: false, keepRare: true, setOnly: false, setKeep: [], setMine: false, pickAll: true,
-  ep: { white: true, jew: true, blue: true, blueLv: 5, dest: 'box' } });   // do de ep Tim: nhat rieng, cat vao Ruong ep / Kho chung / hanh trang
-/* Bo do Hoang Kim / Bach Kim chon giu (theo ten bo): bat "chi giu bo da chon" -> do bo khac khong nhat, ban hang loat duoc */
-const SET_FAMILIES = [['Thanh Câu', 50], ['Vân Lộc', 80], ['Môn phái', 99], ['Thương Lang', 100], ['Tống Kim', 120], ['Tử Mãng', 120], ['Kim Ô', 120], ['Bạch Hổ', 120], ['Xích Lân', 120], ['Minh Phượng', 120], ['Huyền Viên', 120], ['Tinh Sương', 120], ['Đằng Long', 180], ['Bộ chung', 0]];
-const SET_NAMED = SET_FAMILIES.filter(([n]) => !['Môn phái', 'Tống Kim', 'Bộ chung'].includes(n));
-const setFac = it => ((it.req || []).find(q => q[0] === 39) || [0, -1])[1];
-function setFamily(it) {
-  if (!it || !it.set) return null;
-  const n = bareName(it.n), named = SET_NAMED.find(([f]) => n.startsWith(f));
-  if (named) return named[0];
-  if (it.n.includes('Tống Kim')) return 'Tống Kim';
-  return setFac(it) >= 0 ? 'Môn phái' : 'Bộ chung';
+const GROUND_MAX = 40,
+  PICK_R = 26,
+  LOOT_ATTR_GROUPS = [
+    ["Sinh lực", ["lifemax_v", "lifemax_p", "lifereplenish_v"]],
+    ["Nội lực", ["manamax_v", "manamax_p", "manareplenish_v"]],
+    [
+      "Sát thương",
+      [
+        "addphysicsdamage_v",
+        "addphysicsdamage_p",
+        "addfiredamage_v",
+        "addcolddamage_v",
+        "addlightingdamage_v",
+        "addpoisondamage_v",
+      ],
+    ],
+    ["Kháng", ["physicsres_p", "poisonres_p", "coldres_p", "fireres_p", "lightingres_p", "allres_p"]],
+    ["Chỉ số", ["strength_v", "dexterity_v", "vitality_v", "energy_v"]],
+    ["Kỹ năng", ["allskill_v"]],
+    ["Tốc độ", ["attackspeed_v", "castspeed_v", "fastwalkrun_p"]],
+    ["Hút máu / nội", ["steallifeenhance_p", "stealmanaenhance_p"]],
+    ["Chính xác / né", ["attackratingenhance_v", "adddefense_v"]],
+    ["Sát thương nội công", ["metalskill_v", "earthskill_v", "woodskill_v", "waterskill_v", "fireskill_v"]],
+  ],
+  LOOT_SLOT_GROUPS = [
+    ["weapon", "Vũ khí"],
+    ["armor", "Áo"],
+    ["helm", "Mũ"],
+    ["belt", "Đai"],
+    ["boot", "Giày"],
+    ["cuff", "Hộ uyển"],
+    ["amulet", "Dây chuyền"],
+    ["ring", "Nhẫn"],
+    ["pendant", "Ngọc bội"],
+    ["horse", "Ngựa"],
+  ],
+  LOOT_DEF = () => ({
+    mode: "smart",
+    smartUp: !0,
+    custom: !1,
+    minRar: 1,
+    minLvl: 1,
+    groups: [],
+    series: [],
+    auto: !0,
+    minMag: 0,
+    slots: [],
+    wear: !1,
+    accrue: !1,
+    facW: !1,
+    keepRare: !0,
+    setOnly: !1,
+    setKeep: [],
+    setMine: !1,
+    pickAll: !0,
+    ep: { white: !0, jew: !0, blue: !0, blueLv: 5, dest: "box" },
+  }),
+  SET_FAMILIES = [
+    ["Thanh Câu", 50],
+    ["Vân Lộc", 80],
+    ["Môn phái", 99],
+    ["Thương Lang", 100],
+    ["Tống Kim", 120],
+    ["Tử Mãng", 120],
+    ["Kim Ô", 120],
+    ["Bạch Hổ", 120],
+    ["Xích Lân", 120],
+    ["Minh Phượng", 120],
+    ["Huyền Viên", 120],
+    ["Tinh Sương", 120],
+    ["Đằng Long", 180],
+    ["Bộ chung", 0],
+  ],
+  SET_NAMED = SET_FAMILIES.filter(([n]) => !["Môn phái", "Tống Kim", "Bộ chung"].includes(n)),
+  setFac = (n) => ((n.req || []).find((e) => e[0] === 39) || [0, -1])[1];
+function setFamily(n) {
+  if (!n || !n.set) return null;
+  const e = bareName(n.n),
+    t = SET_NAMED.find(([r]) => e.startsWith(r));
+  return t ? t[0] : n.n.includes("Tống Kim") ? "Tống Kim" : setFac(n) >= 0 ? "Môn phái" : "Bộ chung";
 }
-function setKept(it) {
-  if (!it || !it.set) return false;
-  const f = S.lootF; if (!f) return true;
-  if (f.setMine && FAC[S.fac] && !FAC[S.fac].novice && setFac(it) >= 0 && setFac(it) !== FAC[S.fac].id) return false;   // bo cua phai khac
-  if (!f.setOnly) return true;
-  const fam = setFamily(it); return !!fam && (f.setKeep || []).includes(fam);
+const SET_GRP_NAME = {
+  29: "Vô Danh",
+  41: "Tuệ Thanh",
+  42: "Vinh Diệu",
+  44: "Càn Khôn",
+  45: "Chấp Tử",
+  46: "Minh Nguyệt",
+  52: "Như Ý",
+};
+let LOOT_SETS = null,
+  SET_GRP_KEY = null;
+function lootSets() {
+  if (LOOT_SETS) return LOOT_SETS;
+  const n = new Map(),
+    e = {};
+  for (const r of J.sets.gold) {
+    if (typeof setRowOk == "function" && !setRowOk(r)) continue;
+    const o = (r.req.find((l) => l[0] === 36) || [0, 0])[1];
+    if ((r.req.find((l) => l[0] === 39) || [0, -1])[1] >= 0) {
+      e[r.grp] = o >= 120 ? "MP120" : "MP80";
+      continue;
+    }
+    const a = n.get(r.grp) || { names: [], lv: 999 };
+    (a.names.push(bareName(r.n)), (a.lv = Math.min(a.lv, o)), n.set(r.grp, a));
+  }
+  const t = [];
+  for (const [r, o] of n) {
+    const u = o.names.map((s) => s.split(" "));
+    let a = 0;
+    for (; u.every((s) => s[a] && s[a] === u[0][a]);) a++;
+    const l = SET_GRP_NAME[r] || u[0].slice(0, Math.max(a, 2)).join(" "),
+      c = "G:" + l;
+    e[r] = c;
+    const h = t.find((s) => s.k === c);
+    h ? (h.lv = Math.min(h.lv, o.lv)) : t.push({ k: c, n: l, lv: o.lv });
+  }
+  return (
+    t.sort((r, o) => r.lv - o.lv || r.n.localeCompare(o.n)),
+    t.push({ k: "MP80", n: "Môn phái", lv: 80 }, { k: "MP120", n: "Môn phái", lv: 120 }),
+    (SET_GRP_KEY = e),
+    (LOOT_SETS = t),
+    t
+  );
+}
+function setGroupKey(n) {
+  return !n || !n.set
+    ? null
+    : (lootSets(),
+      SET_GRP_KEY[n.set.grp] ||
+        (setFac(n) >= 0 ? (((n.req || []).find((e) => e[0] === 36) || [0, 0])[1] >= 120 ? "MP120" : "MP80") : null));
+}
+const setGroupName = (n) => {
+  const e = lootSets().find((t) => t.k === n);
+  return e ? e.n : n;
+};
+function setKept(n) {
+  return !(!n || !n.set);
 }
 function lootFilter() {
-  const f = S.lootF || (S.lootF = LOOT_DEF());
-  if (f.mode === undefined) f.mode = 'smart';
-  if (f.pickAll === undefined || f.setKeep === undefined || f.keepRare === undefined || f.ep === undefined) { const d = LOOT_DEF(); for (const k in d) if (f[k] === undefined) f[k] = d[k];
-    if (S.epAuto === false) f.ep.white = false; if (S.epAutoJ === false) f.ep.jew = false; delete S.epAuto; delete S.epAutoJ; }
-  return f;
-}
-let LF_KEY = null, LF_WANT = null;
-function lootWant(f) {
-  const key = f.groups.join(',');
-  if (key !== LF_KEY) { LF_KEY = key; LF_WANT = f.groups.length ? new Set(f.groups.flatMap(g => (LOOT_ATTR_GROUPS[g] || [0, []])[1]).map(n => ATTR_ID[n]).filter(x => x !== undefined)) : null; }
-  return LF_WANT;
-}
-const lootRare = it => !!((it.set && setKept(it)) || it.vio || it.plv || (it.d === 10 && (it.r >= 3 || it.rareH)));
-/* Do dung cho he thong ep Tim (phien ban 2+): trang = phoi, nhan / day chuyen / ngoc boi = luyen Huyen Tinh, xanh / vang co dong cap cao = lay thuoc tinh */
-function epWant(it) {
-  const e = lootFilter().ep; if (!e || typeof verVio !== 'function' || !verVio() || !it || it.set || it.vio || it.thanma || !(it.d >= 0 && it.d <= 9)) return '';
-  if (e.jew && FUSE_SLOTS.includes(it.d) && (it.r || 0) <= 2 && !(typeof betterThanEquipped === 'function' && betterThanEquipped(it))) return 'jew';
-  if (e.white && (it.r || 0) === 0 && !(it.mag || []).length) return 'white';
-  if (e.blue && (it.r === 1 || it.r === 2) && (it.mag || []).some(m => oreRows(m.a).length && hutLevel(m) >= (e.blueLv || 1))) return 'blue';
-  return '';
-}
-/* Loc thong minh: giu mon lam nhan vat manh hon (so voi do dang mac), ke ca mon sap mac duoc (cap yeu cau <= cap + 10) */
-let UG_KEY = '', UG = {}, UG_BASE = 1;
-function soonWearable(it) {
-  if (!sexOk(it)) return false;
-  for (const [id, v] of it.req || []) { if (id === 36 && v > eqLevel() + 10) return false; if ((id === 37 || id === 39) && v >= 0 && FAC[S.fac] && (id === 37 ? heroSeries() !== v : FAC[S.fac].id !== v)) return false; }
-  const f = FAC[S.fac]; if (DETAIL_SLOT[it.d] === 'weapon' && f && !weaponFits(it)) return false;
-  return true;
-}
-function upgradeGain(it) {
-  if (!it || !S.fac || !(it.d >= 0 && it.d <= 10)) return -1;
-  const key = Object.values(S.eq).map(x => x ? x.uid + '.' + (x.enh || 0) + '.' + (x.mag || []).length : 0).join(',') + '|' + S.lvl + '|' + S.fac;
-  if (key !== UG_KEY) { UG_KEY = key; UG = {}; try { UG_BASE = Math.max(1, power(calc(S.eq))); } catch (e) { UG_BASE = 1; } }
-  if (it.uid in UG) return UG[it.uid];
-  let g = -1;
-  if (soonWearable(it)) try { const eq = Object.assign({}, S.eq); eq[slotFor(it)] = it; g = power(calc(eq)) / UG_BASE - 1; } catch (e) { g = -1; }
-  return (UG[it.uid] = g);
-}
-const isUpgrade = it => upgradeGain(it) > 0.005;
-/* △: neu cuong hoa len ngang do dang mac cung vi tri thi manh hon */
-const UGE = {};
-function enhGain(it) {
-  if (!it || !S.fac || !(it.d >= 0 && it.d <= 9)) return null;
-  const cur = S.eq[slotFor(it)], tgt = cur && cur.enh || 0; if (tgt <= (it.enh || 0)) return null;
-  upgradeGain(it);   // dong bo khoa bo nho dem
-  const k = UG_KEY + '#' + it.uid; if (k in UGE) return UGE[k];
-  let r = null;
-  if (soonWearable(it)) try { const c = Object.assign({}, it, { enh: tgt }), eq = Object.assign({}, S.eq); eq[slotFor(it)] = c; const g = power(calc(eq)) / UG_BASE - 1; if (g > 0.005) r = { enh: tgt, gain: g }; } catch (e) { r = null; }
-  return (UGE[k] = r);
-}
-const isPotential = it => !isUpgrade(it) && !!enhGain(it);
-function lootMatch(it) {
-  if (typeof dtNeed === 'function' && dtNeed(it)) return true;   // mon giu de tra Da Tau
-  const f = lootFilter();
-  if (it.set && !setKept(it)) return false;             // do bo khong nam trong danh sach giu
-  if (f.mode === 'smart') return lootRare(it) || isUpgrade(it) || isPotential(it);   // thong minh: chi giu do quy + do nang cap
-  if (f.keepRare && lootRare(it)) return true;
-  if (it.r < f.minRar || it.lvl < f.minLvl || (it.mag || []).length < (f.minMag || 0)) return false;
-  if (f.series.length && !f.series.includes(it.s)) return false;
-  if (f.slots.length && !f.slots.includes(DETAIL_SLOT[it.d])) return false;
-  if (f.wear) {
-    if (!sexOk(it)) return false;
-    for (const [id, v] of it.req || []) { if (id === 36 && v > eqLevel() + 5) return false; if ((id === 37 || id === 39) && v >= 0 && FAC[S.fac] && (id === 37 ? heroSeries() !== v : FAC[S.fac].id !== v)) return false; }
+  const n = S.lootF || (S.lootF = LOOT_DEF());
+  if (n.setV !== 2) {
+    const e = n.setKeep || [],
+      t = lootSets(),
+      r = [];
+    (e.includes("Bộ chung") && t.filter((o) => o.k.startsWith("G:")).forEach((o) => r.push(o.k)),
+      e.includes("Môn phái") && r.push("MP80", "MP120"),
+      (n.setKeep = r),
+      (n.setV = 2));
   }
-  if (f.accrue && it.s >= 0 && it.d !== 10 && FAC[S.fac] && !accrues(heroSeries(), it.s)) return false;
-  if (f.facW && DETAIL_SLOT[it.d] === 'weapon' && FAC[S.fac] && !weaponFits(it)) return false;
-  const want = lootWant(f);
-  if (want && !it.mag.some(m => want.has(m.a))) return false;
-  return true;
+  if (
+    (n.mode === void 0 && (n.mode = "smart"),
+    n.smartUp === void 0 &&
+      ((n.smartUp = n.mode !== "custom"), (n.custom = n.mode === "custom"), n.mode !== "custom" && (n.keepRare = !0)),
+    n.pickAll === void 0 || n.setKeep === void 0 || n.keepRare === void 0 || n.ep === void 0)
+  ) {
+    const e = LOOT_DEF();
+    for (const t in e) n[t] === void 0 && (n[t] = e[t]);
+    (S.epAuto === !1 && (n.ep.white = !1), S.epAutoJ === !1 && (n.ep.jew = !1), delete S.epAuto, delete S.epAutoJ);
+  }
+  return n;
 }
-/* 3 bo loc luu san + vai mau nhanh */
-const LOOT_QUICK = [['Mặc định', { mode: 'custom' }], ['Tím / Hoàng Kim', { mode: 'custom', minRar: 3 }], ['Hợp phái', { mode: 'custom', wear: true, facW: true, accrue: true }], ['Nhặt hết', { mode: 'custom', minRar: 0, minLvl: 1 }]];
-function lootPresets() { const p = S.lootP || (S.lootP = [null, null, null]); while (p.length < 3) p.push(null); return p; }
-function lootSavePreset(i) { const f = lootFilter(); lootPresets()[i] = JSON.parse(JSON.stringify(f)); }
-function lootLoadPreset(o) { const { auto, pickAll } = lootFilter(); S.lootF = Object.assign(LOOT_DEF(), JSON.parse(JSON.stringify(o)), { auto, pickAll }); LF_KEY = null; }
-function dropToGround(it, at) {
-  const a = rnd(0, Math.PI * 2), d = rnd(10, 26);
-  const [x, y] = inWorld(at.x + Math.cos(a) * d, at.y + Math.sin(a) * d);
-  R.ground.push({ it, x, y, age: 0 });
-  if (R.ground.length > GROUND_MAX) { let i = R.ground.findIndex(d => !d.it.set && !d.it.vio && !d.it.plv); if (i < 0) i = 0; const old = R.ground.splice(i, 1)[0]; S.gold += itemValue(old.it); } // qua nhieu: mon cu nhat tu ban (khong ban do bo / Tim / Bach Kim neu con mon khac)
-  if (!R.quiet) uiSfx(it.d <= 1 ? 'dropWeapon' : it.d === 2 || it.d === 7 ? 'dropCloth' : 'dropOther');
-  if (it.r >= 2 && !R.quiet) log(`Rơi xuống đất: <span style="color:${RAR_COL[it.r]}">${esc(it.n)}</span>`);
+let LF_KEY = null,
+  LF_WANT = null;
+function lootWant(n) {
+  const e = n.groups.join(",");
+  return (
+    e !== LF_KEY &&
+      ((LF_KEY = e),
+      (LF_WANT = n.groups.length
+        ? new Set(
+            n.groups
+              .flatMap((t) => (LOOT_ATTR_GROUPS[t] || [0, []])[1])
+              .map((t) => ATTR_ID[t])
+              .filter((t) => t !== void 0),
+          )
+        : null)),
+    LF_WANT
+  );
 }
-/* Hanh trang day: tu ban mon kem nhat (khong phai do bo) neu mon moi tot hon -> treo may lau van thay do moi
-   (truoc day tui day la ngung nhat, do tot nam duoi dat roi bi tu ban, nhan vat khong bao gio len do) */
-function makeRoom(it, force) {
-  let worst = null;
-  // khong bo mon Tim dang kham do (vio) va Bach Kim da thang cap (plv) khi nhet do moi; mon trang goc van co the bi bo (kham ngay sau khi mua)
-  for (const x of S.inv) if (!(x.set && setKept(x)) && !x.vio && !x.plv && !x.lock && !x.thanma && !dtNeed(x) && (!worst || itemPower(x) < itemPower(worst))) worst = x;
-  if (!worst || (!force && itemPower(worst) >= itemPower(it))) return false;
-  S.gold += itemValue(worst); S.inv.splice(S.inv.indexOf(worst), 1); invDirty = true;
-  return true;
+const lootRare = (n) => !!((n.set && setKept(n)) || n.vio || n.plv || (n.d === 10 && (n.r >= 3 || n.rareH)));
+function epWant(n) {
+  const e = lootFilter().ep;
+  return !e || typeof verVio != "function" || !verVio() || !n || n.set || n.vio || n.thanma || !(n.d >= 0 && n.d <= 9)
+    ? ""
+    : e.jew &&
+        FUSE_SLOTS.includes(n.d) &&
+        (n.r || 0) <= 2 &&
+        !(typeof betterThanEquipped == "function" && betterThanEquipped(n))
+      ? "jew"
+      : e.white && (n.r || 0) === 0 && !(n.mag || []).length
+        ? "white"
+        : e.blue &&
+            (n.r === 1 || n.r === 2) &&
+            (n.mag || []).some((t) => oreRows(t.a).length && hutLevel(t) >= (e.blueLv || 1))
+          ? "blue"
+          : "";
 }
-/* Nhat toan bo: hanh trang day thi ban cac mon KHONG khop bo loc (tru mon duoc bao ve) de lay cho */
-const sellableByFilter = () => S.inv.filter(x => !lootMatch(x) && !sellProtected(x) && !Object.values(S.eq).includes(x));
-function sellByFilter(quiet) {
-  const w = sellableByFilter(); if (!w.length) return 0;
-  let g = 0; for (const x of w) g += itemValue(x);
-  S.gold += g; S.inv = S.inv.filter(x => !w.includes(x)); invDirty = true;
-  if (!quiet && !R.quiet) log(`<span class="dim">Hành trang đầy: bán ${w.length} món không khớp bộ lọc (+${fmt(g)} lượng)</span>`);
-  return w.length;
+let UG_KEY = "",
+  UG = {},
+  UG_BASE = 1;
+function soonWearable(n) {
+  if (!sexOk(n)) return !1;
+  for (const [t, r] of n.req || [])
+    if (
+      (t === 36 && r > eqLevel() + 10) ||
+      ((t === 37 || t === 39) && r >= 0 && FAC[S.fac] && (t === 37 ? heroSeries() !== r : FAC[S.fac].id !== r))
+    )
+      return !1;
+  const e = FAC[S.fac];
+  return !(DETAIL_SLOT[n.d] === "weapon" && e && !weaponFits(n));
+}
+function upgradeGain(n) {
+  if (!n || !S.fac || !(n.d >= 0 && n.d <= 10)) return -1;
+  const e =
+    Object.values(S.eq)
+      .map((r) => (r ? r.uid + "." + (r.enh || 0) + "." + (r.mag || []).length : 0))
+      .join(",") +
+    "|" +
+    S.lvl +
+    "|" +
+    S.fac;
+  if (e !== UG_KEY) {
+    ((UG_KEY = e), (UG = {}));
+    try {
+      UG_BASE = Math.max(1, power(calc(S.eq)));
+    } catch {
+      UG_BASE = 1;
+    }
+  }
+  if (n.uid in UG) return UG[n.uid];
+  let t = -1;
+  if (soonWearable(n))
+    try {
+      const r = Object.assign({}, S.eq);
+      ((r[slotFor(n)] = n), (t = power(calc(r)) / UG_BASE - 1));
+    } catch {
+      t = -1;
+    }
+  return (UG[n.uid] = t);
+}
+const isUpgrade = (n) => upgradeGain(n) > 0.005,
+  UGE = {};
+function enhGain(n) {
+  if (!n || !S.fac || !(n.d >= 0 && n.d <= 9)) return null;
+  const e = S.eq[slotFor(n)],
+    t = (e && e.enh) || 0;
+  if (t <= (n.enh || 0)) return null;
+  upgradeGain(n);
+  const r = UG_KEY + "#" + n.uid;
+  if (r in UGE) return UGE[r];
+  let o = null;
+  if (soonWearable(n))
+    try {
+      const u = Object.assign({}, n, { enh: t }),
+        a = Object.assign({}, S.eq);
+      a[slotFor(n)] = u;
+      const l = power(calc(a)) / UG_BASE - 1;
+      l > 0.005 && (o = { enh: t, gain: l });
+    } catch {
+      o = null;
+    }
+  return (UGE[r] = o);
+}
+const isPotential = (n) => !isUpgrade(n) && !!enhGain(n);
+function lootMatch(n) {
+  if (typeof dtNeed == "function" && dtNeed(n)) return !0;
+  const e = lootFilter();
+  if (n.set && !setKept(n)) return !1;
+  if ((e.keepRare && lootRare(n)) || (e.smartUp && (isUpgrade(n) || isPotential(n)))) return !0;
+  if (
+    !e.custom ||
+    n.r < e.minRar ||
+    n.lvl < e.minLvl ||
+    (n.mag || []).length < (e.minMag || 0) ||
+    (e.series.length && !e.series.includes(n.s)) ||
+    (e.slots.length && !e.slots.includes(DETAIL_SLOT[n.d]))
+  )
+    return !1;
+  if (e.wear) {
+    if (!sexOk(n)) return !1;
+    for (const [r, o] of n.req || [])
+      if (
+        (r === 36 && o > eqLevel() + 5) ||
+        ((r === 37 || r === 39) && o >= 0 && FAC[S.fac] && (r === 37 ? heroSeries() !== o : FAC[S.fac].id !== o))
+      )
+        return !1;
+  }
+  if (
+    (e.accrue && n.s >= 0 && n.d !== 10 && FAC[S.fac] && !accrues(heroSeries(), n.s)) ||
+    (e.facW && DETAIL_SLOT[n.d] === "weapon" && FAC[S.fac] && !weaponFits(n))
+  )
+    return !1;
+  const t = lootWant(e);
+  return !(t && !n.mag.some((r) => t.has(r.a)));
+}
+const LOOT_QUICK = [
+  ["Mặc định", { smartUp: !0, custom: !1 }],
+  ["Tím / Hoàng Kim", { smartUp: !0, custom: !0, minRar: 3 }],
+  ["Hợp phái", { smartUp: !0, custom: !0, wear: !0, facW: !0, accrue: !0 }],
+  ["Nhặt hết", { smartUp: !0, custom: !0, minRar: 0, minLvl: 1 }],
+];
+function lootPresets() {
+  const n = S.lootP || (S.lootP = [null, null, null]);
+  for (; n.length < 3;) n.push(null);
+  return n;
+}
+function lootSavePreset(n) {
+  const e = lootFilter();
+  lootPresets()[n] = JSON.parse(JSON.stringify(e));
+}
+function lootLoadPreset(n) {
+  const { auto: e, pickAll: t } = lootFilter();
+  ((S.lootF = Object.assign(LOOT_DEF(), JSON.parse(JSON.stringify(n)), { auto: e, pickAll: t })), (LF_KEY = null));
+}
+function dropToGround(n, e) {
+  const t = rnd(0, Math.PI * 2),
+    r = rnd(10, 26),
+    [o, u] = inWorld(e.x + Math.cos(t) * r, e.y + Math.sin(t) * r);
+  if ((R.ground.push({ it: n, x: o, y: u, age: 0 }), R.ground.length > GROUND_MAX)) {
+    let a = R.ground.findIndex((c) => !c.it.set && !c.it.vio && !c.it.plv);
+    a < 0 && (a = 0);
+    const l = R.ground.splice(a, 1)[0];
+    S.gold += itemValue(l.it);
+  }
+  (R.quiet || uiSfx(n.d <= 1 ? "dropWeapon" : n.d === 2 || n.d === 7 ? "dropCloth" : "dropOther"),
+    n.r >= 2 && !R.quiet && log(`Rơi xuống đất: <span style="color:${RAR_COL[n.r]}">${esc(n.n)}</span>`));
+}
+function makeRoom(n, e) {
+  let t = null;
+  for (const r of S.inv)
+    !(r.set && setKept(r)) &&
+      !r.vio &&
+      !r.plv &&
+      !r.lock &&
+      !r.thanma &&
+      !dtNeed(r) &&
+      (!t || itemPower(r) < itemPower(t)) &&
+      (t = r);
+  return !t || (!e && itemPower(t) >= itemPower(n))
+    ? !1
+    : ((S.gold += itemValue(t)), S.inv.splice(S.inv.indexOf(t), 1), (invDirty = !0), !0);
+}
+const sellableByFilter = () =>
+  S.inv.filter((n) => !lootMatch(n) && !sellProtected(n) && !Object.values(S.eq).includes(n));
+function sellByFilter(n) {
+  const e = sellableByFilter();
+  if (!e.length) return 0;
+  let t = 0;
+  for (const r of e) t += itemValue(r);
+  return (
+    (S.gold += t),
+    (S.inv = S.inv.filter((r) => !e.includes(r))),
+    (invDirty = !0),
+    !n &&
+      !R.quiet &&
+      log(`<span class="dim">Hành trang đầy: bán ${e.length} món không khớp bộ lọc (+${fmtL(t)} lượng)</span>`),
+    e.length
+  );
 }
 const LOOT_NEAR = 220;
-/* Space: di nhat mon gan nhat tren dat (moi mon, khong theo bo loc) */
 function pickNearest() {
-  let best = null, bd = 600;
-  for (const d of R.ground) { const k = Math.hypot(d.x - H.x, d.y - H.y); if (k < bd) { bd = k; best = d; } }
-  if (!best) { toast('Không có đồ gần để nhặt'); return; }
-  R.pickTarget = best; R.moveTo = null;
-}                                       // tam nhat do trong luc danh quai
-function pickUp(drop, quiet) {
-  const i = R.ground.indexOf(drop); if (i < 0) return false;
-  if ((S.inv.length >= INV_MAX || epBox().length >= EP_BOX_MAX) && typeof autoHut === 'function') autoHut(5);
-  if (S.inv.length >= INV_MAX && lootFilter().pickAll) sellByFilter();
-  const epd = epWant(drop.it) && lootFilter().ep.dest !== 'inv' && !lootMatch(drop.it);
-  if (!epd && S.inv.length >= INV_MAX && !makeRoom(drop.it, typeof dtNeed === 'function' && dtNeed(drop.it))) { if (!quiet) toast('Hành trang đầy'); return false; }
-  R.ground.splice(i, 1);
-  addItem(drop.it, quiet, true, R.pickTarget === drop); questTick('picked');   // cham tay chon nhat: giu, khong coi la do thua
-  if (R.pickTarget === drop) R.pickTarget = null;
-  return true;
-}
-/* Nhat: di toi mon dang chon (cham tay) hoac, luc khong con quai, tu di nhat mon khop bo loc (hoac moi mon khi bat Nhat toan bo) */
-function updateGround(dt) {
-  for (const d of R.ground) d.age += dt;
-  let target = R.pickTarget && R.ground.includes(R.pickTarget) ? R.pickTarget : null;
-  // tu nhat: mon trong LOOT_NEAR quanh nguoi nhat ca khi dang danh; mon xa hon chi khi khong con quai dang duoi minh (bai JX1: quai dung yen khong tinh)
-  const fighting = R.enemies.some(e => !e.dead && (!e.home || e.aggro));
-  if (!target && lootFilter().auto && !(typeof manual === 'function' && manual())) {
-    let best = null, bd = 1e9;
-    const f = lootFilter(), all = f.pickAll, full = S.inv.length >= INV_MAX && !(all && sellableByFilter().length);   // nhat toan bo: con mon ban duoc theo bo loc thi chua tinh la day
-    const floor = full ? Math.min(...S.inv.filter(x => !x.set && !x.lock).map(itemPower), Infinity) : -Infinity;
-    for (const d of R.ground) { if (d.age < 0.4 || (fighting && Math.hypot(d.x - H.x, d.y - H.y) > LOOT_NEAR) || !(all || lootMatch(d.it) || epWant(d.it)) || (full && itemPower(d.it) <= floor && !dtNeed(d.it))) continue; const k = Math.hypot(d.x - H.x, d.y - H.y); if (k < bd) { bd = k; best = d; } }
-    target = best;
+  let n = null,
+    e = 600;
+  for (const t of R.ground) {
+    const r = Math.hypot(t.x - H.x, t.y - H.y);
+    r < e && ((e = r), (n = t));
   }
-  if (!target) return false;
-  const dist = Math.hypot(target.x - H.x, target.y - H.y);
-  if (dist <= PICK_R) { pickUp(target, true); return true; }
-  obsSteer(H, target.x, target.y, 170 * curSpeed() * dt); H.face = target.x >= H.x ? 1 : -1;
-  return true;
+  if (!n) {
+    toast("Không có đồ gần để nhặt");
+    return;
+  }
+  ((R.pickTarget = n), (R.moveTo = null));
 }
-function groundAt(x, y) {
-  let best = null, bd = 30;
-  for (const d of R.ground) { const k = Math.hypot(d.x - x, d.y - (y + 6)); if (k < bd) { bd = k; best = d; } }
-  return best;
+function pickUp(n, e) {
+  const t = R.ground.indexOf(n);
+  return t < 0
+    ? !1
+    : ((S.inv.length >= INV_MAX || epBox().length >= EP_BOX_MAX) && typeof autoHut == "function" && autoHut(5),
+      S.inv.length >= INV_MAX && lootFilter().pickAll && sellByFilter(),
+      !(epWant(n.it) && lootFilter().ep.dest !== "inv" && !lootMatch(n.it)) &&
+      S.inv.length >= INV_MAX &&
+      !makeRoom(n.it, typeof dtNeed == "function" && dtNeed(n.it))
+        ? (e || toast("Hành trang đầy"), !1)
+        : (R.ground.splice(t, 1),
+          addItem(n.it, e, !0, R.pickTarget === n),
+          questTick("picked"),
+          R.pickTarget === n && (R.pickTarget = null),
+          !0));
 }
-function saveGround() { S.ground = R.ground.map(d => ({ it: d.it, wx: d.x, wy: d.y })); }
-function restoreGround() { R.ground = (S.ground || []).filter(g => g && g.it).map(g => { const [x, y] = inWorld(g.wx ?? WORLD.w / 2, g.wy ?? WORLD.h / 2); return { it: g.it, x, y, age: 1 }; }); }
+function updateGround(n) {
+  for (const o of R.ground) o.age += n;
+  let e = R.pickTarget && R.ground.includes(R.pickTarget) ? R.pickTarget : null;
+  const t = R.enemies.some((o) => !o.dead && (!o.home || o.aggro));
+  if (!e && lootFilter().auto && !(typeof manual == "function" && manual())) {
+    let o = null,
+      u = 1e9;
+    const a = lootFilter(),
+      l = a.pickAll,
+      c = S.inv.length >= INV_MAX && !(l && sellableByFilter().length),
+      h = c ? Math.min(...S.inv.filter((s) => !s.set && !s.lock).map(itemPower), 1 / 0) : -1 / 0;
+    for (const s of R.ground) {
+      if (
+        s.age < 0.4 ||
+        (t && Math.hypot(s.x - H.x, s.y - H.y) > LOOT_NEAR) ||
+        !(l || lootMatch(s.it) || epWant(s.it)) ||
+        (c && itemPower(s.it) <= h && !dtNeed(s.it))
+      )
+        continue;
+      const i = Math.hypot(s.x - H.x, s.y - H.y);
+      i < u && ((u = i), (o = s));
+    }
+    e = o;
+  }
+  return e
+    ? Math.hypot(e.x - H.x, e.y - H.y) <= PICK_R
+      ? (pickUp(e, !0), !0)
+      : (typeof heroCasting == "function" && heroCasting()) || (obsSteer(H, e.x, e.y, 170 * curSpeed() * n), (H.face = e.x >= H.x ? 1 : -1), !0)
+    : !1;
+}
+function groundAt(n, e) {
+  let t = null,
+    r = 30;
+  for (const o of R.ground) {
+    const u = Math.hypot(o.x - n, o.y - (e + 6));
+    u < r && ((r = u), (t = o));
+  }
+  return t;
+}
+function saveGround() {
+  // saved in old crop space so saves stay valid whichever map data (full JMAP / JMO crop) is loaded
+  const o = typeof JXM < "u" ? JXM.off : { x: 0, y: 0 };
+  S.ground = R.ground.map((n) => ({ it: n.it, wx: n.x - o.x, wy: n.y - o.y }));
+}
+function restoreGround() {
+  R.ground = (S.ground || [])
+    .filter((n) => n && n.it)
+    .map((n) => {
+      const [e, t] = inWorld(n.wx ?? WORLD.w / 2, n.wy ?? WORLD.h / 2);
+      return { it: n.it, x: e, y: t, age: 1 };
+    });
+}

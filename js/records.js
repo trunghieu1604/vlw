@@ -1,94 +1,184 @@
-/* ======================= BANG KY LUC CA NHAN =======================
-   Ghi lai cac moc dang nho cua nhan vat (luu trong S.rec): don manh nhat, DPS cao nhat (cua so 5 giay), ha trum nhanh nhat,
-   chuoi ha quai khong guc, do quy nhat nhat duoc, cuong hoa cao nhat, phó bản / boss tuan... Moi ky luc kem ngay dat duoc. */
-'use strict';
+"use strict";
 const DPS_WIN = 5;
 function REC() {
-  const r = S.rec || (S.rec = {});
-  for (const k of ['maxHit', 'maxDps', 'fastBoss', 'bestItem', 'maxEnh', 'bestStreak', 'maxGoldKill', 'wbBest', 'horseLv'])
-    if (r[k] && typeof r[k] !== 'object') delete r[k];
-  r.deaths = r.deaths | 0; r.play = +r.play || 0; r.goldKill = +r.goldKill || 0; r.streak = r.streak | 0;
-  r.dgClear = r.dgClear || {}; r.dgBest = r.dgBest || {}; r.dgRank = r.dgRank || {};
-  r.wbTries = r.wbTries | 0; r.horses = r.horses | 0;
-  return r;
+  const n = S.rec || (S.rec = {});
+  for (const e of [
+    "maxHit",
+    "maxDps",
+    "fastBoss",
+    "bestItem",
+    "maxEnh",
+    "bestStreak",
+    "maxGoldKill",
+    "wbBest",
+    "horseLv",
+  ])
+    n[e] && typeof n[e] != "object" && delete n[e];
+  return (
+    (n.deaths = n.deaths | 0),
+    (n.play = +n.play || 0),
+    (n.goldKill = +n.goldKill || 0),
+    (n.streak = n.streak | 0),
+    (n.dgClear = n.dgClear || {}),
+    (n.dgBest = n.dgBest || {}),
+    (n.dgRank = n.dgRank || {}),
+    (n.wbTries = n.wbTries | 0),
+    (n.horses = n.horses | 0),
+    n
+  );
 }
 const recNow = () => Date.now();
-/* Ghi ky luc neu tot hon (higher = true: so lon hon la tot hon) */
-function recSet(key, v, extra, higher = true) {
-  if (!S || !S.fac || !Number.isFinite(v)) return false;
-  const r = REC(), cur = r[key];
-  if (cur && (higher ? v <= cur.v : v >= cur.v)) return false;
-  r[key] = Object.assign({ v, t: recNow() }, extra || {});
-  return true;
+function recSet(n, e, s, a = !0) {
+  if (!S || !S.fac || !Number.isFinite(e)) return !1;
+  const r = REC(),
+    t = r[n];
+  return t && (a ? e <= t.v : e >= t.v) ? !1 : ((r[n] = Object.assign({ v: e, t: recNow() }, s || {})), !0);
 }
-/* ---------- moc noi vao tro choi ---------- */
-function recHit(dmg, a) {
-  if (R.quiet || !(dmg > 0)) return;
-  R.dpsAcc = (R.dpsAcc || 0) + dmg;
-  if (recSet('maxHit', Math.round(dmg), { n: a ? a.n : '', L: S.lvl }) && !(R.recToastT > 0) && REC().maxHit.v > 1000) { addText(H.x, H.y - 64, 'Kỷ lục đòn đánh!', '#ffd24a', 12); R.recToastT = 20; }
+function recHit(n, e) {
+  if (typeof PCTX < "u" && PCTX) return; // records are the main character's (js/party.js)
+  R.quiet ||
+    !(n > 0) ||
+    ((R.dpsAcc = (R.dpsAcc || 0) + n),
+    recSet("maxHit", Math.round(n), { n: e ? e.n : "", L: S.lvl }) &&
+      !(R.recToastT > 0) &&
+      REC().maxHit.v > 1e3 &&
+      (addText(H.x, H.y - 64, "Kỷ lục đòn đánh!", "#ffd24a", 12), (R.recToastT = 20)));
 }
-function recTick(dt) {
-  R.clock = (R.clock || 0) + dt;
-  if (R.quiet) return;
-  const r = REC(); r.play += dt;
-  R.recToastT = (R.recToastT || 0) - dt;
-  // DPS: gom sat thuong tung giay, lay tong 5 giay gan nhat (chi khi dang danh)
-  R.dpsT = (R.dpsT || 0) + dt;
-  if (R.dpsT >= 1) {
-    R.dpsT -= 1; const w = R.dpsWin || (R.dpsWin = []); w.push(R.dpsAcc || 0); R.dpsAcc = 0; if (w.length > DPS_WIN) w.shift();
-    if (w.length === DPS_WIN && w.every(x => x > 0)) recSet('maxDps', Math.round(w.reduce((a, b) => a + b, 0) / DPS_WIN), { L: S.lvl, n: R.P && R.P.main ? R.P.main.n : '' });
+function recTick(n) {
+  if (((R.clock = (R.clock || 0) + n), R.quiet)) return;
+  const e = REC();
+  if (((e.play += n), (R.recToastT = (R.recToastT || 0) - n), (R.dpsT = (R.dpsT || 0) + n), R.dpsT >= 1)) {
+    R.dpsT -= 1;
+    const s = R.dpsWin || (R.dpsWin = []);
+    (s.push(R.dpsAcc || 0),
+      (R.dpsAcc = 0),
+      s.length > 5 && s.shift(),
+      s.length === 5 &&
+        s.every((a) => a > 0) &&
+        recSet("maxDps", Math.round(s.reduce((a, r) => a + r, 0) / 5), {
+          L: S.lvl,
+          n: R.P && R.P.main ? R.P.main.n : "",
+        }));
   }
 }
-function recKill(e, gold) {
+function recKill(n, e) {
   if (R.quiet || !S.fac) return;
-  const r = REC();
-  r.goldKill += gold || 0; r.streak++;
-  if (r.streak > ((r.bestStreak && r.bestStreak.v) || 0)) r.bestStreak = { v: r.streak, t: recNow() };
-  if (gold) recSet('maxGoldKill', gold, { n: e.n });
-  if (e.cls === 'boss' && e.born != null && !e.wb) { const s = (R.clock || 0) - e.born; if (s > 0.5) recSet('fastBoss', Math.round(s * 10) / 10, { n: e.n, L: e.L }, false); }
+  const s = REC();
+  if (
+    ((s.goldKill += e || 0),
+    s.streak++,
+    s.streak > ((s.bestStreak && s.bestStreak.v) || 0) && (s.bestStreak = { v: s.streak, t: recNow() }),
+    e && recSet("maxGoldKill", e, { n: n.n }),
+    n.cls === "boss" && n.born != null && !n.wb)
+  ) {
+    const a = (R.clock || 0) - n.born;
+    a > 0.5 && recSet("fastBoss", Math.round(a * 10) / 10, { n: n.n, L: n.L }, !1);
+  }
 }
-function recDeath() { if (!S.fac || R.quiet) return; const r = REC(); r.deaths++; r.streak = 0; }
-function recItem(it) {
-  if (!it || R.quiet || !S.fac) return;
-  const r = REC(), cur = r.bestItem, score = it.r * 1000 + it.lvl * 10 + (it.mag || []).length;
-  if (!cur || score > cur.v) r.bestItem = { v: score, n: it.n, r: it.r, t: recNow() };
+function recDeath() {
+  if (!S.fac || R.quiet) return;
+  const n = REC();
+  (n.deaths++, (n.streak = 0));
 }
-function recEnh(it) { if (it && it.enh) recSet('maxEnh', it.enh, { n: it.n }); }
-
-/* ---------- giao dien ---------- */
-const recDate = t => { if (!t) return ''; const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`; };
-const recTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h} giờ ${m} phút` : `${m} phút ${s % 60} giây`; };
+function recItem(n) {
+  if (!n || R.quiet || !S.fac) return;
+  const e = REC(),
+    s = e.bestItem,
+    a = n.r * 1e3 + n.lvl * 10 + (n.mag || []).length;
+  (!s || a > s.v) && (e.bestItem = { v: a, n: n.n, r: n.r, t: recNow() });
+}
+function recEnh(n) {
+  n && n.enh && recSet("maxEnh", n.enh, { n: n.n });
+}
+const recDate = (n) => {
+    if (!n) return "";
+    const e = new Date(n),
+      s = (a) => String(a).padStart(2, "0");
+    return `${s(e.getDate())}/${s(e.getMonth() + 1)}/${e.getFullYear()}`;
+  },
+  recTime = (n) => {
+    n = Math.round(n);
+    const e = Math.floor(n / 3600),
+      s = Math.floor((n % 3600) / 60);
+    return e ? `${e} giờ ${s} phút` : `${s} phút ${n % 60} giây`;
+  };
 function recRows() {
-  const r = REC(), rw = RW().stat, x = (o, f) => o ? f(o) : '<span class="dim">chưa có</span>', d = o => o && o.t ? `<small class="dim">${recDate(o.t)}</small>` : '';
-  const dgs = (typeof DUNGEONS !== 'undefined' ? DUNGEONS : []);
+  const n = REC(),
+    e = RW().stat,
+    s = (t, c) => (t ? c(t) : '<span class="dim">chưa có</span>'),
+    a = (t) => (t && t.t ? `<small class="dim">${recDate(t.t)}</small>` : ""),
+    r = typeof DUNGEONS < "u" ? DUNGEONS : [];
   return [
-    ['Chiến đấu', [
-      ['Đòn đánh mạnh nhất', x(r.maxHit, o => `<b>${fmt(o.v)}</b> ${o.n ? '· ' + esc(o.n) : ''}`), d(r.maxHit)],
-      ['DPS cao nhất (5 giây)', x(r.maxDps, o => `<b>${fmt(o.v)}</b>/giây`), d(r.maxDps)],
-      ['Hạ trùm nhanh nhất', x(r.fastBoss, o => `<b>${o.v} giây</b> · ${esc(o.n)} Lv${o.L}`), d(r.fastBoss)],
-      ['Chuỗi hạ quái không gục', x(r.bestStreak, o => `<b>${fmt(o.v)}</b> quái (hiện ${fmt(r.streak)})`), d(r.bestStreak)],
-      ['Ngân lượng 1 quái', x(r.maxGoldKill, o => `<b>${fmt(o.v)}</b> · ${esc(o.n)}`), d(r.maxGoldKill)],
-      ['Số lần trọng thương', `<b>${fmt(r.deaths)}</b>`, ''],
-    ]],
-    ['Tiến trình', [
-      ['Bản đồ cao nhất', `<b>${esc(zoneOf(Math.min(S.maxStage, STAGES)).n)}</b>`, ''],
-      ['Tổng quái đã hạ', `<b>${fmt(S.totalKills || 0)}</b> · trùm ${fmt(rw.bosses)} · Hoàng Kim ${fmt(rw.goldBoss)}`, ''],
-      ['Tháp thử thách', `<b>tầng ${rw.towerBest}</b>`, ''],
-      ['Chuyển sinh', `<b>${rw.reborn}</b> lần`, ''],
-      ['Thời gian chơi', `<b>${recTime(r.play)}</b>`, ''],
-      ['Ngân lượng từ quái', `<b>${fmt(r.goldKill)}</b>`, ''],
-    ]],
-    ['Trang bị', [
-      ['Món quý nhất từng có', x(r.bestItem, o => `<b style="color:${RAR_COL[o.r]}">${esc(o.n)}</b>`), d(r.bestItem)],
-      ['Cường hóa cao nhất', x(r.maxEnh, o => `<b>+${o.v}</b> · ${esc(o.n)}`), d(r.maxEnh)],
-      ['Ngựa thuần dưỡng cao nhất', x(r.horseLv, o => `<b>cấp ${o.v}</b> · ${esc(o.n)}`), d(r.horseLv)],
-      ['Sổ ngựa', `<b>${typeof horseBookCount === 'function' ? horseBookCount() : 0}</b> loài đã cưỡi`, ''],
-    ]],
-    ['Phó bản & Boss tuần', dgs.map(g => [g.n, r.dgClear[g.id] ? `<b>${r.dgClear[g.id]}</b> lần · nhanh nhất ${r.dgBest[g.id]} giây · hạng ${r.dgRank[g.id] || '—'}` : '<span class="dim">chưa qua</span>', ''])
-      .concat([['Boss tuần: sát thương cao nhất', x(r.wbBest, o => `<b>${fmt(o.v)}</b> · ${esc(o.n || '')} · hạng ${o.rank || '—'}`), d(r.wbBest)], ['Boss tuần: số lượt đã đánh', `<b>${r.wbTries}</b>`, '']])],
+    [
+      "Chiến đấu",
+      [
+        ["Đòn đánh mạnh nhất", s(n.maxHit, (t) => `<b>${fmt(t.v)}</b> ${t.n ? "· " + esc(t.n) : ""}`), a(n.maxHit)],
+        ["DPS cao nhất (5 giây)", s(n.maxDps, (t) => `<b>${fmt(t.v)}</b>/giây`), a(n.maxDps)],
+        ["Hạ trùm nhanh nhất", s(n.fastBoss, (t) => `<b>${t.v} giây</b> · ${esc(t.n)} Lv${t.L}`), a(n.fastBoss)],
+        [
+          "Chuỗi hạ quái không gục",
+          s(n.bestStreak, (t) => `<b>${fmt(t.v)}</b> quái (hiện ${fmt(n.streak)})`),
+          a(n.bestStreak),
+        ],
+        ["Ngân lượng 1 quái", s(n.maxGoldKill, (t) => `<b>${fmt(t.v)}</b> · ${esc(t.n)}`), a(n.maxGoldKill)],
+        ["Số lần trọng thương", `<b>${fmt(n.deaths)}</b>`, ""],
+      ],
+    ],
+    [
+      "Tiến trình",
+      [
+        ["Bản đồ cao nhất", `<b>${esc(zoneOf(Math.min(S.maxStage, STAGES)).n)}</b>`, ""],
+        [
+          "Tổng quái đã hạ",
+          `<b>${fmt(S.totalKills || 0)}</b> · trùm ${fmt(e.bosses)} · Hoàng Kim ${fmt(e.goldBoss)}`,
+          "",
+        ],
+        ["Tháp thử thách", `<b>tầng ${e.towerBest}</b>`, ""],
+        ["Chuyển sinh", `<b>${e.reborn}</b> lần`, ""],
+        ["Thời gian chơi", `<b>${recTime(n.play)}</b>`, ""],
+        ["Ngân lượng từ quái", `<b>${fmtL(n.goldKill)}</b>`, ""],
+      ],
+    ],
+    [
+      "Trang bị",
+      [
+        [
+          "Món quý nhất từng có",
+          s(n.bestItem, (t) => `<b style="color:${RAR_COL[t.r]}">${esc(t.n)}</b>`),
+          a(n.bestItem),
+        ],
+        ["Cường hóa cao nhất", s(n.maxEnh, (t) => `<b>+${t.v}</b> · ${esc(t.n)}`), a(n.maxEnh)],
+        ["Ngựa thuần dưỡng cao nhất", s(n.horseLv, (t) => `<b>cấp ${t.v}</b> · ${esc(t.n)}`), a(n.horseLv)],
+        ["Sổ ngựa", `<b>${typeof horseBookCount == "function" ? horseBookCount() : 0}</b> loài đã cưỡi`, ""],
+      ],
+    ],
+    [
+      "Phó bản & Boss tuần",
+      r
+        .map((t) => [
+          t.n,
+          n.dgClear[t.id]
+            ? `<b>${n.dgClear[t.id]}</b> lần · nhanh nhất ${n.dgBest[t.id]} giây · hạng ${n.dgRank[t.id] || "—"}`
+            : '<span class="dim">chưa qua</span>',
+          "",
+        ])
+        .concat([
+          [
+            "Boss tuần: sát thương cao nhất",
+            s(n.wbBest, (t) => `<b>${fmt(t.v)}</b> · ${esc(t.n || "")} · hạng ${t.rank || "—"}`),
+            a(n.wbBest),
+          ],
+          ["Boss tuần: số lượt đã đánh", `<b>${n.wbTries}</b>`, ""],
+        ]),
+    ],
   ];
 }
 function recordsBody() {
   return `<p class="desc">Kỷ lục riêng của nhân vật này (lưu trong file lưu). Đòn đánh và DPS chỉ tính khi đang chơi, không tính tiến trình vắng mặt.</p>
-    ${recRows().map(([h, rows]) => `<h4 class="rech">${h}</h4><div class="card rect">${rows.map(([a, b, c]) => `<span>${a}</span><span>${b} ${c}</span>`).join('')}</div>`).join('')}`;
+    ${recRows()
+      .map(
+        ([n, e]) =>
+          `<h4 class="rech">${n}</h4><div class="card rect">${e.map(([s, a, r]) => `<span>${s}</span><span>${a} ${r}</span>`).join("")}</div>`,
+      )
+      .join("")}`;
 }

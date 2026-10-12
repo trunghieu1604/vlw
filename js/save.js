@@ -1,246 +1,518 @@
-/* ======================= LUU GAME (localStorage 'jxidle') ======================= */
-'use strict';
-const SAVE_V = 1, OFFLINE_MAX = 8 * 3600;
-/* 3 slot nhan vat: slot 0 giu khoa cu 'jxidle' (tuong thich file luu truoc day), slot 1, 2 = 'jxidle_2', 'jxidle_3'.
-   Con tro 'jxidle_slot' = chi so slot dang choi, hoac 'menu' (hien man hinh chon nhan vat o lan vao tiep theo). */
-const SLOT_N = 3, SLOT_PTR = 'jxidle_slot';
-let SLOT = 0, SAVE_LOCK = false;                 // SAVE_LOCK: dang xoa / doi nhan vat -> moi lan save() (pagehide, an tab...) bi chan, khong ghi lai nhan vat vua xoa
-const slotKey = i => i === 0 ? 'jxidle' : 'jxidle_' + (i + 1);
-const saveKey = () => slotKey(SLOT);
+"use strict";
+const SAVE_V = 1,
+  OFFLINE_MAX = 28800,
+  SLOT_N = 3,
+  SLOT_PTR = "jxidle_slot";
+let SLOT = 0,
+  SAVE_LOCK = !1;
+const slotKey = (n) => (n === 0 ? "jxidle" : "jxidle_" + (n + 1)),
+  saveKey = () => slotKey(SLOT);
 let S;
-const FEMALE_FAC = ['emei', 'cuiyan'];       // phai nu: trang phuc nu; con lai nam
+const FEMALE_FAC = ["emei", "cuiyan"];
 function newSave() {
-  return { v: SAVE_V, name: 'Tân thủ', fac: null, sex: 0, lvl: 1, xp: 0, gold: 0, attrPts: 0, attr: { str: 0, dex: 0, vit: 0, eng: 0 },
-    skPts: 1, sk: {}, main: 0, eq: {}, inv: [], stage: 1, maxStage: 1, wave: 1, uid: 1, autoSell: 0,
-    kps: 0.2, totalKills: 0, autoEquip: true, autoPts: false, diff: 1, autoForge: true, autoBuy: true, tut: 0, hints: {}, bakAt: 0, potOff: false, potUsed: 0, potStock: { life: {}, mana: {} }, ctrl: 'auto', joy: 'fixed', slots: [0, 0, 0, 0], snd: { on: true, vol: 0.7, music: true, mvol: 0.4 }, lootF: { minRar: 1, minLvl: 1, groups: [], series: [], auto: true }, ground: [], mats: { ht: {}, ore: {}, shard: {}, misc: {} }, last: Date.now() };
+  return {
+    v: 1,
+    name: "Tân thủ",
+    fac: null,
+    sex: 0,
+    lvl: 1,
+    xp: 0,
+    gold: 0,
+    attrPts: 0,
+    attr: { str: 0, dex: 0, vit: 0, eng: 0 },
+    skPts: 1,
+    sk: {},
+    main: 0,
+    eq: {},
+    inv: [],
+    stage: 1,
+    maxStage: 1,
+    wave: 1,
+    uid: 1,
+    autoSell: 0,
+    kps: 0.2,
+    totalKills: 0,
+    autoEquip: !0,
+    autoPts: !1,
+    diff: 1,
+    autoForge: !0,
+    autoBuy: !0,
+    tut: 0,
+    hints: {},
+    bakAt: 0,
+    potOff: !1,
+    potUsed: 0,
+    potStock: { life: {}, mana: {} },
+    ctrl: "auto",
+    joy: "fixed",
+    slots: [0, 0, 0, 0],
+    snd: { on: !0, vol: 0.7, music: !0, mvol: 0.4 },
+    lootF: { minRar: 1, minLvl: 1, groups: [], series: [], auto: !0 },
+    ground: [],
+    mats: { ht: {}, ore: {}, shard: {}, misc: {} },
+    last: Date.now(),
+  };
 }
-/* Chu ky file luu (cyrb53 + muoi): phat hien sua tay localStorage / ma xuat. Khong ngan duoc nguoi quyet tam (game chay hoan toan o may nguoi choi) nhung chan sua vo tinh va nhap ma da bi doi. */
-const SAVE_SALT = 'jx-idle-v1:';
-function sigOf(str) {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57; const s = SAVE_SALT + str;
-  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+const SAVE_SALT = "jx-idle-v1:";
+function sigOf(n) {
+  let e = 3735928559,
+    a = 1103547991;
+  const s = SAVE_SALT + n;
+  for (let t = 0; t < s.length; t++) {
+    const o = s.charCodeAt(t);
+    ((e = Math.imul(e ^ o, 2654435761)), (a = Math.imul(a ^ o, 1597334677)));
+  }
+  return (
+    (e = Math.imul(e ^ (e >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909)),
+    (a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(e ^ (e >>> 13), 3266489909)),
+    (4294967296 * (2097151 & a) + (e >>> 0)).toString(36)
+  );
 }
-function pack(state) { const body = JSON.stringify(state); return JSON.stringify({ d: body, h: sigOf(body) }); }
-function unpack(txt) {                       // -> { state, ok } ; ok=false neu chu ky sai; file cu (khong goi) coi la hop le 1 lan roi ky lai
-  const o = JSON.parse(txt);
-  if (o && typeof o.d === 'string' && typeof o.h === 'string') return { state: JSON.parse(o.d), ok: sigOf(o.d) === o.h };
-  return { state: o, ok: true, legacy: true };
+function pack(n) {
+  // never serialize S while a disciple is swapped in (js/party.js)
+  if (n === S && typeof PCTX < "u" && PCTX) return withMain(() => pack(n));
+  const e = JSON.stringify(n);
+  return JSON.stringify({ d: e, h: sigOf(e) });
+}
+function unpack(n) {
+  const e = JSON.parse(n);
+  return e && typeof e.d == "string" && typeof e.h == "string"
+    ? { state: JSON.parse(e.d), ok: sigOf(e.d) === e.h }
+    : { state: e, ok: !0, legacy: !0 };
 }
 function save() {
-  if (SAVE_LOCK || !S || !S.fac) return;
-  S.last = Date.now(); if (typeof saveGround === 'function' && R.ground) saveGround();
-  try {
-    const k = saveKey(), prev = localStorage.getItem(k);
-    if (prev) { try { if (unpack(prev).ok) localStorage.setItem(k + '_bak', prev); } catch (e) { /* bo qua ban hong */ } }   // ban sao luu = ban hop le truoc do
-    localStorage.setItem(k, pack(S)); localStorage.setItem(SLOT_PTR, String(SLOT));
-  } catch (e) { /* bo nho day / che do rieng tu */ }
-}
-function migrate(o) {
-  const s = Object.assign(newSave(), o);
-  s.attr = Object.assign({ str: 0, dex: 0, vit: 0, eng: 0 }, o.attr || {});
-  if (!s.mig73) { s.mig73 = 1; s.autoForge = true; }   // ban 73: do Tim la do chinh -> bat tu ren (tu che phoi, khao) cho moi nhan vat
-  if (s.fac && !FAC[s.fac]) s.fac = null;
-  for (const id in s.sk) if (!SK[id]) { if ((id >= 708 && id <= 717) || (id >= 1055 && id <= 1109)) s.skPts = (s.skPts || 0) + (s.sk[id] | 0); delete s.sk[id]; }   // chieu 120 / 150 da bo: hoan diem
-  { const m = (o.mats || {}).misc || {}; const n = (m.bk120 | 0) + (m.bk150 | 0); if (n) { m.bk90 = (m.bk90 | 0) + n; delete m.bk120; delete m.bk150; } }   // Mat Tich 120 / 150 cu -> Mat Tich 90
-  if (!s.sk9Free) { s.sk9Free = 1; for (const id in s.sk) if (SK[id] && SK[id].tier === 90 && !(typeof isBr90 === 'function' && isBr90(id)) && s.sk[id] > 0) s.skPts = (s.skPts || 0) + 1; }   // v112: vo cong 90 hoc bang Mat Tich khong ton diem -> hoan 1 diem da tru truoc day
-  s.stage = clamp(s.stage | 0 || 1, 1, STAGES + 400);
-  delete s.push;                                            // che do vuot ai da bo
-  // am thanh: file luu cu chi co {on:false} mac dinh (chua tung chinh) -> dung cau hinh moi
-  s.snd = Object.assign({ on: true, vol: 0.7, music: true, mvol: 0.4 }, o.snd && 'vol' in o.snd ? o.snd : {});
-  s.lootF = Object.assign({ minRar: 1, minLvl: 1, groups: [], series: [], auto: true }, o.lootF || {});
-  if (o.autoSell && !o.lootF) s.lootF.minRar = o.autoSell;      // tu ban cu -> muc do hiem toi thieu cua bo loc
-  // do sinh truoc khi co ngu hanh trang bi: khong co thu tu tien/hau to -> giu moi dong luon hieu luc
-  for (const it of s.inv.concat(Object.values(s.eq), (s.ground || []).map(g => g && g.it))) if (it && (it.mag || []).some(m => m.pre === undefined)) it.leg = true;
-  if (!o.autoPtsOff) { s.autoPts = false; s.autoPtsOff = 1; }     // tu cong diem tiem nang / ky nang nay mac dinh TAT (ca file luu cu: tat mot lan, bat lai o the Khac)
-  s.mats = { ht: Object.assign({}, (o.mats || {}).ht), ore: Object.assign({}, (o.mats || {}).ore), shard: Object.assign({}, (o.mats || {}).shard), misc: Object.assign({}, (o.mats || {}).misc) };
-  s.rw = o.rw && typeof o.rw === 'object' ? o.rw : {};    // phan thuong: file cu chua co -> RW() tu dien mac dinh
-  s.lvl = clamp(Math.floor(+s.lvl) || 1, 1, MAX_LEVEL); s.xp = Math.max(0, +s.xp || 0);
-  s.gold = Number.isFinite(+s.gold) ? Math.max(0, +s.gold) : 0; s.skPts = Math.max(0, Math.floor(+s.skPts) || 0); s.attrPts = Math.max(0, Math.floor(+s.attrPts) || 0);
-  s.inv = (Array.isArray(s.inv) ? s.inv : []).filter(it => it && typeof it === 'object' && Array.isArray(it.base) && Array.isArray(it.mag)).slice(0, INV_MAX);
-  let maxUid = 0; for (const it of s.inv.concat(Object.values(s.eq || {}), s.stable || [])) if (it && it.uid > maxUid) maxUid = it.uid; s.uid = Math.max(+s.uid || 1, maxUid + 1);
-  { const seen = new Set(); s.inv = s.inv.filter(it => { if (seen.has(it.uid)) { it.uid = s.uid++; } seen.add(it.uid); return true; }); }   // uid trung (nhap ma sua tay): cap lai
-  s.diff = [0, 1, 2].includes(+o.diff) ? +o.diff : 1; s.hints = o.hints && typeof o.hints === 'object' ? o.hints : {};
-  if (s.fac && !o.sexSet) s.sex = FEMALE_FAC.includes(s.fac) ? 1 : 0;   // file luu cu (chua chon gioi tinh): gioi tinh theo phai; nhan vat moi tu chon
-  if (s.fac) s.sexSet = 1;
-  const wrongSex = k => s.eq[k] && !sexReqOkFor(s.eq[k], s.sex);
-  for (const k of Object.keys(s.eq || {})) if (!s.eq[k] || typeof s.eq[k] !== 'object') delete s.eq[k]; else if (wrongSex(k)) { if (s.inv.length < INV_MAX) s.inv.push(s.eq[k]); delete s.eq[k]; }   // trang phuc sai gioi tinh dang mac: thao ve tui
-  // ten bo con tieng Trung (setvi.js) -> Han Viet
-  for (const it of s.inv.concat(Object.values(s.eq || {}), (s.ground || []).map(g => g && g.it))) if (it && it.set && /[\u3400-\u9fff]/.test(it.n)) it.n = setNameVi(it.n);
-  { // do bo khong co du lieu JX1 (setfix.js): xoa; con lai sua so mon kich hoat
-    const n0 = s.inv.length + Object.keys(s.eq || {}).length + (s.ground || []).length;
-    s.inv = s.inv.filter(it => !setNoData(it));
-    for (const k of Object.keys(s.eq || {})) if (setNoData(s.eq[k])) delete s.eq[k];
-    s.ground = (s.ground || []).filter(g => !(g && setNoData(g.it)));
-    const del = n0 - (s.inv.length + Object.keys(s.eq || {}).length + s.ground.length);
-    if (del > 0) (window.SET_PURGED = window.SET_PURGED || []).push(del);
-    for (const it of s.inv.concat(Object.values(s.eq || {}), s.ground.map(g => g && g.it))) setRepair(it);
+  if (typeof pDefer == "function" && pDefer("save", save)) return;
+  if (!(SAVE_LOCK || !S || !S.fac)) {
+    ((S.last = Date.now()), typeof saveGround == "function" && R.ground && saveGround());
+    try {
+      const n = saveKey(),
+        e = localStorage.getItem(n);
+      if (e)
+        try {
+          unpack(e).ok && localStorage.setItem(n + "_bak", e);
+        } catch {}
+      (localStorage.setItem(n, pack(S)), localStorage.setItem(SLOT_PTR, String(SLOT)));
+    } catch {}
   }
-  // do Bach Kim cu chua co tien to: them [Bach Kim]
-  for (const it of s.inv.concat(Object.values(s.eq || {}), (s.ground || []).map(g => g && g.it))) if (it && it.set && it.set.kind === 'platina' && !/^\[/.test(it.n)) it.n = '[Bạch Kim] ' + it.n;
-  for (const id in s.sk) if (SK[id] && SK[id].book) (s.bkOk || (s.bkOk = {}))[id] = 1;   // chieu da hoc truoc khi can Mat Tich: giu
-  for (const it of s.inv.concat(Object.values(s.eq || {}))) if (it && it.d === 10 && it.r === 3 && !it.vio) { it.r = 2; it.rareH = 1; }
-  for (const it of s.inv.concat(Object.values(s.eq || {}), s.epBox || [])) if (it && it.r === 2 && !it.rareH && it.d !== 10) it.r = (it.mag || []).length ? 1 : 0;   // do 'Vang' cu (3+ dong) -> do xanh   // ngua hiem cu vien Tim -> Vang
-  if (!s.sk9m) {   // vo cong 90 tu nay luyen bang danh quai: cap da cong diem -> thanh cap da luyen, hoan diem (tru 1 diem hoc)
-    s.skL = s.skL || {};
-    for (const id in s.sk) { const k = SK[id]; if (k && k.tier === 90 && s.sk[id] > 0) { s.skL[id] = { lv: s.sk[id], xp: 0 }; s.skPts = (s.skPts || 0) + s.sk[id] - 1; } }
-    const eff = (s.lvl || 1) + REB_EQ_LV * ((s.rw && s.rw.stat && s.rw.stat.reborn) || 0);
-    for (const id in s.sk) { const k = SK[id]; if (!k || k.tier === 90) continue; const cap = Math.max(1, Math.min(k.max, eff - k.req + 1)); if (s.sk[id] > cap) { s.skPts = (s.skPts || 0) + s.sk[id] - cap; s.sk[id] = cap; } }
-    s.sk9m = 1;
+}
+function vioDedupe(n) {
+  if (!n || !n.vio || !Array.isArray(n.mag)) return !1;
+  const e = new Set(),
+    a = n.mag.length;
+  return (
+    (n.mag = n.mag.filter((s) => s && !e.has(s.a) && e.add(s.a))),
+    n.mag.forEach((s, t) => {
+      s.pre = t % 2 === 0 ? 1 : 0;
+    }),
+    n.mag.length < a
+  );
+}
+function migrate(n) {
+  const e = Object.assign(newSave(), n);
+  ((e.attr = Object.assign({ str: 0, dex: 0, vit: 0, eng: 0 }, n.attr || {})),
+    e.mig73 || ((e.mig73 = 1), (e.autoForge = !0)),
+    e.fac && !FAC[e.fac] && (e.fac = null));
+  for (const t in e.sk)
+    SK[t] ||
+      (((t >= 708 && t <= 717) || (t >= 1055 && t <= 1109)) && (e.skPts = (e.skPts || 0) + (e.sk[t] | 0)),
+      delete e.sk[t]);
+  {
+    const t = (n.mats || {}).misc || {},
+      o = (t.bk120 | 0) + (t.bk150 | 0);
+    o && ((t.bk90 = (t.bk90 | 0) + o), delete t.bk120, delete t.bk150);
   }
-  s.v = SAVE_V;
-  return s;
+  if (!e.sk9Free) {
+    e.sk9Free = 1;
+    for (const t in e.sk)
+      SK[t] &&
+        SK[t].tier === 90 &&
+        !(typeof isBr90 == "function" && isBr90(t)) &&
+        e.sk[t] > 0 &&
+        (e.skPts = (e.skPts || 0) + 1);
+  }
+  ((e.stage = clamp(e.stage | 0 || 1, 1, STAGES + 400)),
+    delete e.push,
+    (e.snd = Object.assign({ on: !0, vol: 0.7, music: !0, mvol: 0.4 }, n.snd && "vol" in n.snd ? n.snd : {})),
+    (e.lootF = Object.assign({ minRar: 1, minLvl: 1, groups: [], series: [], auto: !0 }, n.lootF || {})),
+    n.autoSell && !n.lootF && (e.lootF.minRar = n.autoSell));
+  for (const t of e.inv.concat(
+    Object.values(e.eq),
+    (e.ground || []).map((o) => o && o.it),
+  ))
+    t && (t.mag || []).some((o) => o.pre === void 0) && (t.leg = !0);
+  for (const t of e.inv.concat(Object.values(e.eq), e.epBox || [])) vioDedupe(t);
+  // the monster pet ("Đồng hành") was replaced by the disciples (js/party.js): refund it as gold, once
+  if (e.rw && e.rw.pet) {
+    const t = e.rw.pet,
+      o = clamp(t.lvl | 0, 1, 999),
+      r = Math.round(2e3 * o * (1 + o / 10));
+    ((e.gold = (Number.isFinite(+e.gold) ? +e.gold : 0) + r), (e.petGold = [o, r]), delete e.rw.pet);
+  }
+  (n.autoPtsOff || ((e.autoPts = !1), (e.autoPtsOff = 1)),
+    (e.mats = {
+      ht: Object.assign({}, (n.mats || {}).ht),
+      ore: Object.assign({}, (n.mats || {}).ore),
+      shard: Object.assign({}, (n.mats || {}).shard),
+      misc: Object.assign({}, (n.mats || {}).misc),
+    }),
+    (e.rw = n.rw && typeof n.rw == "object" ? n.rw : {}),
+    (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, MAX_LEVEL)),
+    (e.xp = Math.max(0, +e.xp || 0)),
+    (e.gold = Number.isFinite(+e.gold) ? Math.max(0, +e.gold) : 0),
+    (e.skPts = Math.max(0, Math.floor(+e.skPts) || 0)),
+    (e.attrPts = Math.max(0, Math.floor(+e.attrPts) || 0)),
+    (e.inv = (Array.isArray(e.inv) ? e.inv : [])
+      .filter((t) => t && typeof t == "object" && Array.isArray(t.base) && Array.isArray(t.mag))
+      .slice(0, INV_MAX)));
+  // disciples (js/party.js): sanitize their sheets; their worn items and bags count for uid uniqueness
+  e.party =
+    Array.isArray(n.party) && typeof partySanitize == "function"
+      ? n.party
+          .map((t) => partySanitize(t, e))
+          .filter(Boolean)
+          .slice(0, PARTY_MAX - 1)
+      : Array.isArray(n.party)
+        ? n.party
+        : void 0;
+  let a = 0;
+  for (const t of e.inv.concat(
+    Object.values(e.eq || {}),
+    e.stable || [],
+    (e.party || []).flatMap((o) => Object.values((o && o.eq) || {}).concat((o && o.inv) || [])),
+  ))
+    t && t.uid > a && (a = t.uid);
+  e.uid = Math.max(+e.uid || 1, a + 1);
+  {
+    const t = new Set(
+      Object.values(e.eq || {})
+        .concat((e.party || []).flatMap((o) => Object.values((o && o.eq) || {})))
+        .map((o) => o && o.uid),
+    );
+    e.inv = e.inv.filter((o) => (t.has(o.uid) && (o.uid = e.uid++), t.add(o.uid), !0));
+    // each disciple has its own bag (js/party.js): uids stay unique across every bag
+    for (const o of e.party || []) for (const r of (o && o.inv) || []) (t.has(r.uid) && (r.uid = e.uid++), t.add(r.uid));
+  }
+  ((e.diff = [0, 1, 2].includes(+n.diff) ? +n.diff : 1),
+    (e.hints = n.hints && typeof n.hints == "object" ? n.hints : {}),
+    e.fac && !n.sexSet && (e.sex = FEMALE_FAC.includes(e.fac) ? 1 : 0),
+    e.fac && (e.sexSet = 1));
+  const s = (t) => e.eq[t] && !sexReqOkFor(e.eq[t], e.sex);
+  for (const t of Object.keys(e.eq || {}))
+    !e.eq[t] || typeof e.eq[t] != "object"
+      ? delete e.eq[t]
+      : s(t) && (e.inv.length < INV_MAX && e.inv.push(e.eq[t]), delete e.eq[t]);
+  for (const t of e.inv.concat(
+    Object.values(e.eq || {}),
+    (e.ground || []).map((o) => o && o.it),
+  ))
+    t && t.set && /[\u3400-\u9fff]/.test(t.n) && (t.n = setNameVi(t.n));
+  {
+    const t = e.inv.length + Object.keys(e.eq || {}).length + (e.ground || []).length;
+    e.inv = e.inv.filter((r) => !setNoData(r));
+    for (const r of Object.keys(e.eq || {})) setNoData(e.eq[r]) && delete e.eq[r];
+    e.ground = (e.ground || []).filter((r) => !(r && setNoData(r.it)));
+    const o = t - (e.inv.length + Object.keys(e.eq || {}).length + e.ground.length);
+    o > 0 && (window.SET_PURGED = window.SET_PURGED || []).push(o);
+    for (const r of e.inv.concat(
+      Object.values(e.eq || {}),
+      e.ground.map((l) => l && l.it),
+    ))
+      setRepair(r);
+  }
+  for (const t of e.inv.concat(
+    Object.values(e.eq || {}),
+    (e.ground || []).map((o) => o && o.it),
+  ))
+    t && t.set && t.set.kind === "platina" && !/^\[/.test(t.n) && (t.n = "[Bạch Kim] " + t.n);
+  for (const t in e.sk) SK[t] && SK[t].book && ((e.bkOk || (e.bkOk = {}))[t] = 1);
+  for (const t of e.inv.concat(Object.values(e.eq || {})))
+    t && t.d === 10 && t.r === 3 && !t.vio && ((t.r = 2), (t.rareH = 1));
+  for (const t of e.inv.concat(Object.values(e.eq || {}), e.epBox || []))
+    t && t.r === 2 && !t.rareH && t.d !== 10 && (t.r = (t.mag || []).length ? 1 : 0);
+  if (!e.sk9m) {
+    e.skL = e.skL || {};
+    for (const o in e.sk) {
+      const r = SK[o];
+      r &&
+        r.tier === 90 &&
+        e.sk[o] > 0 &&
+        ((e.skL[o] = { lv: e.sk[o], xp: 0 }), (e.skPts = (e.skPts || 0) + e.sk[o] - 1));
+    }
+    const t = (e.lvl || 1) + REB_EQ_LV * ((e.rw && e.rw.stat && e.rw.stat.reborn) || 0);
+    for (const o in e.sk) {
+      const r = SK[o];
+      if (!r || r.tier === 90) continue;
+      const l = Math.max(1, Math.min(r.max, t - r.req + 1));
+      e.sk[o] > l && ((e.skPts = (e.skPts || 0) + e.sk[o] - l), (e.sk[o] = l));
+    }
+    e.sk9m = 1;
+  }
+  if (!e.eqRebuild && typeof eqRemoved == "function") {
+    let t = 0,
+      o = 0;
+    const r = e.lvl || 1,
+      l = (i) => {
+        let c = typeof itemValue == "function" ? itemValue(i) : 0;
+        for (let f = 0; f < (i.enh || 0); f++)
+          c +=
+            (0.2 * (1e3 + (i.lvl || 0) * 1e3 + (i.r || 0) * 2e3) * Math.pow(1.8, f) * (1 + r / 10)) /
+            Math.max(0.35, 1 - 0.07 * f);
+        return c;
+      },
+      u = (i) => (eqRemoved(i) ? ((t += l(i)), o++, !1) : !0);
+    ((e.inv = (e.inv || []).filter(u)), (e.epBox = (e.epBox || []).filter(u)));
+    for (const i in e.eq || {}) e.eq[i] && !u(e.eq[i]) && delete e.eq[i];
+    if (e.mats && e.mats.shard && typeof shardRows < "u")
+      for (const i in e.mats.shard) {
+        const c = shardRows.get(i);
+        (!c || !setRowOk(c)) && delete e.mats.shard[i];
+      }
+    ((t = Math.min(5e8, Math.round(t))),
+      t > 0 && (e.gold = (e.gold || 0) + t),
+      o && (e.eqRebuildMsg = [o, t]),
+      (e.eqRebuild = 1));
+  }
+  if (!e.horseEnhFix) {
+    let t = 0;
+    for (const o of (e.inv || []).concat(Object.values(e.eq || {}), e.epBox || [], e.stable || []))
+      if (!(!o || o.d !== 10 || !(o.enh > 0))) {
+        for (let r = 0; r < o.enh; r++)
+          t +=
+            ((1e3 + (o.lvl || 0) * 1e3 + (o.r || 0) * 2e3) * Math.pow(1.8, r) * (1 + (e.lvl || 1) / 10)) /
+            Math.max(0.35, 1 - 0.07 * r);
+        delete o.enh;
+      }
+    ((t = Math.round(t)), t > 0 && ((e.gold = (e.gold || 0) + t), (e.horseEnhBack = t)), (e.horseEnhFix = 1));
+  }
+  if (typeof eqBanned == "function") {
+    let t = 0;
+    const o = (r) => (eqBanned(r) ? (t++, !1) : !0);
+    ((e.inv = (e.inv || []).filter(o)),
+      (e.epBox = (e.epBox || []).filter(o)),
+      Array.isArray(e.stable) && (e.stable = e.stable.filter(o)));
+    for (const r in e.eq || {}) e.eq[r] && !o(e.eq[r]) && delete e.eq[r];
+    if (e.mats && e.mats.shard) for (const r in e.mats.shard) setBanned(r) && delete e.mats.shard[r];
+    t && (e.banMsg = t);
+  }
+  for (const o of (e.inv || []).concat(Object.values(e.eq || {}), e.epBox || [], e.stable || [])) {
+    if (o && o.d === 10 && (o.n === "Sư tử" || o.k === 22)) {
+      o.req = [[36, 1]];
+    }
+  }
+  return ((e.v = 1), e);
 }
-/* Tom tat mot slot (cho man hinh chon nhan vat): null = trong */
-function slotInfo(i) {
+function slotInfo(n) {
   try {
-    const t = localStorage.getItem(slotKey(i)); if (!t) return null;
-    let u; try { u = unpack(t); } catch (e) { u = null; }
-    if (!u || !u.ok) { const b = localStorage.getItem(slotKey(i) + '_bak'); try { u = b && unpack(b); } catch (e) { u = null; } }
-    const o = u && u.state; if (!o || !o.fac) return null;
-    return { fac: o.fac, lvl: o.lvl | 0 || 1, stage: o.stage | 0 || 1, last: o.last || 0, name: o.name || '', sex: o.sex | 0 };
-  } catch (e) { return null; }
+    const e = localStorage.getItem(slotKey(n));
+    if (!e) return null;
+    let a;
+    try {
+      a = unpack(e);
+    } catch {
+      a = null;
+    }
+    if (!a || !a.ok) {
+      const t = localStorage.getItem(slotKey(n) + "_bak");
+      try {
+        a = t && unpack(t);
+      } catch {
+        a = null;
+      }
+    }
+    const s = a && a.state;
+    return !s || !s.fac
+      ? null
+      : {
+          fac: s.fac,
+          lvl: s.lvl | 0 || 1,
+          stage: s.stage | 0 || 1,
+          last: s.last || 0,
+          name: s.name || "",
+          sex: s.sex | 0,
+        };
+  } catch {
+    return null;
+  }
 }
-/* Chon slot luc khoi dong: con tro hop le -> dung; chua co con tro -> neu dung 1 slot co nhan vat thi vao thang (file luu cu), nhieu slot thi hien man hinh chon */
 function pickSlot() {
-  let p = null; try { p = localStorage.getItem(SLOT_PTR); } catch (e) { /* che do rieng tu */ }
-  const used = [...Array(SLOT_N).keys()].filter(i => slotInfo(i));
-  if (p === 'menu') return { slot: used[0] ?? 0, menu: used.length > 0 };
-  const n = +p; if (p !== null && Number.isInteger(n) && n >= 0 && n < SLOT_N) return { slot: n, menu: false };
-  if (used.length > 1) return { slot: used[0], menu: true };
-  return { slot: used[0] ?? 0, menu: false };
+  let n = null;
+  try {
+    n = localStorage.getItem(SLOT_PTR);
+  } catch {}
+  const e = [...Array(3).keys()].filter((s) => slotInfo(s));
+  if (n === "menu") return { slot: e[0] ?? 0, menu: e.length > 0 };
+  const a = +n;
+  return n !== null && Number.isInteger(a) && a >= 0 && a < 3
+    ? { slot: a, menu: !1 }
+    : e.length > 1
+      ? { slot: e[0], menu: !0 }
+      : { slot: e[0] ?? 0, menu: !1 };
 }
-/* Xoa han mot slot: chan save() truoc, xoa khoa va ban sao luu, roi tai lai trang (neu khong, su kien pagehide se ghi nhan vat tro lai) */
-async function deleteSlot(i) {
-  if (typeof netOn === 'function' && netOn() && NET.user) { try { await netCall(sb => sb.from('saves').delete().eq('owner', NET.user.id).eq('slot', i)); } catch (e) { toast('Không xóa được trên đám mây: ' + e.message); return; } }   // xoa ca ban dam may
-  SAVE_LOCK = true;
-  try { localStorage.removeItem(slotKey(i)); localStorage.removeItem(slotKey(i) + '_bak'); localStorage.setItem(SLOT_PTR, 'menu'); } catch (e) { /* bo qua */ }
+async function deleteSlot(n) {
+  if (typeof netOn == "function" && netOn() && NET.user)
+    try {
+      await netCall((e) => e.del("/api/saves/" + n));
+    } catch (e) {
+      toast("Không xóa được trên đám mây: " + e.message);
+      return;
+    }
+  SAVE_LOCK = !0;
+  try {
+    (localStorage.removeItem(slotKey(n)),
+      localStorage.removeItem(slotKey(n) + "_bak"),
+      localStorage.setItem(SLOT_PTR, "menu"));
+  } catch {}
   location.reload();
 }
-async function switchCharacter() { save(); if (typeof netOn === 'function' && netOn() && NET.user && S && S.fac) { try { await netUpload(); } catch (e) { /* bo qua */ } } SAVE_LOCK = true; try { localStorage.setItem(SLOT_PTR, 'menu'); } catch (e) { /* bo qua */ } location.reload(); }
+async function switchCharacter() {
+  if ((save(), typeof netOn == "function" && netOn() && NET.user && S && S.fac))
+    try {
+      await netUpload();
+    } catch {}
+  SAVE_LOCK = !0;
+  try {
+    localStorage.setItem(SLOT_PTR, "menu");
+  } catch {}
+  location.reload();
+}
 function load() {
   try {
-    const t = localStorage.getItem(saveKey());
-    if (t) {
-      let u = unpack(t);
-      if (!u.ok) {                                          // chu ky sai: dung ban sao luu hop le truoc do, neu khong thi cho chay tiep nhung danh dau
-        const b = localStorage.getItem(saveKey() + '_bak'); let ub = null; try { ub = b && unpack(b); } catch (e) { /* hong */ }
-        if (ub && ub.ok) u = ub; else u.state.tampered = 1;
-        window.__tampered = true;
+    const n = localStorage.getItem(saveKey());
+    if (n) {
+      let e = unpack(n);
+      if (!e.ok) {
+        const a = localStorage.getItem(saveKey() + "_bak");
+        let s = null;
+        try {
+          s = a && unpack(a);
+        } catch {}
+        (s && s.ok ? (e = s) : (e.state.tampered = 1), (window.__tampered = !0));
       }
-      S = migrate(u.state); return true;
+      return ((S = migrate(e.state)), !0);
     }
-  } catch (e) { console.warn('Khong doc duoc file luu, tao moi', e); }
-  S = newSave(); return false;
+  } catch (n) {
+    console.warn("Khong doc duoc file luu, tao moi", n);
+  }
+  return ((S = newSave()), !1);
 }
-/* ---------- File luu de chuyen thiet bi (.jxsave) ----------
-   Dinh dang: JSON { game: 'jxidle', v, exported, fac, lvl, data } voi data = chuoi pack() co chu ky (cung dinh dang luu trong may).
-   Nap vao BAT KY slot nao: kiem tra chu ky + noi dung, ghi bang migrate(), giu ban sao luu slot cu. Cung nhan ma van ban cu (base64) va file tho. */
 function saveFileText() {
-  save();
-  return JSON.stringify({ game: 'jxidle', v: SAVE_V, exported: Date.now(), fac: S.fac, lvl: S.lvl, data: pack(S) });
+  return (
+    save(),
+    JSON.stringify({ game: "jxidle", v: 1, exported: Date.now(), fac: S.fac, lvl: S.lvl, data: pack(S) })
+  );
 }
-function saveFileName() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `jxidle_${S.fac}_cap${S.lvl}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.jxsave`; }
+function saveFileName() {
+  const n = new Date(),
+    e = (a) => String(a).padStart(2, "0");
+  return `jxidle_${S.fac}_cap${S.lvl}_${n.getFullYear()}${e(n.getMonth() + 1)}${e(n.getDate())}_${e(n.getHours())}${e(n.getMinutes())}.jxsave`;
+}
 function downloadSaveFile() {
-  if (!S.fac) return false;
-  const blob = new Blob([saveFileText()], { type: 'application/json' }), a = document.createElement('a');
-  S.bakAt = Date.now(); save();
-  a.href = URL.createObjectURL(blob); a.download = saveFileName(); document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  return true;
+  if (!S.fac) return !1;
+  const n = new Blob([saveFileText()], { type: "application/json" }),
+    e = document.createElement("a");
+  return (
+    (S.bakAt = Date.now()),
+    save(),
+    (e.href = URL.createObjectURL(n)),
+    (e.download = saveFileName()),
+    document.body.appendChild(e),
+    e.click(),
+    setTimeout(() => {
+      (URL.revokeObjectURL(e.href), e.remove());
+    }, 1500),
+    !0
+  );
 }
-/* Doc noi dung file / ma -> trang thai hop le (nem loi neu hong, sai chu ky hoac khong phai file cua game) */
-function parseSaveText(txt) {
-  txt = String(txt || '').trim().replace(/^\uFEFF/, '');
-  if (!txt) throw new Error('File rỗng');
-
-  // Strip wrapping quotes if user pasted string wrapped in "" or ''
-  if ((txt.startsWith('"') && txt.endsWith('"')) || (txt.startsWith("'") && txt.endsWith("'"))) {
-    txt = txt.slice(1, -1).trim();
-  }
-
-  let packed;
-  if (txt[0] === '{') {
-    let o;
-    try { o = JSON.parse(txt); } catch(e) { throw new Error('Cấu trúc file JSON không hợp lệ'); }
-    if (o && o.game === 'jxidle' && typeof o.data === 'string') packed = o.data;
-    else if (o && typeof o.d === 'string' && typeof o.h === 'string') packed = txt;      // file tho (khoa luu trong may)
-    else throw new Error('Không phải file lưu của game');
-  } else {
-    const cleanB64 = txt.replace(/\s+/g, '');
-    try {
-      packed = decodeURIComponent(escape(atob(cleanB64)));
-    } catch(e) {
-      try {
-        const decodedStr = decodeURIComponent(txt);
-        if (decodedStr[0] === '{') return parseSaveText(decodedStr);
-      } catch(e2) {}
-      throw new Error('Mã lưu không hợp lệ hoặc không đúng định dạng Base64');
-    }
-  }
-  const u = unpack(packed);
-  if (!u.ok) throw new Error('File đã bị chỉnh sửa (sai chữ ký)');
-  const o = u.state;
-  if (!o || typeof o !== 'object' || !o.fac || !FAC[o.fac] || !('lvl' in o)) throw new Error('File không có nhân vật hợp lệ');
-  return o;
-}
-/* Ghi nhan vat vao slot i (giu ban sao luu cu), dat con tro, tai lai trang */
-function writeSlot(i, state) {
-  const s = migrate(state); s.last = Date.now();
-  SAVE_LOCK = true;
-  try {
-    const k = slotKey(i), prev = localStorage.getItem(k);
-    if (prev) localStorage.setItem(k + '_bak', prev);
-    localStorage.setItem(k, pack(s));
-    localStorage.setItem(SLOT_PTR, String(i));
-  } catch (e) { SAVE_LOCK = false; throw new Error('Không ghi được (bộ nhớ trình duyệt đầy hoặc bị chặn)'); }
+function parseSaveText(n) {
+  if (
+    ((n = String(n || "")
+      .trim()
+      .replace(/^\uFEFF/, "")),
+    !n)
+  )
+    throw new Error("File rỗng");
+  let e;
+  if (n[0] === "{") {
+    const t = JSON.parse(n);
+    if (t && t.game === "jxidle" && typeof t.data == "string") e = t.data;
+    else if (t && typeof t.d == "string" && typeof t.h == "string") e = n;
+    else throw new Error("Không phải file lưu của game");
+  } else e = decodeURIComponent(escape(atob(n)));
+  const a = unpack(e);
+  if (!a.ok) throw new Error("File đã bị chỉnh sửa (sai chữ ký)");
+  const s = a.state;
+  if (!s || typeof s != "object" || !s.fac || !FAC[s.fac] || !("lvl" in s))
+    throw new Error("File không có nhân vật hợp lệ");
   return s;
 }
-function exportSave() { save(); return btoa(unescape(encodeURIComponent(pack(S)))); }
-function importSave(txt) {
-  const cleanStr = String(txt || '').trim();
-  if (!cleanStr) throw new Error('Nội dung nhập rỗng');
-  if (cleanStr.startsWith('{')) {
-    const st = parseSaveText(cleanStr);
-    S = migrate(st); save(); R.dirty = true;
-    return;
+function writeSlot(n, e) {
+  const a = migrate(e);
+  ((a.last = Date.now()), (SAVE_LOCK = !0));
+  try {
+    const s = slotKey(n),
+      t = localStorage.getItem(s);
+    (t && localStorage.setItem(s + "_bak", t),
+      localStorage.setItem(s, pack(a)),
+      localStorage.setItem(SLOT_PTR, String(n)));
+  } catch {
+    throw ((SAVE_LOCK = !1), new Error("Không ghi được (bộ nhớ trình duyệt đầy hoặc bị chặn)"));
   }
-  const cleanB64 = cleanStr.replace(/\s+/g, '');
-  const u = unpack(decodeURIComponent(escape(atob(cleanB64))));
-  if (!u.ok) throw new Error('Mã đã bị chỉnh sửa');
-  const o = u.state;
-  if (!o || typeof o !== 'object' || !('lvl' in o)) throw new Error('Mã không hợp lệ');
-  S = migrate(o); save(); R.dirty = true;
+  return a;
 }
-
-/* Tien trinh offline: uoc tinh theo toc do ha quai do duoc khi dang choi (S.kps), toi da 8 gio */
-/* Treo may: 2 gio dau tinh day du, tu gio thu 3 chi con 40%, tran 8 gio / lan va 12 gio / 24 gio thuc (chong chinh dong ho); luon thap hon choi that.
-   Dong ho lui (S.last o tuong lai) khong cho tien trinh. */
-const OFFLINE_FULL = 2 * 3600, OFFLINE_TAIL = 0.4, OFFLINE_RATE = 0.75, OFFLINE_DAY_MAX = 12 * 3600;
+function exportSave() {
+  return (save(), btoa(unescape(encodeURIComponent(pack(S)))));
+}
+function importSave(n) {
+  const e = unpack(decodeURIComponent(escape(atob(n.trim()))));
+  if (!e.ok) throw new Error("Mã đã bị chỉnh sửa");
+  const a = e.state;
+  if (!a || typeof a != "object" || !("lvl" in a)) throw new Error("Mã không hợp lệ");
+  ((S = migrate(a)), save(), (R.dirty = !0));
+}
+const OFFLINE_FULL = 8 * 3600,
+  OFFLINE_TAIL = 1,
+  OFFLINE_RATE = 0.7,
+  OFFLINE_DAY_MAX = 12 * 3600;
 function offlineGains() {
-  const now = Date.now(), raw = (now - S.last) / 1000;
-  if (!(raw >= 60) || !S.fac) return null;
-  const d = S.offDay = (S.offDay && now - S.offDay.t0 < 86400000 && S.offDay.t0 <= now) ? S.offDay : { t0: now, secs: 0 };
-  const capped = Math.min(OFFLINE_MAX, raw, Math.max(0, OFFLINE_DAY_MAX - d.secs));
-  if (capped < 60) return null;
-  d.secs += capped;
-  const secs = capped, eff = Math.min(secs, OFFLINE_FULL) + OFFLINE_TAIL * Math.max(0, secs - OFFLINE_FULL);
-  const kills = Math.floor(eff * clamp(S.kps || 0.1, 0.02, 3) * 0.8 * OFFLINE_RATE);
-  if (!kills) return null;
-  const L = stageLevel(S.stage), lv0 = S.lvl;
-  const xp = expFor(Math.min(L, S.lvl + XP_OVER)) * kills * (S.lvl - L > 10 ? 0.2 : S.lvl - L > 5 ? 0.6 : 1) * monRewK(L) * DENS_REW;   // quai dong: moi con x DENS_REW (combat.js)
-  const gold = moneyDrop({ L, cls: 'normal' }) * kills * monRewK(L) * DENS_REW;
-  gainXp(xp * newbieXp()); S.gold += gold; if (L >= S.lvl - 10) sk9Gain(kills, true, R.P && R.P.main ? { [R.P.main.id]: 1 } : null);   // offline: tinh cho chieu chinh
-  let got = 0, sold = 0;
-  const nDrops = Math.min(30, Math.floor(kills * 0.08 * DENS_REW));
-  for (let i = 0; i < nDrops; i++) {
-    const it = rollDrops({ L, cls: Math.random() < 0.15 ? 'elite' : 'normal', bonusDrop: 1 })[0];
-    if (!it) continue;
-    if (addItem(it, true)) got++; else sold++;
+  const n = Date.now(),
+    e = (n - S.last) / 1e3;
+  if (!(e >= 60) || !S.fac) return null;
+  const a = (S.offDay = S.offDay && n - S.offDay.t0 < 864e5 && S.offDay.t0 <= n ? S.offDay : { t0: n, secs: 0 }),
+    s = Math.min(28800, e, Math.max(0, OFFLINE_DAY_MAX - a.secs));
+  if (s < 60) return null;
+  a.secs += s;
+  const t = s,
+    o = Math.min(t, OFFLINE_FULL) + OFFLINE_TAIL * Math.max(0, t - OFFLINE_FULL),
+    r = Math.floor(o * clamp(S.kps || 0.1, 0.02, 3) * OFFLINE_RATE);
+  if (!r) return null;
+  const l = stageLevel(S.stage),
+    u = S.lvl,
+    // EXP of the offline kills for the character in S (the main, or a disciple swapped in: js/party.js)
+    xf = () =>
+      expFor(Math.min(l, S.lvl + expCfg("over", XP_OVER))) *
+      r *
+      xpPenK(l - S.lvl) *
+      xpMonK(l) *
+      DENS_REW * expCfg("offlineMul", 1) * xpZoneK(),
+    i = xf(),
+    c = moneyDrop({ L: l, cls: "normal" }) * r * monRewK(l) * hpRatio(l) * DENS_REW;
+  (gainXp(i * newbieXp()),
+    (S.gold += c),
+    l >= sk9MinL() && sk9Cfg("offline", !0) && sk9Gain(r * sk9Cfg("normal", 1), !0, R.P && R.P.main ? { [R.P.main.id]: 1 } : null));
+  // every disciple gets the full EXP too, at its own level
+  if (typeof partyN == "function")
+    for (let k = 1; k <= partyN(); k++)
+      withChar(k, () => {
+        (R.P || recalc(), gainXp(xf() * newbieXp()), l >= sk9MinL() && sk9Cfg("offline", !0) && sk9Gain(r * sk9Cfg("normal", 1), !0, R.P && R.P.main ? { [R.P.main.id]: 1 } : null));
+      });
+  let f = 0,
+    d = 0;
+  const g = Math.min(30, Math.floor(r * 0.08 * DENS_REW));
+  for (let m = 0; m < g; m++) {
+    const h = rollDrops({ L: l, cls: Math.random() < 0.15 ? "elite" : "normal", bonusDrop: 1 })[0];
+    h && (addItem(h, !0) ? f++ : d++);
   }
-  autoEquipAll(); if (typeof autoFuse === 'function') autoFuse(); sweepJunk(); autoBuyWeapon(); autoForge();
-  const chests = offlineChests(secs);                       // rương tu luyen theo moc 1 / 4 / 8 gio (rewards.js)
-  return { secs, kills, xp, gold, lv0, lv1: S.lvl, got, sold, chests };
+  (autoEquipAll(), typeof autoFuse == "function" && autoFuse(), sweepJunk(), autoBuyWeapon(), autoForge());
+  const p = offlineChests(t);
+  return { secs: t, kills: r, xp: i, gold: c, lv0: u, lv1: S.lvl, got: f, sold: d, chests: p };
 }

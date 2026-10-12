@@ -1,243 +1,513 @@
-/* ======================= DIEU KHIEN: joystick, o ky nang, thuoc, Tho Dia Phu (mau GD_Idle) ======================= */
-'use strict';
-const INPUT = { active: false, id: null, fromJoy: false, ox: 0, oy: 0, x: 0, y: 0, moved: false, keys: {}, target: null };
-const JOY_R = 45, TAP_MOVE = 8, TP_CD = 20, POT_CD = 1.5;
-const manual = () => S.ctrl === 'manual';
-const joyFixed = () => S.joy !== 'float';
-/* Che do dieu khien: tren may tinh man hinh ngang co chuot -> chuot (bam / giu chuot de di, bam do tren dat de nhat) hoac joystick, doi bang nut tren san dau.
-   Dien thoai / may bang / man hinh doc: luon joystick (nut doi khong hien). */
-const isDesktopLandscape = () => !!(window.matchMedia && window.matchMedia('(orientation: landscape) and (min-width: 900px) and (hover: hover) and (pointer: fine)').matches);
-const inputMode = () => isDesktopLandscape() ? (S.inputMode === 'joy' ? 'joy' : 'mouse') : 'joy';
-const mouseMode = () => inputMode() === 'mouse';
-function refreshRotBtn() { const b = $('#rotBtn'); if (!b) return; const on = S.rot !== false; b.innerHTML = 'Xoay chiêu: <i class="ck"></i>'; b.title = on ? 'Xoay chiêu: luân phiên chiêu ở ô F1–F4 khi tự đánh' : 'Chỉ đánh chiêu chính'; b.classList.toggle('on', on); }
-function toggleRot() { S.rot = S.rot === false; refreshRotBtn(); R.dirty = true; save(); toast(S.rot !== false ? 'Xoay chiêu: luân phiên các chiêu ở ô F1 đến F4 khi tự đánh' : 'Xoay chiêu tắt: chỉ đánh chiêu chính'); }
+"use strict";
+const INPUT = { active: !1, id: null, fromJoy: !1, ox: 0, oy: 0, x: 0, y: 0, moved: !1, keys: {}, target: null },
+  JOY_R = 45,
+  TAP_MOVE = 8,
+  TP_CD = 20,
+  POT_CD = 1.5,
+  manual = () => S.ctrl === "manual" && !(typeof PCTX < "u" && PCTX), // disciples always fight on their own
+  joyFixed = () => S.joy !== "float",
+  isDesktopLandscape = () =>
+    !!(
+      window.matchMedia &&
+      window.matchMedia("(orientation: landscape) and (min-width: 900px) and (hover: hover) and (pointer: fine)")
+        .matches
+    ),
+  inputMode = () => (isDesktopLandscape() ? (S.inputMode === "joy" ? "joy" : "mouse") : "joy"),
+  mouseMode = () => inputMode() === "mouse";
+function refreshRotBtn() {
+  const t = $("#rotBtn");
+  if (!t) return;
+  const o = S.rot !== !1;
+  ((t.innerHTML = 'Xoay chiêu: <i class="ck"></i>'),
+    (t.title = o ? "Xoay chiêu: luân phiên chiêu ở ô Q W E A khi tự đánh (R)" : "Chỉ đánh chiêu chính"),
+    t.classList.toggle("on", o));
+}
+function toggleRot() {
+  ((S.rot = S.rot === !1),
+    refreshRotBtn(),
+    (R.dirty = !0),
+    save(),
+    toast(
+      S.rot !== !1
+        ? "Xoay chiêu: luân phiên các chiêu ở ô Q W E A khi tự đánh"
+        : "Xoay chiêu tắt: chỉ đánh chiêu chính",
+    ));
+}
 function refreshInputBtn() {
-  const on = isDesktopLandscape(); document.body.classList.toggle('deskland', on);
-  const b = $('#inBtn'); if (b) b.textContent = mouseMode() ? '🖱 Chuột' : '🕹 Joystick';
+  const t = isDesktopLandscape();
+  document.body.classList.toggle("deskland", t);
+  const o = $("#inBtn");
+  o && (o.textContent = mouseMode() ? "🖱 Chuột" : "🕹 Joystick");
 }
-const joyAnchor = () => ({ x: JOY_R + 14, y: AR.h - JOY_R - 14 });   // goc trai duoi san dau
-
-/* ---------- tay cam (Gamepad API): analog / D-pad di chuyen, A B X Y = chieu 1-4, LB / RB = thuoc HP / MP, Start = tam dung Luyen Cong ---------- */
-const GP = { v: [0, 0], prev: [] };
+const joyAnchor = () => ({ x: JOY_R + 14, y: AR.h - JOY_R - 14 }),
+  GP = { v: [0, 0], prev: [] };
 function gamepadPoll() {
-  const list = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [], p = list.find(x => x && x.connected);
-  if (!p) { GP.v = [0, 0]; GP.prev = []; return; }
-  const b = i => !!(p.buttons[i] && p.buttons[i].pressed);
-  let x = p.axes[0] || 0, y = p.axes[1] || 0; if (Math.hypot(x, y) < 0.25) { x = 0; y = 0; }
-  if (b(14)) x = -1; if (b(15)) x = 1; if (b(12)) y = -1; if (b(13)) y = 1;
-  GP.v = [x, y];
-  if ((x || y) && S.fac && !R.town && !manual()) setCtrl('manual', true);
-  const edge = i => b(i) && !GP.prev[i];
-  if (S.fac) {
-    for (let i = 0; i < 4; i++) if (edge(i)) pressSlot(i);
-    if (edge(4)) drinkNow('life'); if (edge(5)) drinkNow('mana'); if (edge(8)) R.town ? backFromTown() : goTown();
+  const t = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [],
+    o = t.find((s) => s && s.connected);
+  if (!o) {
+    ((GP.v = [0, 0]), (GP.prev = []));
+    return;
   }
-  GP.prev = p.buttons.map(bt => !!bt.pressed);
+  const a = (s) => !!(o.buttons[s] && o.buttons[s].pressed);
+  let e = o.axes[0] || 0,
+    n = o.axes[1] || 0;
+  (Math.hypot(e, n) < 0.25 && ((e = 0), (n = 0)),
+    a(14) && (e = -1),
+    a(15) && (e = 1),
+    a(12) && (n = -1),
+    a(13) && (n = 1),
+    (GP.v = [e, n]),
+    (e || n) && S.fac && !R.town && !manual() && setCtrl("manual", !0));
+  const i = (s) => a(s) && !GP.prev[s];
+  if (S.fac) {
+    for (let s = 0; s < 4; s++) i(s) && pressSlot(s);
+    (i(4) && drinkNow("life"), i(5) && drinkNow("mana"), i(8) && tdpToggle());
+  }
+  GP.prev = o.buttons.map((s) => !!s.pressed);
 }
-/* Vector di chuyen: keo tren san (joystick noi), phim WASD / mui ten, hoac diem da cham */
 function inputVec() {
   if (INPUT.active && INPUT.moved) {
-    const x = INPUT.x - INPUT.ox, y = INPUT.y - INPUT.oy, l = Math.hypot(x, y);
-    if (l < 6) return [0, 0];
-    const k = Math.min(1, l / JOY_R) / l; return [x * k, y * k];
+    const n = INPUT.x - INPUT.ox,
+      i = INPUT.y - INPUT.oy,
+      s = Math.hypot(n, i);
+    if (s < 6) return [0, 0];
+    const r = Math.min(1, s / JOY_R) / s;
+    return [n * r, i * r];
   }
-  if (GP.v[0] || GP.v[1]) { INPUT.target = null; const l = Math.hypot(GP.v[0], GP.v[1]); return l > 1 ? [GP.v[0] / l, GP.v[1] / l] : GP.v.slice(); }
-  const K = INPUT.keys; let x = 0, y = 0;
-  if (K.ArrowLeft || K.a) x -= 1; if (K.ArrowRight || K.d) x += 1; if (K.ArrowUp || K.w) y -= 1; if (K.ArrowDown || K.s) y += 1;
-  const l = Math.hypot(x, y); if (l) { INPUT.target = null; return [x / l, y / l]; }
-  if (INPUT.target) {
-    const dx = INPUT.target.x - H.x, dy = INPUT.target.y - H.y, d = Math.hypot(dx, dy);
-    if (d < 6) { INPUT.target = null; return [0, 0]; }
-    return [dx / d, dy / d];
+  if (GP.v[0] || GP.v[1]) {
+    INPUT.target = null;
+    const n = Math.hypot(GP.v[0], GP.v[1]);
+    return n > 1 ? [GP.v[0] / n, GP.v[1] / n] : GP.v.slice();
   }
-  return [0, 0];
+  const t = INPUT.keys;
+  let o = 0,
+    a = 0;
+  (t.ArrowLeft && (o -= 1), t.ArrowRight && (o += 1), t.ArrowUp && (a -= 1), t.ArrowDown && (a += 1));
+  const e = Math.hypot(o, a);
+  return e ? ((INPUT.target = null), [o / e, a / e]) : [0, 0];
 }
-function moveManual(dt) {
-  const [vx, vy] = inputVec(); if (!vx && !vy) return false;
-  const sp = 150 * curSpeed();
-  const [nx, ny] = clampWorld(H.x + vx * sp * dt, H.y + vy * sp * dt);
-  if (!obsMove(H, nx, ny) && INPUT.target) INPUT.target = null;      // cham vat can: bo diem cham
-  R.pickTarget = null; return true;
+// Joystick / keys / gamepad steer directly (sliding along walls); a clicked ground point is walked to along
+// a path (navGo). Speed is ground speed: half on screen when moving straight up/down, like JX1.
+// JX1: no moving while a skill / attack animation plays (do_attack/do_magic finish first); a clicked
+// target is kept and walked to once the cast ends.
+const heroCasting = () => H.act === "at" && !(R.deadT > 0);
+// The main character prefers moving over attacking: while the player steers (keys / joystick / gamepad) or a
+// clicked point / NPC is still being walked to, no new attack starts (one already casting still finishes).
+// Disciples (withChar context) are never held back by the player's input.
+function heroWantsMove() {
+  if ((typeof PCTX != "undefined" && PCTX) || !manual()) return !1;
+  if (INPUT.target) return !0;
+  const [o, a] = inputVec();
+  return !!(o || a);
 }
-function setCtrl(mode, quiet) {
-  S.ctrl = mode; INPUT.target = null; renderPad();
-  if (!quiet) toast(mode === 'manual' ? 'Tự điều khiển: kéo trên sân để đi, nhân vật tự đánh quái trong tầm' : 'Tự động: nhân vật tự đi đánh và nhặt đồ');
+function moveManual(t) {
+  if (heroCasting()) return !0;
+  const [o, a] = inputVec(),
+    e = 150 * curSpeed() * t;
+  if (o || a) {
+    const k = isoK(o, a),
+      [n, i] = clampWorld(H.x + o * e * k, H.y + a * e * k);
+    return (obsMove(H, n, i), (H._nav = null), (R.pickTarget = null), !0);
+  }
+  if (!INPUT.target) return !1;
+  return (navGo(H, INPUT.target.x, INPUT.target.y, e, 0) <= 0 && (INPUT.target = null), (R.pickTarget = null), !0);
 }
-
-/* ---------- o ky nang ---------- */
-function learnedAttacks() { return Object.keys(S.sk).map(Number).filter(id => S.sk[id] && isAttack(SK[id])); }
+function setCtrl(t, o) {
+  ((S.ctrl = t),
+    (INPUT.target = null),
+    renderPad(),
+    o ||
+      toast(
+        t === "manual"
+          ? "Tự điều khiển: kéo trên sân để đi, nhân vật tự đánh quái trong tầm"
+          : "Tự động: nhân vật tự đi đánh và nhặt đồ",
+      ));
+}
+function learnedAttacks() {
+  return Object.keys(S.sk)
+    .map(Number)
+    .filter((t) => S.sk[t] && isAttack(SK[t]));
+}
 function fillSlots() {
-  S.slots = (S.slots || [0, 0, 0, 0]).map(id => (id && S.sk[id] ? id : 0));
-  for (const id of learnedAttacks().sort((a, b) => SK[b].req - SK[a].req)) {
-    if (S.slots.includes(id)) continue;
-    const i = S.slots.indexOf(0); if (i < 0) break; S.slots[i] = id;
+  S.slots = (S.slots || [0, 0, 0, 0]).map((t) => (t === -1 ? -1 : t && S.sk[t] ? t : 0));
+  for (const t of learnedAttacks().sort((o, a) => SK[a].req - SK[o].req)) {
+    if (S.slots.includes(t)) continue;
+    const o = S.slots.indexOf(0);
+    if (o < 0) break;
+    S.slots[o] = t;
   }
 }
-function assignSlot(i, id) { fillSlots(); const j = S.slots.indexOf(id); if (j >= 0) S.slots[j] = S.slots[i]; S.slots[i] = id; renderPad(); save(); }
-/* chon chieu cho o F1-F4 (kieu JX1: bang bieu tuong bat len ngay tren thanh ky nang) - ▾ / chuot phai / o trong */
-function skSlotModal(i) {
-  fillSlots(); let w = $('#skPick'); if (w && w.dataset.i === String(i)) { w.remove(); return; } if (w) w.remove();
-  const cur = S.slots[i], list = learnedAttacks().sort((a, b) => SK[a].req - SK[b].req), bat = $('#battle');
-  w = document.createElement('div'); w.id = 'skPick'; w.dataset.i = i;
-  const nm = id => { const s = SK[id], j = S.slots.indexOf(id); return `<b>${esc(s.n)}</b> <small>cấp ${S.sk[id] || 0}${j >= 0 && j !== i ? ` · đang ở F${j + 1}` : ''}</small>`; };
-  w.innerHTML = `<div class="nm">F${i + 1} · ${cur ? nm(cur) : '<small>chưa gán</small>'}</div>` + (list.map(id => { const j = S.slots.indexOf(id);
-    return `<button class="spk${id === cur ? ' on' : ''}" data-ss="${id}" style="background-image:url('${esc(SK[id].ic || '')}')">${j >= 0 ? `<i>F${j + 1}</i>` : ''}<u>${S.sk[id] || 0}</u></button>`; }).join('') || '<small class="dim">Chưa học chiêu tấn công</small>');
-  bat.appendChild(w);
-  const k = uiScale(), br = bat.getBoundingClientRect(), sb = $(`#pad .sk[data-i="${i}"]`).getBoundingClientRect(), pr = $('#pad').getBoundingClientRect();
-  const W = w.offsetWidth, x = clamp((sb.left + sb.width / 2 - br.left) / k - W / 2, 4, br.width / k - W - 4);
-  w.style.left = x + 'px'; w.style.bottom = ((br.bottom - pr.top) / k + 6) + 'px';
-  w.querySelectorAll('[data-ss]').forEach(b => {
-    b.onpointerenter = () => { w.querySelector('.nm').innerHTML = `F${i + 1} · ${nm(+b.dataset.ss)}`; };
-    b.onclick = e => { e.stopPropagation(); assignSlot(i, +b.dataset.ss); w.remove(); if (curTab === 'skill') refresh(); };
-  });
-  setTimeout(() => document.addEventListener('pointerdown', function off(e) { if (!w.contains(e.target)) { w.remove(); document.removeEventListener('pointerdown', off, true); } }, true), 0);
+function assignSlot(t, o) {
+  if ((fillSlots(), o === -1)) {
+    ((S.slots[t] = -1), renderPad(), save());
+    return;
+  }
+  const a = S.slots.indexOf(o);
+  (a >= 0 && (S.slots[a] = S.slots[t]), (S.slots[t] = o), renderPad(), save());
 }
-function pressSlot(i) {
-  fillSlots(); const id = S.slots[i]; if (!id) { skSlotModal(i); return; }
-  S.main = id; S.mainLock = true; R.dirty = true; recalc(); renderPad(); toast('Chiêu chính: ' + SK[id].n);
+function skSlotModal(t) {
+  fillSlots();
+  let o = $("#skPick");
+  if (o && o.dataset.i === String(t)) {
+    o.remove();
+    return;
+  }
+  o && o.remove();
+  const a = S.slots[t],
+    e = learnedAttacks().sort((c, d) => SK[c].req - SK[d].req),
+    n = $("#battle");
+  ((o = document.createElement("div")), (o.id = "skPick"), (o.dataset.i = t));
+  const i = (c) => {
+    const d = SK[c],
+      h = S.slots.indexOf(c);
+    return `<b>${esc(d.n)}</b> <small>cấp ${S.sk[c] || 0}${h >= 0 && h !== t ? ` · đang ở F${h + 1}` : ""}</small>`;
+  };
+  ((o.innerHTML =
+    `<div class="nm">F${t + 1} · ${a > 0 ? i(a) : "<small>trống</small>"}</div>` +
+    (a > 0 ? '<button class="spk spk0" data-ss="-1" title="Bỏ chiêu khỏi ô này">✕</button>' : "") +
+    (e
+      .map((c) => {
+        const d = S.slots.indexOf(c);
+        return `<button class="spk${c === a ? " on" : ""}" data-ss="${c}" style="background-image:url('${esc(SK[c].ic || "")}')">${d >= 0 ? `<i>F${d + 1}</i>` : ""}<u>${S.sk[c] || 0}</u></button>`;
+      })
+      .join("") || '<small class="dim">Chưa học chiêu tấn công</small>')),
+    n.appendChild(o));
+  const s = uiScale(),
+    r = n.getBoundingClientRect(),
+    l = $(`#pad .sk[data-i="${t}"]`).getBoundingClientRect(),
+    f = $("#pad").getBoundingClientRect(),
+    u = o.offsetWidth,
+    p = clamp((l.left + l.width / 2 - r.left) / s - u / 2, 4, r.width / s - u - 4);
+  ((o.style.left = p + "px"),
+    (o.style.bottom = (r.bottom - f.top) / s + 6 + "px"),
+    o.querySelectorAll("[data-ss]").forEach((c) => {
+      ((c.onpointerenter = () => {
+        o.querySelector(".nm").innerHTML =
+          `F${t + 1} · ${+c.dataset.ss == -1 ? "<b>Bỏ trống ô này</b>" : i(+c.dataset.ss)}`;
+      }),
+        (c.onclick = (d) => {
+          (d.stopPropagation(), assignSlot(t, +c.dataset.ss), o.remove(), curTab === "skill" && refresh());
+        }));
+    }),
+    setTimeout(
+      () =>
+        document.addEventListener(
+          "pointerdown",
+          function c(d) {
+            o.contains(d.target) || (o.remove(), document.removeEventListener("pointerdown", c, !0));
+          },
+          !0,
+        ),
+      0,
+    ));
 }
-
-/* ---------- thuoc & Tho Dia Phu ---------- */
-function drinkNow(kind) {
-  R.potCd = R.potCd || { life: 0, mana: 0 };
-  if (R.potCd[kind] > 0) return;
-  const r = slotPick(kind === 'mana' ? 1 : 0); if (!r) { toast('Không đủ ngân lượng mua thuốc'); return; }
-  const p = r.p; usePotion(kind, p, r.free); R.potCd[kind] = POT_CD;
-  toast(r.free ? `${p.n} (còn ${potStock(p.kind)[p.tier] || 0})` : `${p.n} (-${fmt(potPrice(p))} lượng)`);
+function pressSlot(t) {
+  fillSlots();
+  const o = S.slots[t];
+  if (!(o > 0)) {
+    skSlotModal(t);
+    return;
+  }
+  ((S.main = o), (S.mainLock = !0), (R.dirty = !0), recalc(), renderPad(), toast("Chiêu chính: " + SK[o].n));
+}
+function drinkNow(t) {
+  if (((R.potCd = R.potCd || { life: 0, mana: 0 }), R.potCd[t] > 0)) return;
+  const o = slotPick(t === "mana" ? 1 : 0);
+  if (!o) {
+    toast("Không đủ ngân lượng mua thuốc");
+    return;
+  }
+  const a = o.p;
+  (usePotion(t, a, o.free),
+    (R.potCd[t] = POT_CD),
+    toast(o.free ? `${a.n} (còn ${potStock(a.kind)[a.tier] || 0})` : `${a.n} (-${fmtL(potPrice(a))} lượng)`));
 }
 function goTown() {
-  if (R.town) return;
-  if (R.dg) { toast('Đang trong phó bản / boss tuần'); return; }
-  if ((R.tpCd || 0) > 0) { toast(`Thổ Địa Phù hồi sau ${Math.ceil(R.tpCd)} giây`); return; }
-  R.town = true; R.enemies = []; R.corpses = []; R.pickTarget = null; R.moveTo = null; INPUT.target = null;
-  obsLoad('town'); [H.x, H.y] = inWorld(WORLD.w / 2, WORLD.h / 2); snapCamera();
-  R.bgImg = img(W.town.bg); uiSfx('use');
-  playMusic(W.town.id);
-  $('#townName').textContent = W.town.n; $('#townBar').classList.remove('hidden');
-  R.banner = { t: 2.2, text: W.town.n, sub: 'Hồi phục · bán đồ · trở lại bãi' };
-  log(`Dùng Thổ Địa Phù về <b>${esc(W.town.n)}</b>.`);
+  if (!R.town) {
+    if (R.dg) {
+      toast("Đang trong phó bản / boss tuần");
+      return;
+    }
+    if ((R.tpCd || 0) > 0) {
+      toast(`Thổ Địa Phù hồi sau ${Math.ceil(R.tpCd)} giây`);
+      return;
+    }
+    ((R.town = !0),
+      (R.enemies = []),
+      (R.corpses = []),
+      (R.pickTarget = null),
+      (R.moveTo = null),
+      (INPUT.target = null),
+      obsLoad("town"),
+      ([H.x, H.y] = inWorld(...(typeof mapMid == "function" ? mapMid() : [WORLD.w / 2, WORLD.h / 2]))),
+      snapCamera(),
+      (R.bgImg = img(W.town.bg)),
+      uiSfx("use"),
+      playMusic(W.town.id),
+      ($("#townName").textContent = W.town.n),
+      $("#townBar").classList.remove("hidden"),
+      (R.banner = { t: 2.2, text: W.town.n, sub: "Hồi phục · bán đồ · trở lại bãi" }),
+      log(`Dùng Thổ Địa Phù về <b>${esc(W.town.n)}</b>.`));
+  }
+}
+// Thổ Địa Phù key / button: loads the target map first (js/maptravel.js), then goes there.
+function tdpToggle() {
+  if (typeof mgTravel == "function") return mgTravel(R.town ? "back" : "town");
+  R.town ? backFromTown() : goTown();
 }
 function backFromTown() {
-  if (!R.town) return;
-  R.town = false; { const z = zoneOf(Math.min(S.stage, STAGES)); obsLoad(z.id); [H.x, H.y] = inWorld(H.x, H.y); snapCamera(); } R.tpCd = TP_CD; S.wave = 1; R.spawnT = 0.5; R.zoneShown = null;
-  $('#townBar').classList.add('hidden');
-  onZoneChange(zoneOf(Math.min(S.stage, STAGES)));
+  if (R.town) {
+    R.town = !1;
+    {
+      const t = zoneOf(Math.min(S.stage, STAGES));
+      (obsLoad(t.id), ([H.x, H.y] = inWorld(H.x, H.y)), snapCamera());
+    }
+    ((R.tpCd = TP_CD),
+      (S.wave = 1),
+      (R.spawnT = 0.5),
+      (R.zoneShown = null),
+      $("#townBar").classList.add("hidden"),
+      onZoneChange(zoneOf(Math.min(S.stage, STAGES))));
+  }
 }
-function townTick(dt) { // trong thanh: hoi day nhanh, khong co quai
-  R.life = Math.min(R.P.life, R.life + R.P.life * 0.25 * dt); R.mana = Math.min(R.P.mana, R.mana + R.P.mana * 0.25 * dt);
-  moveManual(dt);
+function townTick(t) {
+  ((R.life = Math.min(R.P.life, R.life + R.P.life * 0.25 * t)),
+    (R.mana = Math.min(R.P.mana, R.mana + R.P.mana * 0.25 * t)),
+    moveManual(t));
 }
-
-/* ---------- nut / phim ---------- */
 function renderPad() {
-  if (!S || !S.fac) return;
-  fillSlots();
-  document.querySelectorAll('#pad .sk').forEach(b => {
-    const id = S.slots[+b.dataset.i], s = SK[id];
-    b.classList.toggle('empty', !s); b.classList.toggle('nowp', !!s && !skWOk(s)); b.classList.toggle('cur', !!(s && R.P && R.P.main.id === id));
-    b.querySelector('i').style.backgroundImage = s && s.ic ? `url('${s.ic}')` : '';
-    const lv = s ? (S.sk[id] || 0) + (typeof skillBonusLv === 'function' ? skillBonusLv(id) : 0) : 0, bon = s && typeof skillBonusLv === 'function' ? skillBonusLv(id) : 0;
-    b.title = s ? `${s.n} · cấp ${lv}${bon ? ` (${S.sk[id]}+${bon})` : ''}${skWOk(s) ? '' : ' · cần ' + EQT_VI[skEqt(s)]}` : 'Ô trống';
-    let lb = b.querySelector('.sklv'); if (!lb) { lb = document.createElement('u'); lb.className = 'sklv'; b.appendChild(lb); } lb.textContent = s ? lv : ''; lb.classList.toggle('up', !!bon);
-  });
-  const m = R.P && R.P.main, mb = $('#bMain');
-  if (mb) { const w = S.eq && S.eq.weapon, bas = m && R.P.basic === m, ic = bas ? 'img/s/8.png' : m && SK[m.id] && SK[m.id].ic;
-    mb.querySelector('i').style.backgroundImage = ic ? `url('${ic}')` : ''; mb.title = 'Chiêu chính: ' + (bas ? 'Đánh thường' : m && SK[m.id] ? SK[m.id].n : '—'); }
-  const b = $('#ctrlBtn'); b.innerHTML = 'Auto: <i class="ck"></i>'; b.classList.toggle('on', !manual()); b.title = manual() ? 'Tự điều khiển (F)' : 'Tự động đánh (F)';
+  if (!S || !S.fac || (typeof pDefer == "function" && pDefer("renderPad", renderPad))) return;
+  (fillSlots(),
+    document.querySelectorAll("#pad .sk").forEach((e) => {
+      const n = S.slots[+e.dataset.i],
+        i = SK[n];
+      (e.classList.toggle("empty", !i),
+        e.classList.toggle("nowp", !!i && !skWOk(i)),
+        e.classList.toggle("cur", !!(i && R.P && R.P.main.id === n)),
+        (e.querySelector("i").style.backgroundImage = i && i.ic ? `url('${i.ic}')` : ""));
+      const s = i ? (S.sk[n] || 0) + (typeof skillBonusLv == "function" ? skillBonusLv(n) : 0) : 0,
+        r = i && typeof skillBonusLv == "function" ? skillBonusLv(n) : 0;
+      e.title = i
+        ? `${i.n} · cấp ${s}${r ? ` (${S.sk[n]}+${r})` : ""}${skWOk(i) ? "" : " · cần " + EQT_VI[skEqt(i)]}`
+        : "Ô trống";
+      e.title += ` (phím ${"QWEA"[+e.dataset.i] || ""})`;
+      let l = e.querySelector(".sklv");
+      (l || ((l = document.createElement("u")), (l.className = "sklv"), e.appendChild(l)),
+        (l.textContent = i ? s : ""),
+        l.classList.toggle("up", !!r));
+    }));
+  const t = R.P && R.P.main,
+    o = $("#bMain");
+  if (o) {
+    const e = S.eq && S.eq.weapon,
+      n = t && R.P.basic === t,
+      i = n ? "img/s/8.png" : t && SK[t.id] && SK[t.id].ic;
+    ((o.querySelector("i").style.backgroundImage = i ? `url('${i}')` : ""),
+      (o.title = "Chiêu chính: " + (n ? "Đánh thường" : t && SK[t.id] ? SK[t.id].n : "—")));
+  }
+  const a = $("#ctrlBtn");
+  ((a.innerHTML = 'Auto: <i class="ck"></i>'),
+    a.classList.toggle("on", !manual()),
+    (a.title = manual() ? "Tự điều khiển (F)" : "Tự động đánh (F)"));
 }
 function updatePadCd() {
-  const pc = R.potCd || {}, set = (el, v, max) => el && el.querySelector('.cd').style.setProperty('--p', `${clamp(v / max, 0, 1) * 100}%`);
-  set($('#bHp'), pc.life || 0, POT_CD); set($('#bMp'), pc.mana || 0, POT_CD); set($('#bTp'), R.tpCd || 0, TP_CD);
-  for (const [id, i] of [['#bHp', 0], ['#bMp', 1]]) {          // o thuoc: thuoc da chon / tot nhat + so luong trong tui
-    const el = $(id); if (!el || typeof slotShow !== 'function') continue;
-    const v = slotShow(i), key = v.ic + '|' + v.n + '|' + v.name; if (el._k === key) continue; el._k = key;
-    el.querySelector('i').style.backgroundImage = v.ic ? `url('${v.ic}')` : ''; el.querySelector('em').textContent = v.n || ''; el.title = `${v.name} (phím ${i + 1}) · chuột phải / ▾ để chọn thuốc`;
+  const t = R.potCd || {},
+    o = (a, e, n) => a && a.querySelector(".cd").style.setProperty("--p", `${clamp(e / n, 0, 1) * 100}%`);
+  (o($("#bHp"), t.life || 0, POT_CD), o($("#bMp"), t.mana || 0, POT_CD), o($("#bTp"), R.tpCd || 0, TP_CD));
+  for (const [a, e] of [
+    ["#bHp", 0],
+    ["#bMp", 1],
+  ]) {
+    const n = $(a);
+    if (!n || typeof slotShow != "function") continue;
+    const i = slotShow(e),
+      s = i.ic + "|" + i.n + "|" + i.name;
+    n._k !== s &&
+      ((n._k = s),
+      (n.querySelector("i").style.backgroundImage = i.ic ? `url('${i.ic}')` : ""),
+      (n.querySelector("em").textContent = i.n || ""),
+      (n.title = `${i.name} (phím ${e + 1}) · chuột phải / ▾ để chọn thuốc`));
   }
 }
 function bindControls() {
-  const pos = ev => { const r = CV.getBoundingClientRect(), k = uiScale(); return [(ev.clientX - r.left) / k, (ev.clientY - r.top) / k]; }; // toa do man hinh
-  CV.addEventListener('pointerdown', ev => {
+  const t = (e) => {
+    const n = CV.getBoundingClientRect(),
+      i = uiScale();
+    return [(e.clientX - n.left) / i, (e.clientY - n.top) / i];
+  };
+  (CV.addEventListener("pointerdown", (e) => {
     if (INPUT.active) return;
-    if (mouseMode() && ev.pointerType !== 'touch') {              // che do chuot: bam / giu chuot de di toi do, bam do tren dat de nhat
-      const [x, y] = pos(ev), d = groundAt(x + CAM.x, y + CAM.y);
-      Object.assign(INPUT, { active: true, id: ev.pointerId, fromJoy: false, mouse: true, moved: false, x, y });
-      CV.setPointerCapture && CV.setPointerCapture(ev.pointerId);
-      if (d) { R.pickTarget = R.pickTarget === d ? null : d; if (R.pickTarget) toast(`Đi nhặt: ${d.it.n}`); INPUT.mouse = false; return; }
-      if (!manual()) setCtrl('manual');
-      const [wx, wy] = inWorld(x + CAM.x, y + CAM.y); INPUT.target = { x: wx, y: wy }; R.pickTarget = null;
+    if (mouseMode() && e.pointerType !== "touch") {
+      const [l, f] = t(e),
+        u = groundAt(l + CAM.x, f + CAM.y);
+      if (
+        (Object.assign(INPUT, { active: !0, id: e.pointerId, fromJoy: !1, mouse: !0, moved: !1, x: l, y: f }),
+        CV.setPointerCapture && CV.setPointerCapture(e.pointerId),
+        u)
+      ) {
+        ((R.pickTarget = R.pickTarget === u ? null : u),
+          R.pickTarget && toast(`Đi nhặt: ${u.it.n}`),
+          (INPUT.mouse = !1));
+        return;
+      }
+      manual() || setCtrl("manual");
+      const [p, c] = inWorld(l + CAM.x, f + CAM.y);
+      ((INPUT.target = { x: p, y: c }), (R.pickTarget = null));
       return;
     }
-    const [x, y] = pos(ev), a = joyAnchor(), fromJoy = !joyFixed() || Math.hypot(x - a.x, y - a.y) <= JOY_R * 1.7;
-    Object.assign(INPUT, { active: true, id: ev.pointerId, fromJoy, ox: fromJoy && joyFixed() ? a.x : x, oy: fromJoy && joyFixed() ? a.y : y, x, y, moved: false });
-    CV.setPointerCapture && CV.setPointerCapture(ev.pointerId);
-  });
-  CV.addEventListener('pointermove', ev => {
-    if (!INPUT.active || ev.pointerId !== INPUT.id) return;
-    const [x, y] = pos(ev); INPUT.x = x; INPUT.y = y;
-    if (INPUT.mouse) { const [wx, wy] = inWorld(x + CAM.x, y + CAM.y); INPUT.target = { x: wx, y: wy }; return; }   // giu chuot: di theo con tro
-    if (joyFixed() && !INPUT.fromJoy) return;                   // joystick co dinh: keo ngoai vung khong di chuyen
-    if (!INPUT.moved && Math.hypot(x - INPUT.ox, y - INPUT.oy) > TAP_MOVE) { INPUT.moved = true; INPUT.target = null; if (!manual()) setCtrl('manual'); }
-  });
-  const up = ev => {
-    if (ev.pointerId !== INPUT.id) return;
-    const [x, y] = pos(ev), tap = !INPUT.moved && !INPUT.mouse;
-    INPUT.mouse = false; INPUT.active = false; INPUT.id = null; INPUT.moved = false;
-    if (!tap) return;
-    const d = groundAt(x + CAM.x, y + CAM.y);                   // cham vao do: di nhat (doi sang toa do the gioi)
-    if (d) { R.pickTarget = R.pickTarget === d ? null : d; if (R.pickTarget) toast(`Đi nhặt: ${d.it.n}`); return; }
-    if (manual()) { const [wx, wy] = inWorld(x + CAM.x, y + CAM.y); INPUT.target = { x: wx, y: wy }; }   // cham dat: di toi do
+    const [n, i] = t(e),
+      s = joyAnchor(),
+      r = !joyFixed() || Math.hypot(n - s.x, i - s.y) <= JOY_R * 1.7;
+    (Object.assign(INPUT, {
+      active: !0,
+      id: e.pointerId,
+      fromJoy: r,
+      ox: r && joyFixed() ? s.x : n,
+      oy: r && joyFixed() ? s.y : i,
+      x: n,
+      y: i,
+      moved: !1,
+    }),
+      CV.setPointerCapture && CV.setPointerCapture(e.pointerId));
+  }),
+    CV.addEventListener("pointermove", (e) => {
+      if (!INPUT.active || e.pointerId !== INPUT.id) return;
+      const [n, i] = t(e);
+      if (((INPUT.x = n), (INPUT.y = i), INPUT.mouse)) {
+        const [s, r] = inWorld(n + CAM.x, i + CAM.y);
+        INPUT.target = { x: s, y: r };
+        return;
+      }
+      (joyFixed() && !INPUT.fromJoy) ||
+        (!INPUT.moved &&
+          Math.hypot(n - INPUT.ox, i - INPUT.oy) > TAP_MOVE &&
+          ((INPUT.moved = !0), (INPUT.target = null), manual() || setCtrl("manual")));
+    }));
+  const o = (e) => {
+    if (e.pointerId !== INPUT.id) return;
+    const [n, i] = t(e),
+      s = !INPUT.moved && !INPUT.mouse;
+    if (((INPUT.mouse = !1), (INPUT.active = !1), (INPUT.id = null), (INPUT.moved = !1), !s)) return;
+    const r = groundAt(n + CAM.x, i + CAM.y);
+    if (r) {
+      ((R.pickTarget = R.pickTarget === r ? null : r), R.pickTarget && toast(`Đi nhặt: ${r.it.n}`));
+      return;
+    }
+    if (manual()) {
+      const [l, f] = inWorld(n + CAM.x, i + CAM.y);
+      INPUT.target = { x: l, y: f };
+    }
   };
-  CV.addEventListener('pointerup', up);
-  CV.addEventListener('pointercancel', ev => { if (ev.pointerId === INPUT.id) { INPUT.active = false; INPUT.id = null; INPUT.moved = false; } });
-  window.addEventListener('keydown', ev => {
-    if (/INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
-    const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key; INPUT.keys[k] = true;
-    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k) && !manual()) setCtrl('manual');
-    if (ev.repeat) return;
-    if (/^F[1-4]$/.test(k)) { ev.preventDefault(); pressSlot(+k[1] - 1); }          // F1-F4: o vo cong
-    if (k === '1' || k === 'q') drinkNow('life'); if (k === '2' || k === 'e') drinkNow('mana'); if (k === '3' || k === 't') R.town ? backFromTown() : goTown();   // 1 2 3: o vat pham
-    if (k === 'f') setCtrl(manual() ? 'auto' : 'manual');
-    if (k === 'r') toggleRot();
-    if (k === 'm') toggleMount();                                    // M: len / xuong ngua
-    if (k === ' ') { ev.preventDefault(); pickNearest(); }            // Space: nhat mon gan nhat (nhu JX1)
+  (CV.addEventListener("pointerup", o),
+    CV.addEventListener("pointercancel", (e) => {
+      e.pointerId === INPUT.id && ((INPUT.active = !1), (INPUT.id = null), (INPUT.moved = !1));
+    }),
+    window.addEventListener("keydown", (e) => {
+      if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+      const n = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      ((INPUT.keys[n] = !0),
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(n) && !manual() && setCtrl("manual"),
+        !e.repeat &&
+          (n === "1" && drinkNow("life"),
+          n === "2" && drinkNow("mana"),
+          (n === "3" || n === "t") && tdpToggle(),
+          n === "f" && setCtrl(manual() ? "auto" : "manual"),
+          n === "r" && toggleRot(),
+          n === "m" && toggleMount(),
+          n === " " && (e.preventDefault(), pickNearest())));
+    }),
+    window.addEventListener("keyup", (e) => {
+      INPUT.keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = !1;
+    }));
+  const a = (e, n) =>
+    e.addEventListener("pointerdown", (i) => {
+      (i.preventDefault(), i.stopPropagation(), n());
+    });
+  document.querySelectorAll("#pad .sk").forEach((e) => {
+    (e.addEventListener("pointerdown", (n) => {
+      if ((n.preventDefault(), n.stopPropagation(), n.button === 2)) return;
+      const i = +e.dataset.i;
+      (fillSlots(), n.target.closest(".pk") || !(S.slots[i] > 0) ? skSlotModal(i) : pressSlot(i));
+    }),
+      e.addEventListener("contextmenu", (n) => {
+        (n.preventDefault(), skSlotModal(+e.dataset.i));
+      }));
   });
-  window.addEventListener('keyup', ev => { INPUT.keys[ev.key.length === 1 ? ev.key.toLowerCase() : ev.key] = false; });
-  const tapBtn = (el, fn) => el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); fn(); });
-  document.querySelectorAll('#pad .sk').forEach(b => {
-    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (e.button === 2) return; const i = +b.dataset.i; fillSlots(); if (e.target.closest('.pk') || !S.slots[i]) skSlotModal(i); else pressSlot(i); });
-    b.addEventListener('contextmenu', e => { e.preventDefault(); skSlotModal(+b.dataset.i); });
-  });
-  for (const [id, i, k] of [['#bHp', 0, 'life'], ['#bMp', 1, 'mana']]) {   // cham: uong; ▾ / chuot phai: chon thuoc
-    const el = $(id);
-    el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (e.button === 2) return; if (e.target.closest('.pk')) potSlotModal(i); else drinkNow(k); });
-    el.addEventListener('contextmenu', e => { e.preventDefault(); potSlotModal(i); });
+  for (const [e, n, i] of [
+    ["#bHp", 0, "life"],
+    ["#bMp", 1, "mana"],
+  ]) {
+    const s = $(e);
+    (s.addEventListener("pointerdown", (r) => {
+      (r.preventDefault(),
+        r.stopPropagation(),
+        r.button !== 2 && (r.target.closest(".pk") ? potSlotModal(n) : drinkNow(i)));
+    }),
+      s.addEventListener("contextmenu", (r) => {
+        (r.preventDefault(), potSlotModal(n));
+      }));
   }
-  tapBtn($('#bTp'), () => R.town ? backFromTown() : goTown());
-  $('#bMain').onclick = () => typeof showTab === 'function' && showTab('skill');
-  $('#ctrlBtn').onclick = () => setCtrl(manual() ? 'auto' : 'manual');
-  $('#inBtn').onclick = () => { S.inputMode = mouseMode() ? 'joy' : 'mouse'; INPUT.target = null; refreshInputBtn(); save(); toast(mouseMode() ? 'Điều khiển bằng chuột: bấm hoặc giữ chuột để đi' : 'Điều khiển bằng joystick: kéo ở góc trái dưới'); };
-  refreshInputBtn(); window.addEventListener('resize', refreshInputBtn);
-  $('#rotBtn').onclick = () => toggleRot(); $('#rideBtn').onclick = () => toggleMount(); refreshRideBtn();
-  refreshRotBtn();
-  $('#bBack').onclick = backFromTown;
-  { const kb = $('#ktcBtn'); if (kb) kb.onclick = () => ktcModal(); }
-  $('#bShop').onclick = () => shopModal(); $('#bKtcT').onclick = () => ktcModal(); $('#bStashT').onclick = () => stashModal();
-  $('#bSellTown').onclick = () => { const r = sellUnmatched(); toast(`Bán ${r.n} món`); refresh(); };
+  (a($("#bTp"), tdpToggle),
+    ($("#bMain").onclick = () => typeof showTab == "function" && showTab("skill")),
+    ($("#ctrlBtn").onclick = () => setCtrl(manual() ? "auto" : "manual")),
+    ($("#inBtn").onclick = () => {
+      ((S.inputMode = mouseMode() ? "joy" : "mouse"),
+        (INPUT.target = null),
+        refreshInputBtn(),
+        save(),
+        toast(
+          mouseMode()
+            ? "Điều khiển bằng chuột: bấm hoặc giữ chuột để đi"
+            : "Điều khiển bằng joystick: kéo ở góc trái dưới",
+        ));
+    }),
+    refreshInputBtn(),
+    window.addEventListener("resize", refreshInputBtn),
+    ($("#rotBtn").onclick = () => toggleRot()),
+    ($("#rideBtn").onclick = () => toggleMount()),
+    refreshRideBtn(),
+    refreshRotBtn(),
+    ($("#bBack").onclick = () => (typeof mgTravel == "function" ? mgTravel("back") : backFromTown())));
+  {
+    const e = $("#ktcBtn");
+    e && (e.onclick = () => ktcModal());
+  }
+  (($("#bShop").onclick = () => shopModal()),
+    ($("#bKtcT").onclick = () => ktcModal()),
+    ($("#bStashT").onclick = () => stashModal()),
+    ($("#bSellTown").onclick = () => {
+      const e = sellUnmatched();
+      (toast(`Bán ${e.n} món`), refresh());
+    }));
 }
-function drawJoystick(c) {
+function drawJoystick(t) {
   if (mouseMode()) return;
-  const fixed = joyFixed(), a = joyAnchor(), on = INPUT.active && (fixed ? INPUT.fromJoy : true);
-  if (!fixed && !(on && INPUT.moved)) return;
-  const ox = fixed ? a.x : INPUT.ox, oy = fixed ? a.y : INPUT.oy;
-  c.globalAlpha = on ? 0.35 : 0.12; c.fillStyle = '#000'; c.beginPath(); c.arc(ox, oy, JOY_R, 0, 7); c.fill();
-  const ring = img('ui/ring.png');                           // vong sang vang goc (tools/extract_ui.py), thieu thi ve vien
-  if (ring && ring.complete && ring.naturalWidth) {
-    const n = 4, fw = ring.naturalWidth / n, fr = Math.floor(performance.now() / 90) % n, sz = JOY_R * 2.6;
-    c.globalAlpha = on ? 0.9 : 0.4; c.drawImage(ring, fr * fw, 0, fw, ring.naturalHeight, ox - sz / 2, oy - sz / 2, sz, sz);
-  } else { c.globalAlpha = on ? 0.8 : 0.35; c.strokeStyle = '#e6c67a'; c.lineWidth = 2; c.beginPath(); c.arc(ox, oy, JOY_R, 0, 7); c.stroke(); }
-  if (on) {
-    const dx = INPUT.x - ox, dy = INPUT.y - oy, l = Math.hypot(dx, dy), k = l > JOY_R ? JOY_R / l : 1;
-    c.globalAlpha = 0.8; c.fillStyle = '#e6c67a'; c.beginPath(); c.arc(ox + dx * k, oy + dy * k, 14, 0, 7); c.fill();
+  const o = joyFixed(),
+    a = joyAnchor(),
+    e = INPUT.active && (o ? INPUT.fromJoy : !0);
+  if (!o && !(e && INPUT.moved)) return;
+  const n = o ? a.x : INPUT.ox,
+    i = o ? a.y : INPUT.oy;
+  ((t.globalAlpha = e ? 0.35 : 0.12), (t.fillStyle = "#000"), t.beginPath(), t.arc(n, i, JOY_R, 0, 7), t.fill());
+  const s = img("ui/ring.png");
+  if (s && s.complete && s.naturalWidth) {
+    const l = s.naturalWidth / 4,
+      f = Math.floor(performance.now() / 90) % 4,
+      u = JOY_R * 2.6;
+    ((t.globalAlpha = e ? 0.9 : 0.4), t.drawImage(s, f * l, 0, l, s.naturalHeight, n - u / 2, i - u / 2, u, u));
+  } else
+    ((t.globalAlpha = e ? 0.8 : 0.35),
+      (t.strokeStyle = "#e6c67a"),
+      (t.lineWidth = 2),
+      t.beginPath(),
+      t.arc(n, i, JOY_R, 0, 7),
+      t.stroke());
+  if (e) {
+    const r = INPUT.x - n,
+      l = INPUT.y - i,
+      f = Math.hypot(r, l),
+      u = f > JOY_R ? JOY_R / f : 1;
+    ((t.globalAlpha = 0.8), (t.fillStyle = "#e6c67a"), t.beginPath(), t.arc(n + r * u, i + l * u, 14, 0, 7), t.fill());
   }
-  c.globalAlpha = 1;
+  t.globalAlpha = 1;
 }

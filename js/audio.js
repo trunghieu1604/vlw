@@ -1,51 +1,83 @@
-/* ======================= AM THANH (window.JS tu tools/extract_sound.py) ======================= */
-'use strict';
-const SND = window.JS || { music: {}, npc: {}, skill: {}, ui: {} };
-const AUD = { ctx: null, gain: null, buf: {}, loading: {}, last: {}, voices: 0, music: null, musicSrc: '' };
-const SFX_GAP = 0.07, MAX_VOICES = 10;
-function sndCfg() { return S.snd || (S.snd = { on: true, vol: 0.7, music: true, mvol: 0.4 }); }
-function audInit() { // trinh duyet chi cho phat sau lan cham dau tien
-  if (AUD.ctx) { if (AUD.ctx.state === 'suspended') AUD.ctx.resume(); return; }
-  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-  AUD.ctx = new AC(); AUD.gain = AUD.ctx.createGain(); AUD.gain.connect(AUD.ctx.destination); audApply();
+"use strict";
+const SND = window.JS || { music: {}, npc: {}, skill: {}, ui: {} },
+  AUD = { ctx: null, gain: null, buf: {}, loading: {}, last: {}, voices: 0, music: null, musicSrc: "" },
+  SFX_GAP = 0.07,
+  MAX_VOICES = 10;
+function sndCfg() {
+  return S.snd || (S.snd = { on: !0, vol: 0.7, music: !0, mvol: 0.4 });
+}
+function audInit() {
+  if (AUD.ctx) {
+    AUD.ctx.state === "suspended" && AUD.ctx.resume();
+    return;
+  }
+  const n = window.AudioContext || window.webkitAudioContext;
+  n && ((AUD.ctx = new n()), (AUD.gain = AUD.ctx.createGain()), AUD.gain.connect(AUD.ctx.destination), audApply());
 }
 function audApply() {
-  const c = sndCfg();
-  if (AUD.gain) AUD.gain.gain.value = c.on ? c.vol : 0;
-  if (AUD.music) { AUD.music.volume = c.music ? c.mvol : 0; if (!c.music) AUD.music.pause(); else if (AUD.music.paused) AUD.music.play().catch(() => {}); }
+  const n = sndCfg();
+  (AUD.gain && (AUD.gain.gain.value = n.on ? n.vol : 0),
+    AUD.music &&
+      ((AUD.music.volume = n.music ? n.mvol : 0),
+      n.music ? AUD.music.paused && AUD.music.play().catch(() => {}) : AUD.music.pause()));
 }
-function audLoad(src) {
-  if (AUD.buf[src] || AUD.loading[src] || !AUD.ctx) return;
-  AUD.loading[src] = true;
-  fetch(src).then(r => r.arrayBuffer()).then(b => AUD.ctx.decodeAudioData(b)).then(buf => { AUD.buf[src] = buf; })
-    .catch(() => { AUD.buf[src] = null; });
+function audLoad(n) {
+  AUD.buf[n] ||
+    AUD.loading[n] ||
+    !AUD.ctx ||
+    ((AUD.loading[n] = !0),
+    fetch(n)
+      .then((t) => t.arrayBuffer())
+      .then((t) => AUD.ctx.decodeAudioData(t))
+      .then((t) => {
+        AUD.buf[n] = t;
+      })
+      .catch(() => {
+        AUD.buf[n] = null;
+      }));
 }
-function sfx(src, vol = 1, rate = 1) {
-  if (!src || R.quiet || !AUD.ctx || !sndCfg().on) return;
-  const now = AUD.ctx.currentTime;
-  if (AUD.last[src] && now - AUD.last[src] < SFX_GAP) return;
-  const buf = AUD.buf[src]; if (!buf) { audLoad(src); return; }
+function sfx(n, t = 1, i = 1) {
+  if (!n || R.quiet || !AUD.ctx || !sndCfg().on) return;
+  const c = AUD.ctx.currentTime;
+  if (AUD.last[n] && c - AUD.last[n] < SFX_GAP) return;
+  const o = AUD.buf[n];
+  if (!o) {
+    audLoad(n);
+    return;
+  }
   if (AUD.voices >= MAX_VOICES) return;
-  AUD.last[src] = now; AUD.voices++;
-  const s = AUD.ctx.createBufferSource(), g = AUD.ctx.createGain();
-  s.buffer = buf; s.playbackRate.value = rate; g.gain.value = vol;
-  s.connect(g); g.connect(AUD.gain); s.onended = () => AUD.voices--; s.start();
+  ((AUD.last[n] = c), AUD.voices++);
+  const u = AUD.ctx.createBufferSource(),
+    e = AUD.ctx.createGain();
+  ((u.buffer = o),
+    (u.playbackRate.value = i),
+    (e.gain.value = t),
+    u.connect(e),
+    e.connect(AUD.gain),
+    (u.onended = () => AUD.voices--),
+    u.start());
 }
-const npcSfx = (key, act, vol = 0.6) => { const e = SND.npc[key]; if (e) sfx(e[act], vol, rnd(0.93, 1.07)); };
-const skillSfx = id => sfx(SND.skill[id], 0.5);
-const uiSfx = k => sfx(SND.ui[k], 0.6);
-/* Nhac nen theo ban do (musicset.txt), lap lai; ban do khong co nhac rieng -> nhac vung gan nhat */
-function playMusic(mapId) {
-  const list = Object.values(SND.music); if (!list.length) return;
-  const src = SND.music[mapId] || list[Math.abs(mapId) % list.length];
-  if (AUD.musicSrc === src) return;
-  if (AUD.music) AUD.music.pause();
-  AUD.musicSrc = src; AUD.music = new Audio(src); AUD.music.loop = true;
-  const c = sndCfg(); AUD.music.volume = c.music ? c.mvol : 0;
-  if (c.music) AUD.music.play().catch(() => {});   // bi chan truoc lan cham dau: phat lai khi mo khoa
+const npcSfx = (n, t, i = 0.6) => {
+    const c = SND.npc[n];
+    c && sfx(c[t], i, rnd(0.93, 1.07));
+  },
+  skillSfx = (n) => sfx(SND.skill[n], 0.5),
+  uiSfx = (n) => sfx(SND.ui[n], 0.6);
+function playMusic(n) {
+  const t = Object.values(SND.music);
+  if (!t.length) return;
+  const i = SND.music[n] || t[Math.abs(n) % t.length];
+  if (AUD.musicSrc === i) return;
+  (AUD.music && AUD.music.pause(), (AUD.musicSrc = i), (AUD.music = new Audio(i)), (AUD.music.loop = !0));
+  const c = sndCfg();
+  ((AUD.music.volume = c.music ? c.mvol : 0), c.music && AUD.music.play().catch(() => {}));
 }
-function preloadZoneSounds(z) {
-  if (!AUD.ctx) return;
-  for (const t of z.m.concat([z.boss])) { const e = SND.npc[MON[t] && MON[t].anim]; if (e) Object.values(e).forEach(s => s && audLoad(s)); }
-  Object.values(SND.ui).forEach(s => s && audLoad(s));
+function preloadZoneSounds(n) {
+  if (AUD.ctx) {
+    for (const t of n.m.concat([n.boss])) {
+      const i = SND.npc[MON[t] && MON[t].anim];
+      i && Object.values(i).forEach((c) => c && audLoad(c));
+    }
+    Object.values(SND.ui).forEach((t) => t && audLoad(t));
+  }
 }

@@ -1,141 +1,265 @@
-/* ======================= NHAN VAT GHEP BO PHAN KIEU JX1 =======================
-   Hinh tu client VLTK (spr\npcres\man|woman) xuat bang jxres/build.py -> img/jx/{m,f}/*.webp + jxlook.js (window.JXLOOK).
-   Nhu JX1: nhan vat ghep tu 11 bo phan (dau, toc, vai, than, 2 tay, 2 vu khi, ngua truoc/giua/sau), moi bo phan chon dong
-   theo trang bi dang mac qua bang ArmorRes / HelmRes / MeleeRes / RangeRes / HorseRes (ma = dong trong bang do + 2;
-   ma 1 = khong mac). Tu the (dung / chay / danh / thi trien / trung don / nga, co hoac khong cuoi ngua) lay theo bang
-   "vu khi - hanh dong" (未骑马关联表 / 骑马关联表); thu tu ve tung bo phan theo huong va khung (贴图顺序表).
-   Thieu hinh (chua tai xong) -> ve hinh mon phai cu. */
-'use strict';
+"use strict";
 let JXL = window.JXLOOK || null;
-if (!JXL && typeof document !== 'undefined') {
-  const s = document.createElement('script'); s.src = 'js/jxlook.js?v=' + ((document.querySelector('script[src*="js/core.js"]') || {}).src || '').split('v=')[1];
-  s.onload = () => { JXL = window.JXLOOK || null; if (JXL && typeof R !== 'undefined' && S && S.fac) { R.jx = jxOn() ? jxSetup() : null; if (R.jx) jxPreload(); } };
-  document.head.appendChild(s);
+if (!JXL && typeof document < "u") {
+  const n = document.createElement("script");
+  ((n.src = "jxlook.js?v=" + ((document.querySelector('script[src*="js/core.js"]') || {}).src || "").split("v=")[1]),
+    (n.onload = () => {
+      ((JXL = window.JXLOOK || null),
+        JXL && typeof R < "u" && S && S.fac && ((R.jx = jxOn() ? jxSetup() : null), R.jx && jxPreload()));
+    }),
+    document.head.appendChild(n));
 }
-const JX_PART_IDX = { '头部': 0, '发型': 1, '肩膀': 4, '躯体': 5, '左手': 6, '右手': 7, '左手武器': 8, '右手武器': 9, '马前': 12, '马中': 13, '马后': 14 };
-const JX_IDX_PART = Object.fromEntries(Object.entries(JX_PART_IDX).map(([k, v]) => [v, k]));
-const JX_GROUP = { '头部': 'helm', '发型': 'helm', '肩膀': 'armor', '躯体': 'armor', '左手': 'armor', '右手': 'armor', '左手武器': 'weapon', '右手武器': 'weapon', '马前': 'horse', '马中': 'horse', '马后': 'horse' };
-const jxSheetKey = (sx, nm) => nm.startsWith('m:') ? 'm/' + nm.slice(2) : (nm.startsWith('ma_') ? 'm/' + nm : sx + '/' + nm);
-const jxOn = () => !!JXL && S && S.jxLook !== false;
-function jxItemP(it) {
-  if (!it) return -1;
-  if (Number.isInteger(it.p)) return it.p;
-  const b = typeof baseRow === 'function' ? baseRow(it.d, it.k, it.lvl || 1) : null;
-  return b && Number.isInteger(b.p) ? b.p : -1;
+const JX_PART_IDX = {
+    头部: 0,
+    发型: 1,
+    肩膀: 4,
+    躯体: 5,
+    左手: 6,
+    右手: 7,
+    左手武器: 8,
+    右手武器: 9,
+    马前: 12,
+    马中: 13,
+    马后: 14,
+  },
+  JX_IDX_PART = Object.fromEntries(Object.entries(JX_PART_IDX).map(([n, o]) => [o, n])),
+  JX_GROUP = {
+    头部: "helm",
+    发型: "helm",
+    肩膀: "armor",
+    躯体: "armor",
+    左手: "armor",
+    右手: "armor",
+    左手武器: "weapon",
+    右手武器: "weapon",
+    马前: "horse",
+    马中: "horse",
+    马后: "horse",
+  },
+  jxSheetKey = (n, o) => (o.startsWith("m:") ? "m/" + o.slice(2) : n + "/" + o),
+  jxOn = () => !!JXL && S && S.jxLook !== !1;
+function jxItemP(n) {
+  if (!n) return -1;
+  if (Number.isInteger(n.p)) return n.p;
+  const o = typeof baseRow == "function" ? baseRow(n.d, n.k, n.lvl || 1) : null;
+  return o && Number.isInteger(o.p) ? o.p : -1;
 }
-const HORSE_NAME_TO_ROW = [
-  ['Ô Vân', 5], ['Xích Thố', 0], ['Tuyệt Ảnh', 9], ['Tuyệt ảnh', 9], ['Đích Lô', 2], ['Chiếu Dạ', 1],
-  ['Bôn Tiêu', 6], ['Phiên Vũ', 7], ['Phi Vân', 1], ['Xích Long', 9], ['Tuyệt Địa', 0], ['Du Huy', 4],
-  ['Đằng Vụ', 8], ['Siêu Quang', 10], ['Hãn Huyết', 15], ['Bạch Hổ', 11], ['Thần Mã', 10], ['Hổ Vương', 10],
-  ['Sư tử', 10], ['Lạc đà', 9], ['Dương Đà', 0], ['Hươu', 9], ['Dương Sa', 7], ['Ngự Phong', 8],
-  ['Truy điện', 4], ['Lưu Tinh', 1], ['Bạch Mã', 11], ['Chiến Mã', 2], ['Thông', 1], ['Lưu', 1], ['Hoàng', 0], ['Mã', 0]
-];
-
-function jxHorseRow(it) {
-  if (!it || !JXL || !JXL.tabs) return -1;
-  const sx = R.jx ? R.jx.sx : (S && S.sex ? 'f' : 'm');
-  const tab = (JXL.tabs[sx] || {})['马中'] || {};
-  if (!tab) return -1;
-  if (it.thanma && JX_TM_ROW[it.thanma] != null && tab[JX_TM_ROW[it.thanma]] != null) return JX_TM_ROW[it.thanma];
-  const name = it.n || '';
-  for (const [kw, row] of HORSE_NAME_TO_ROW) {
-    if (name.includes(kw) && tab[row] != null) return row;
-  }
-  const r = jxRow('horse', it);
-  if (r >= 0 && tab[r] != null) return r;
-  const m = JXL.res ? (JXL.res.horse || {}) : {};
-  for (const k in m) if (m[k] >= 2 && tab[m[k] - 2] != null) return m[k] - 2;
-  return 0;
+const JX_TM_ROW = {
+    ovan: 5,
+    xtho: 13,
+    tanh: 3,
+    dlo: 2,
+    cdsu: 11,
+    pvan: 1,
+    btieu: 6,
+    xlc: 9,
+    duhuy: 4,
+    tdia: 0,
+    dvu: 8,
+    squang: 10,
+    pvu: 7,
+    hhlc: 15,
+    bhv: 11,
+    pvtm: 10,
+  },
+  JX_HN_ROW = {
+    "Bôn Tiêu": 6,
+    "Phiên Vũ": 7,
+    "Phi Vân": 1,
+    "Xích Long Câu": 9,
+    "Tuyệt Địa": 0,
+    "Du Huy": 4,
+    "Đằng Vụ": 8,
+    "Siêu Quang": 10,
+    "Kim Tinh Hổ Vương": 10,
+    "Hỏa Tinh Kim Hổ Vương": 13,
+    "Kim Tinh Bạch Hổ Vương": 11,
+    "Long Tinh Hắc Hổ Vương": 3,
+    "Hãn Huyết Long Câu": 15,
+    "Phong Vân Bạch Mã": 11,
+    "Phong Vân Chiến Mã": 2,
+    "Phong Vân Thần Mã": 10,
+    "Sư tử": 10,
+    "Lạc đà": 9,
+    "Dương Đà": 0,
+    "Hươu đốm": 9,
+    "Dương Sa": 7,
+    "Ngự Phong": 8,
+    "Truy điện": 4,
+    "Lưu Tinh": 1,
+  },
+  JX_K_ROW = {
+    6: 10,
+    7: 11,
+    8: 12,
+    9: 13,
+    11: 15,
+    13: 17,
+    14: 18,
+    15: 19,
+    16: 20,
+    17: 21,
+    18: 22,
+    19: 11,
+    20: 11,
+    21: 11,
+    22: 23,
+    23: 24,
+    24: 25,
+    25: 26,
+    30: 11,
+    31: 13,
+    32: 17,
+  },
+  JX_K5_ROW = {
+    "Ô Vân Đạp Tuyết": 5,
+    "Xích Thố": 0,
+    "Tuyệt Ảnh": 9,
+    "Tuyệt ảnh": 9,
+    "Đích Lô": 2,
+    "Chiếu Dạ Ngọc Sư Tử": 1,
+  };
+function jxHorseExact(n) {
+  if (!n) return -1;
+  const o = (JXL.tabs[S && S.sex ? "f" : "m"] || {}).马中 || {},
+    t = (n.n || "").replace(/\s+\d+$/, ""),
+    e = n.k === 5 ? JX_K5_ROW[t] : JX_K_ROW[n.k];
+  return e != null && o[e] ? e : -1;
 }
-
-const JX_SET_PART = { helm: '头部', armor: '躯体', melee: '右手武器', range: '右手武器' };
-function jxSetRow(g, it) {
-  const s = it && it.set, tab = s && JXL.set && JXL.set[s.kind];
-  if (!tab) return -1;
-  const key = s.grp + '.' + s.sid + '.' + it.d + '.' + it.k;
-  const r = tab[key];
-  if (r == null) return -1;
-  const sx = S && S.sex ? 'f' : 'm';
-  const c = ((JXL.tabs[sx] || {})[JX_SET_PART[g]] || {})[r];
-  return c && Object.keys(c).length ? r : -1;
+function jxHorseRow(n) {
+  const o = jxHorseExact(n);
+  if (o >= 0) return o;
+  if (n && n.thanma && JX_TM_ROW[n.thanma] != null && JXL.tabs[R.jx ? R.jx.sx : "m"]) return JX_TM_ROW[n.thanma];
+  const t = n && n.n ? n.n.replace(/\s+\d+$/, "") : "";
+  if (JX_HN_ROW[t] != null && jxRow("horse", n) < 0) return JX_HN_ROW[t];
+  const e = jxRow("horse", n);
+  if (e >= 0) return e;
+  const r = JXL.res.horse || {};
+  for (const s in r) if (r[s] >= 2) return r[s] - 2;
+  return -1;
 }
-
-function jxRow(g, it) {
-  const m = JXL.res[g]; if (!m) return -1;
-  if (it && it.set && g !== 'horse' && reqOk(it)) { const r = jxSetRow(g, it); if (r >= 0) return r; }
-  const id = it && (reqOk(it) || g === 'horse') && jxItemP(it) >= 0 ? jxItemP(it) + 2 : 1;
-  const v = m[id] ?? m[1]; return v == null ? -1 : v - 2;
+function jxRow(n, o) {
+  const t = JXL.res[n];
+  if (!t) return -1;
+  const e = o && (reqOk(o) || n === "horse") && jxItemP(o) >= 0 ? jxItemP(o) + 2 : 1,
+    r = t[e] ?? t[1];
+  return r == null ? -1 : r - 2;
 }
-
 function jxSetup() {
   if (!JXL || !S || !S.fac) return null;
-  const sx = S.sex ? 'f' : 'm', eq = S.eq, w = eq.weapon;
-  const rows = { helm: jxRow('helm', eq.helm), armor: jxRow('armor', eq.armor), weapon: jxRow(w && w.d === 1 ? 'range' : 'melee', w), horse: eq.horse && R.mounted ? jxHorseRow(eq.horse) : -1 };
-  if (rows.weapon < 0) rows.weapon = 0;
-  const wn = (JXL.wnames[sx] || [])[rows.weapon] || '空手';
-  const asc = JXL.assoc[sx][wn] || JXL.assoc[sx]['空手'];
-  const ride = rows.horse >= 0 && asc && asc[1] ? 1 : 0;
-  return { sx, rows, asc: asc ? asc[ride] || asc[0] : {}, ride, key: JSON.stringify([sx, rows, ride]) };
+  const n = S.sex ? "f" : "m",
+    o = S.eq,
+    t = o.weapon,
+    e = {
+      helm: jxRow("helm", o.helm),
+      armor: jxRow("armor", o.armor),
+      weapon: jxRow(t && t.d === 1 ? "range" : "melee", t),
+      horse: o.horse && R.mounted ? jxHorseRow(o.horse) : -1,
+    };
+  e.weapon < 0 && (e.weapon = 0);
+  const r = (JXL.wnames[n] || [])[e.weapon] || "空手",
+    s = JXL.assoc[n][r] || JXL.assoc[n].空手,
+    a = e.horse >= 0 && s && s[1] ? 1 : 0;
+  return { sx: n, rows: e, asc: s ? s[a] || s[0] : {}, ride: a, key: JSON.stringify([n, e, a]) };
 }
-
-function jxOrder(sx, act, dir16, frame) {
-  const S2 = JXL.sort[sx], sec = S2[act] || {}, D = S2.DEFAULT;
-  for (const k in sec) if (k[0] === 'L' && sec[k][0] === frame) return sec[k].slice(1);
-  const v = sec['Dir' + (dir16 + 1)] || D['Dir' + (dir16 + 1)] || D.Dir1; return v.slice(1);
+// JX1 part draw order (CSortTable::GetSort, called from KNpcResVN::Draw): nDir is the SPR direction
+// index (0..7 for the 8-direction player SPRs -> Dir1..Dir8, not Dir1/3/5..) and "LineN" rows match the
+// ABSOLUTE frame number dir*framesPerDir+frame.
+function jxOrder(n, o, t, e) {
+  const r = JXL.sort[n],
+    s = r[o] || {},
+    a = r.DEFAULT;
+  for (const f in s) if (f[0] === "L" && s[f][0] === e) return s[f].slice(1);
+  return (s["Dir" + (t + 1)] || a["Dir" + (t + 1)] || a.Dir1).slice(1);
 }
-
-const JX_MS = { st: 120, run: 85 };
-function drawJxHero(act, dir8, time, x, y, sc, alpha, mainSk, overrideJx) {
-  const jx = overrideJx || R.jx; if (!jx) return false;
-  const castMg = !overrideJx && act === 'at' && R.P && R.P.main && !R.P.main.phys && jx.asc.mg;
-  const g = jx.asc[castMg ? 'mg' : act] || jx.asc.st; if (!g) return false;
-  const tab = JXL.tabs[jx.sx], loaded = []; let masterP = null;
-  const rawOrder = jxOrder(jx.sx, g, dir8 % 8 * 2, 0);
-  for (const rawP of rawOrder) {
-    const pName = typeof rawP === 'number' ? (JX_IDX_PART[rawP] || rawP) : rawP;
-    const pIdx = typeof rawP === 'number' ? rawP : JX_PART_IDX[rawP];
-    if (pIdx == null) continue;
-    const groupName = JX_GROUP[pName]; if (!groupName) continue;
-    const row = jx.rows[groupName]; if (row < 0) continue;
-    const keyStr = ((tab[pName] || {})[row] || {})[g]; if (!keyStr) continue;
-    const fullKey = jxSheetKey(jx.sx, keyStr), meta = JXL.sheets[fullKey]; if (!meta) continue;
-    const im = img('img/jx/' + fullKey + '.webp');
-    if (!im.complete || !im.naturalWidth) { if (pName === '躯体' || (pName === '马中' && jx.rows.horse >= 0)) return false; continue; }
-    loaded.push([im, meta, pName, pIdx]);
-    if (pName === '躯体' || !masterP) masterP = meta;
+// ms per native SPR frame (sheets hold every frame; same cycle length as the old half-frame sheets)
+const JX_MS = { st: 60, run: 42.5 };
+// last look whose sheets were all loaded: drawn while a new look / action is still loading,
+// so body parts never pop in and out one by one (R.jxLast: per actor, swapped with the disciples)
+// sheets of look u for action g -> [[img, meta, part]], or null while any of them is still loading
+function jxSet(u, g) {
+  // complete sets are cached on the look object (a new look = a new object): no per-frame lookups
+  const C = u._set || (u._set = {});
+  if (C[g]) return C[g];
+  const L = JXL.tabs[u.sx] || {},
+    b = [];
+  let wait = !1;
+  for (const c in JX_PART_IDX) {
+    const h = u.rows[JX_GROUP[c]];
+    if (h < 0) continue;
+    const l = ((L[c] || {})[h] || {})[g];
+    if (!l) continue;
+    const j = jxSheetKey(u.sx, l),
+      m = JXL.sheets[j];
+    if (!m) continue;
+    const x = img("img/jx/" + j + ".webp" + SPR_V);
+    if (!x.complete) wait = !0;
+    else if (x.naturalWidth) b.push([x, m, c]);
   }
-  if (!masterP) return false;
-  const framesN = masterP[4]; let fr;
-  if (act === 'st' || act === 'run') fr = Math.floor(time * 1000 / (JX_MS[act] || 110)) % framesN;
+  return wait || !b.length ? null : (C[g] = b);
+}
+// "at" -> the magic action ("mg") for the skill being cast: JX1 CharAnimId when the effect tables have it
+// (JFX.act, fxjx.js: 11 cdo_magic / 9,10 cdo_attack), else a non-physical main skill casts with "mg"
+const jxCastMg = () => {
+    const a = typeof JFX < "u" && JFX.act && H && H.castSk && JFX.act[H.castSk];
+    return a ? a === "mg" : !!(R.P && R.P.main && !R.P.main.phys);
+  },
+  jxAct = (u, n, f) => (!f && n === "at" && jxCastMg() && u.asc.mg ? "mg" : n);
+function drawJxHero(n, o, t, e, r, s, a, O, f) {
+  let u = f || R.jx;
+  if (!u) return !1;
+  let g = u.asc[jxAct(u, n, f)] || u.asc.st;
+  if (!g) return !1;
+  let b = jxSet(u, g);
+  if (!b && !f) {
+    // still loading: keep drawing the previous complete look, else this look's stand pose
+    const v = R.jxLast && R.jxLast.key !== u.key ? R.jxLast : null,
+      vg = v && (v.asc[jxAct(v, n)] || v.asc.st),
+      vb = vg && jxSet(v, vg);
+    if (vb) ((u = v), (g = vg), (b = vb));
+    else if (u.asc.st && u.asc.st !== g && (b = jxSet(u, u.asc.st))) ((g = u.asc.st), (n = "st"));
+  }
+  if (!b) return !1;
+  !f && u === R.jx && (R.jxLast = u);
+  let p = null;
+  for (const [, m, c] of b) (c === "躯体" || !p) && (p = m);
+  const d = p[4],
+    D = p[5] || 8,
+    dr = Math.floor(((o % 8) * D) / 8 + 0.5) % D;
+  let w;
+  if (n === "st" || n === "run") w = Math.floor((t * 1e3) / (JX_MS[n] || 55)) % d;
   else {
-    const dur = typeof animLen === 'function' && animLen(mainSk, act) || framesN * 0.09;
-    fr = Math.min(framesN - 1, Math.floor(clamp(time / Math.max(0.1, dur), 0, 0.999) * framesN));
+    const i = (typeof animLen == "function" && animLen(O, n)) || d * 0.05;
+    w = Math.min(d - 1, Math.floor(clamp(t / Math.max(0.1, i), 0, 0.999) * d));
   }
-  const rawSort = jxOrder(jx.sx, g, dir8 % 8 * 2, fr * (masterP[6] || 1));
-  const sortLst = rawSort.map(p => typeof p === 'number' ? p : JX_PART_IDX[p]);
-  loaded.sort((a, b) => sortLst.indexOf(a[3]) - sortLst.indexOf(b[3]));
-  const footX = JXL.foot[0], footY = JXL.foot[1]; let maxH = 0;
-  CX.globalAlpha = alpha;
-  for (const [im, m, pName, pIdx] of loaded) {
-    const [w, h, ox, oy, n, dDirs] = m;
-    const colFr = Math.min(n - 1, Math.floor(fr * n / framesN));
-    const rowDir = dDirs >= 8 ? dir8 % 8 : Math.floor(dir8 % 8 * dDirs / 8);
-    const dx = x + (ox - footX) * sc;
-    const dy = y + (oy - footY) * sc;
-    const dw = w * sc;
-    const dh = h * sc;
-    CX.drawImage(im, colFr * w, rowDir * h, w, h, dx, dy, dw, dh);
-    maxH = Math.max(maxH, (footY - oy) * sc);
+  const T = jxOrder(u.sx, g, dr, dr * d + w * (p[6] || 1));
+  b.sort((i, c) => T.indexOf(JX_PART_IDX[i[2]]) - T.indexOf(JX_PART_IDX[c[2]]));
+  const M = JXL.foot[0],
+    X = JXL.foot[1],
+    k = s / (JXL.sc || 1),
+    // whole CSS pixels at 1:1 (the camera is already rounded) -> the sprite is never resampled
+    ex = k === 1 ? Math.round(e) : e,
+    ey = k === 1 ? Math.round(r) : r,
+    sm = sprCrisp(CX, k);
+  let y = 0;
+  CX.globalAlpha = a;
+  for (const [i, c] of b) {
+    const [h, l, j, m, x, H] = c,
+      P = Math.min(x - 1, Math.floor((w * x) / d)),
+      _ = H === D ? dr : Math.floor(((o % 8) * H) / 8 + 0.5) % H;
+    (CX.drawImage(i, P * h, _ * l, h, l, ex + (j - M) * k, ey + (m - X) * k, h * k, l * k),
+      (y = Math.max(y, (X - m) * k)));
   }
-  CX.globalAlpha = 1;
-  return maxH;
+  return ((CX.globalAlpha = 1), (CX.imageSmoothingEnabled = sm), y);
 }
-
 function jxPreload() {
-  const jx = R.jx;
-  if (jx) for (const act of Object.values(jx.asc)) for (const pName in JX_PART_IDX) {
-    const row = jx.rows[JX_GROUP[pName]]; if (row < 0) continue;
-    const keyStr = (((JXL.tabs[jx.sx] || {})[pName] || {})[row] || {})[act];
-    if (keyStr && JXL.sheets[jxSheetKey(jx.sx, keyStr)]) img('img/jx/' + jxSheetKey(jx.sx, keyStr) + '.webp');
-  }
+  const n = R.jx;
+  if (n)
+    for (const o of Object.values(n.asc))
+      for (const t in JX_PART_IDX) {
+        const e = n.rows[JX_GROUP[t]];
+        if (e < 0) continue;
+        const r = (((JXL.tabs[n.sx] || {})[t] || {})[e] || {})[o];
+        r && JXL.sheets[jxSheetKey(n.sx, r)] && img("img/jx/" + jxSheetKey(n.sx, r) + ".webp" + SPR_V);
+      }
 }

@@ -1,161 +1,386 @@
-/* ======================= REN DO: CUONG HOA + TAY LUYEN (cho tieu ngan luong lau dai) =======================
-   Cuong hoa +1..+10: moi cap +8% thuoc tinh goc (ENH_STEP, core.js). Gia tang x1.8 moi cap va theo cap nhan vat,
-   ti le thanh cong giam dan (thap nhat 35%); that bai chi mat ngan luong, khong vo do.
-   Tay luyen: gieo lai toan bo dong thuoc tinh ma thuat (dung luat magicattrib.txt: he, loai do, tien / hau to);
-   do Hoang Kim / Bach Kim co dong co dinh nen khong tay luyen duoc. */
-'use strict';
-const enhCostAt = (it, l) => Math.round((1000 + it.lvl * 1000 + (it.r || 0) * 2000) * Math.pow(1.8, l) * (1 + S.lvl / 10));
-const enhChanceAt = l => Math.max(0.35, 1 - 0.07 * l);
-const enhCost = it => enhCostAt(it, it.enh || 0);
-const enhChance = it => enhChanceAt(it.enh || 0);
-/* Chi phi ky vong de dua mon tu cap hien tai len cap muc tieu (moi lan thu ton enhCost, ti le thanh cong enhChance) */
-function enhExpected(it, target) { let c = 0; for (let l = it.enh || 0; l < target; l++) c += enhCostAt(it, l) / enhChanceAt(l); return Math.round(c); }
-const rerollCost = it => Math.round((500 + it.lvl * 400) * (1 + (it.mag || []).length * 0.5) * (1 + S.lvl / 15));
-const REROLL_KEEP = 0.75;                                  // moi dong giu lai: +75% gia tay luyen
-const rerollCostKeep = (it, nKeep) => Math.round(rerollCost(it) * (1 + REROLL_KEEP * nKeep));
-const canReroll = it => !it.set && !it.vio && !it.thanma && (it.mag || []).length > 0;
-function payGold(c) { if (S.gold < c) { toast('Không đủ ngân lượng'); return false; } S.gold -= c; return true; }
-function enhTry(it) {                                      // mot lan cuong hoa, khong ve lai giao dien
-  if ((it.enh || 0) >= ENH_MAX || S.gold < enhCost(it)) return null;
-  S.gold -= enhCost(it);
-  if (Math.random() < enhChance(it)) { it.enh = (it.enh || 0) + 1; recEnh(it); return true; }
-  return false;
+"use strict";
+const enhCostAt = (n, a) => 1 + a,
+  enhChanceAt = (n) => Math.max(0.1, 1 - 0.1 * n),
+  enhCost = (n) => enhCostAt(n, n.enh || 0),
+  enhChance = (n) => enhChanceAt(n.enh || 0),
+  ENH_DROP_AT = 6,
+  enhDrops = (n) => n >= 6;
+function enhStepCost(n, a) {
+  const e = enhChanceAt(a),
+    t = enhCostAt(n, a);
+  return enhDrops(a) ? (t + (1 - e) * enhStepCost(n, a - 1)) / e : t / e;
 }
-function enhance(it) {
-  if (!owned(it)) { closeModal(); return; }
-  if ((it.enh || 0) >= ENH_MAX || !payGold(enhCost(it))) return;
-  S.gold += enhCost(it); const ok = enhTry(it);
-  if (ok) { toast(`Cường hóa thành công: +${it.enh}`); uiSfx('learn'); log(`Cường hóa <b>${esc(it.n)}</b> lên +${it.enh}`); }
-  else { toast('Cường hóa thất bại (mất ngân lượng)'); uiSfx('use'); }
-  R.dirty = true; invDirty = true; save(); forgeModal(it);
+function enhExpected(n, a) {
+  let e = 0;
+  for (let t = n.enh || 0; t < a; t++) e += enhStepCost(n, t);
+  return Math.round(e);
 }
-/* Cuong hoa lien tuc toi +target, dung khi het ngan sach (khong dung qua budget luong) */
-function enhanceTo(it, target, budget) {
-  const st = { tries: 0, ok: 0, fail: 0, spent: 0, from: it.enh || 0 };
-  while ((it.enh || 0) < target && st.tries < 200) {
-    const c = enhCost(it); if (c > S.gold || st.spent + c > budget) break;
-    const r = enhTry(it); if (r === null) break;
-    st.tries++; st.spent += c; if (r) st.ok++; else st.fail++;
+const rerollCost = (n) => Math.round((500 + n.lvl * 400) * (1 + (n.mag || []).length * 0.5) * (1 + S.lvl / 15)),
+  REROLL_KEEP = 0.75,
+  rerollCostKeep = (n, a) => Math.round(rerollCost(n) * (1 + REROLL_KEEP * a)),
+  canReroll = (n) => !n.set && !n.vio && !n.thanma && (n.mag || []).length > 0;
+function payGold(n) {
+  return S.gold < n ? (toast("Không đủ ngân lượng"), !1) : ((S.gold -= n), !0);
+}
+const enhAllowed = (n) => !!n && n.d !== 10;
+function enhTry(n) {
+  return !enhAllowed(n) || (n.enh || 0) >= ENH_MAX || (S.knb | 0) < enhCost(n)
+    ? null
+    : ((S.knb = (S.knb | 0) - enhCost(n)),
+      Math.random() < enhChance(n)
+        ? ((n.enh = (n.enh || 0) + 1), recEnh(n), !0)
+        : (enhDrops(n.enh || 0) && (n.enh--, n.enh || delete n.enh), !1));
+}
+function enhance(n) {
+  if (!owned(n)) {
+    closeModal();
+    return;
   }
-  if (st.tries) { R.dirty = true; invDirty = true; log(`Cường hóa <b>${esc(it.n)}</b>: +${st.from} → +${it.enh || 0} (${st.tries} lần, ${st.fail} thất bại, −${fmt(st.spent)} lượng)`); save(); }
-  return st;
+  if (!enhAllowed(n)) return toast("Ngựa không cường hóa được");
+  if ((n.enh || 0) >= ENH_MAX) return;
+  if ((S.knb | 0) < enhCost(n)) return toast("Không đủ Kim Nguyên Bảo");
+  const a = n.enh || 0,
+    e = enhTry(n);
+  (e
+    ? (uiSfx(n.enh >= 7 ? "levelup" : "learn"), log(`Cường hóa <b>${esc(n.n)}</b> lên +${n.enh}`))
+    : (uiSfx("use"),
+      (n.enh || 0) < a && log(`<span class="bad">Cường hóa <b>${esc(n.n)}</b> thất bại, tụt về +${n.enh || 0}</span>`)),
+    (R.dirty = !0),
+    (invDirty = !0),
+    save(),
+    forgeModal(n),
+    enhFx(e, n.enh || 0, !e && (n.enh || 0) < a));
 }
-/* Luc chien thay doi neu mon (dang mac) len them 1 cap cuong hoa */
-function enhPowerGain(it) {
-  if (!Object.values(S.eq).includes(it) || (it.enh || 0) >= ENH_MAX) return null;
-  const p0 = power(calc()); it.enh = (it.enh || 0) + 1; const p1 = power(calc()); it.enh--; if (!it.enh) delete it.enh;
-  return p1 / Math.max(1, p0) - 1;
+function enhFx(n, a, e) {
+  if (!document.getElementById("enhFxCss")) {
+    const l = document.createElement("style");
+    ((l.id = "enhFxCss"),
+      (l.textContent = `
+.enhfx{position:absolute;inset:0;pointer-events:none;z-index:50;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.enhfx b{font:900 34px/1 serif;letter-spacing:2px;text-shadow:0 0 8px #000,0 2px 0 #000;animation:enhTxt 1.3s ease-out forwards}
+.enhfx.ok{background:radial-gradient(circle,rgba(255,214,90,.55) 0,rgba(255,170,0,.18) 35%,transparent 70%);animation:enhFlash 1.3s ease-out forwards}
+.enhfx.ok b{color:#ffe27a}
+.enhfx.ok i{position:absolute;left:50%;top:50%;width:4px;height:120px;margin:-60px 0 0 -2px;background:linear-gradient(#fff6c0,transparent);transform-origin:50% 100%;animation:enhRay 1s ease-out forwards}
+.enhfx.fail{background:radial-gradient(circle,rgba(120,120,120,.45) 0,rgba(60,0,0,.25) 45%,transparent 75%);animation:enhFlash 1.2s ease-out forwards}
+.enhfx.fail b{color:#ff6a5a;animation:enhShake .45s linear 2,enhTxt 1.2s ease-out forwards}
+.modal-shake{animation:enhShake .4s linear 1}
+@keyframes enhFlash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+@keyframes enhTxt{0%{transform:scale(.4);opacity:0}20%{transform:scale(1.15);opacity:1}35%{transform:scale(1)}80%{opacity:1}100%{transform:translateY(-30px);opacity:0}}
+@keyframes enhRay{0%{opacity:0;transform:rotate(var(--r)) scaleY(.2)}25%{opacity:1}100%{opacity:0;transform:rotate(var(--r)) scaleY(1.6)}}
+@keyframes enhShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}`),
+      document.head.appendChild(l));
+  }
+  const t = (document.getElementById("mBody") || {}).parentElement || document.querySelector(".modal");
+  if (!t) return;
+  getComputedStyle(t).position === "static" && (t.style.position = "relative");
+  const s = document.createElement("div");
+  ((s.className = "enhfx " + (n ? "ok" : "fail")),
+    (s.innerHTML =
+      (n
+        ? Array.from(
+            { length: a >= 7 ? 16 : 10 },
+            (l, i) => `<i style="--r:${i * (360 / (a >= 7 ? 16 : 10))}deg"></i>`,
+          ).join("")
+        : "") +
+      `<b>${n ? `+${a} THÀNH CÔNG` : "THẤT BẠI"}${e ? `<br><small style="font-size:18px">tụt về +${a}</small>` : ""}</b>`),
+    t.appendChild(s),
+    n || (t.classList.remove("modal-shake"), t.offsetWidth, t.classList.add("modal-shake")),
+    setTimeout(() => s.remove(), 1400));
 }
-/* Tay luyen giu dong: cac dong trong keep giu nguyen, cac dong con lai gieo lai (khong trung loai thuoc tinh voi dong giu) */
-function rollKeep(it, keep) {
-  const used = new Set(it.mag.filter((m, i) => keep.has(i)).map(m => m.a)), lucky = R.P ? R.P.lucky : 0;
-  return it.mag.map((m, i) => keep.has(i) ? m : (rollLine(it, i, clamp(it.lvl + irnd(-1, 0), 1, 10), used, lucky) || m));
+function enhanceTo(n, a, e) {
+  const t = { tries: 0, ok: 0, fail: 0, spent: 0, from: n.enh || 0 };
+  for (; (n.enh || 0) < a && t.tries < 200;) {
+    const s = enhCost(n);
+    if (s > (S.knb | 0) || t.spent + s > e) break;
+    const l = enhTry(n);
+    if (l === null) break;
+    (t.tries++, (t.spent += s), l ? t.ok++ : t.fail++);
+  }
+  return (
+    t.tries &&
+      ((R.dirty = !0),
+      (invDirty = !0),
+      log(
+        `Cường hóa <b>${esc(n.n)}</b>: +${t.from} → +${n.enh || 0} (${t.tries} lần, ${t.fail} thất bại, −${t.spent} KNB)`,
+      ),
+      save()),
+    t
+  );
+}
+function enhPowerGain(n) {
+  if (!Object.values(S.eq).includes(n) || (n.enh || 0) >= ENH_MAX) return null;
+  const a = power(calc());
+  n.enh = (n.enh || 0) + 1;
+  const e = power(calc());
+  return (n.enh--, n.enh || delete n.enh, e / Math.max(1, a) - 1);
+}
+function rollKeep(n, a) {
+  const e = new Set(n.mag.filter((s, l) => a.has(l)).map((s) => s.a)),
+    t = R.P ? R.P.lucky : 0;
+  return n.mag.map((s, l) => (a.has(l) ? s : rollLine(n, l, clamp(n.lvl + irnd(-1, 0), 1, 10), e, t) || s));
 }
 let RR = { uid: 0, keep: new Set(), cand: null };
-function rrState(it) { if (RR.uid !== it.uid) RR = { uid: it.uid, keep: new Set(), cand: null }; return RR; }
-function rerollPreview(it) {
-  if (!owned(it) || !canReroll(it)) return;
-  const st = rrState(it), c = rerollCostKeep(it, st.keep.size);
-  if (st.keep.size >= it.mag.length) { toast('Phải để ít nhất 1 dòng tẩy luyện'); return; }
-  if (!payGold(c)) return;
-  st.cand = rollKeep(it, st.keep); uiSfx('learn'); save(); forgeModal(it);
+function rrState(n) {
+  return (RR.uid !== n.uid && (RR = { uid: n.uid, keep: new Set(), cand: null }), RR);
 }
-function rerollAccept(it) {
-  const st = rrState(it); if (!st.cand || !owned(it)) return;
-  it.mag = st.cand; delete it.leg; st.cand = null;
-  R.dirty = true; invDirty = true; toast('Đã nhận dòng mới'); save(); forgeModal(it);
-}
-/* So sanh luc chien mon voi bo dong khac (dang mac: luc chien that; trong tui: chi so mon) */
-function magPowerDelta(it, mag) {
-  const clone = Object.assign({}, it, { mag }), slot = slotOfEquipped(it, S.eq);
-  if (slot) { const eq = Object.assign({}, S.eq); eq[slot] = clone; return power(calc(eq)) / Math.max(1, power(calc())) - 1; }
-  return itemPower(clone) / Math.max(1, itemPower(it)) - 1;
-}
-function afterRc(r, reopen) {
-  toast(r.msg); uiSfx(r.ok ? 'learn' : 'use'); log(esc(r.msg));
-  R.dirty = true; invDirty = true; save(); reopen();
-}
-function platCard(it) {
-  if (!it.set || it.set.kind !== 'platina') return '';
-  const lv = it.plv || 0; if (lv >= PLAT_MAX) return '<div class="card"><b>Thăng cấp Bạch Kim</b> <small class="dim">Đã tối đa +10</small></div>';
-  const u = PLAT_UP[lv], ok = S.gold >= platCost(u.cost.van) && matHave('misc', 'wc') >= u.inputs[0].qty && matHave('misc', 'mys') >= u.inputs[1].qty;
-  return `<div class="card"><b>Thăng cấp Bạch Kim</b> <small class="dim">+${lv} → +${lv + 1} · thành công ${u.rate}% · mỗi cấp +${Math.round(PLAT_STEP * 100)}% thuộc tính gốc</small><br>
-    <small>${u.inputs[0].qty} Thủy Tinh Trắng (có ${matHave('misc', 'wc')}) · ${u.inputs[1].qty} Thần Bí Khoáng Thạch (có ${matHave('misc', 'mys')}) · ${fmt(platCost(u.cost.van))} lượng</small>
-    <div class="btnrow"><button class="btn" id="fPlat" ${ok ? '' : 'disabled'}>Thăng cấp</button></div></div>`;
-}
-function forgeModal(it) {
-  const cur = it.enh || 0, max = cur >= ENH_MAX, gain = enhPowerGain(it), st = rrState(it);
-  const tgtSel = max ? '' : `<select id="fTgt">${Array.from({ length: ENH_MAX - cur }, (_, i) => cur + 1 + i).map(t => `<option value="${t}" ${t === Math.min(ENH_MAX, cur + 3) ? 'selected' : ''}>+${t} (≈${fmt(enhExpected(it, t))})</option>`).join('')}</select>`;
-  const keepN = st.keep.size, rc = rerollCostKeep(it, keepN);
-  const magLines = mag => mag.map((m, i) => `<div class="${i % 2 ? 'h' : 'm'}">${esc(attrText(attrName(m.a), m.p.map(v => v === -1 ? 0 : v)))}${i % 2 ? ' (ẩn)' : ''}</div>`).join('');
-  const rrBody = !canReroll(it) ? '<small class="dim">Đồ trắng / đồ bộ / đồ Tím không tẩy luyện được</small>' : st.cand ? (() => {
-    const d = magPowerDelta(it, st.cand), col = d > 0.0005 ? 'cp' : d < -0.0005 ? 'cn' : 'dim';
-    return `<div class="forgecmp"><div class="sl"><b>Dòng cũ</b>${magLines(it.mag)}</div><div class="sl"><b>Dòng mới</b>${magLines(st.cand)}</div></div>
-      <p class="small">${Object.values(S.eq).includes(it) ? 'Lực chiến' : 'Chỉ số món'} nếu nhận: <b class="${col}">${pctTxt(d)}</b></p>
-      <div class="btnrow"><button class="btn" id="fRrOk">Nhận dòng mới</button><button class="btn" id="fRrNo">Giữ dòng cũ</button></div>`;
-  })() : `<small>Đánh dấu dòng muốn <b>giữ lại</b> (mỗi dòng +${REROLL_KEEP * 100}% giá). Kết quả hiện để so sánh trước khi nhận.</small>
-      ${it.mag.map((m, i) => `<label class="keepl"><input type="checkbox" data-keep="${i}" ${st.keep.has(i) ? 'checked' : ''}><span class="${i % 2 ? 'h' : 'm'}">${esc(attrText(attrName(m.a), m.p.map(v => v === -1 ? 0 : v)))}${i % 2 ? ' (ẩn)' : ''}</span></label>`).join('')}
-      <div class="btnrow"><button class="btn red" id="fRe" ${S.gold >= rc && keepN < it.mag.length ? '' : 'disabled'}>Tẩy luyện (${fmt(rc)} lượng${keepN ? `, giữ ${keepN} dòng` : ''})</button></div>`;
-  modal(`<h3>Rèn đồ <small>${fmt(S.gold)} lượng</small></h3>${itemHTML(it)}
-    <div class="card"><b>Cường hóa</b> <small class="dim">+${cur} / +${ENH_MAX} · mỗi cấp +${Math.round(ENH_STEP * 100)}% thuộc tính gốc</small><br>
-      ${max ? '<small class="dim">Đã cường hóa tối đa</small>' : `<small>Giá ${fmt(enhCost(it))} lượng · thành công ${Math.round(enhChance(it) * 100)}% · thất bại chỉ mất ngân lượng${gain != null ? ` · lực chiến <b class="cp">${pctTxt(gain)}</b>` : ''}</small>`}
-      <div class="btnrow"><button class="btn" id="fEnh" ${max || S.gold < enhCost(it) ? 'disabled' : ''}>Cường hóa lên +${cur + 1}</button></div>
-      ${max ? '' : `<div class="btnrow"><small>Liên tục tới</small>${tgtSel}<button class="btn" id="fEnhTo" ${S.gold < enhCost(it) ? 'disabled' : ''}>Cường hóa liên tục</button></div><small class="dim">≈ chi phí kỳ vọng. Dừng khi đạt mức hoặc hết ngân lượng.</small>`}</div>
-    <div class="card"><b>Tẩy luyện</b> <small class="dim">gieo lại ${(it.mag || []).length} dòng thuộc tính</small><br>${rrBody}</div>
-    ${verVio() && !it.set && it.d >= 0 && it.d <= 9 && (isPhoiSrc(it) || it.vio) ? `<div class="card"><b>💎 Lò Ép Đồ</b> <small class="dim">${it.vio ? 'khảm đá thuộc tính vào phôi Huyền Tinh này' : 'lấy thuộc tính thành đá, hoặc chế tạo thành phôi Huyền Tinh'}</small><div class="btnrow"><button class="btn" id="fEp">Mở Lò Ép Đồ</button></div></div>` : ''}${platCard(it)}`, () => {
-    $('#fEnh').onclick = () => enhance(it);
-    const to = $('#fEnhTo'); if (to) to.onclick = () => { if (!owned(it)) return closeModal(); const r = enhanceTo(it, +$('#fTgt').value, S.gold); toast(r.tries ? `+${r.from} → +${it.enh || 0}: ${r.tries} lần, ${r.fail} thất bại, −${fmt(r.spent)} lượng` : 'Không đủ ngân lượng'); uiSfx(r.ok ? 'learn' : 'use'); forgeModal(it); };
-    const re = $('#fRe'); if (re) re.onclick = () => rerollPreview(it);
-    const ok = $('#fRrOk'), no = $('#fRrNo'); if (ok) ok.onclick = () => rerollAccept(it); if (no) no.onclick = () => { st.cand = null; toast('Giữ dòng cũ'); forgeModal(it); };
-    document.querySelectorAll('#mBody [data-keep]').forEach(b => b.onchange = () => { const i = +b.dataset.keep; if (b.checked) st.keep.add(i); else st.keep.delete(i); forgeModal(it); });
-    const lo = $('#fHtLo'); if (lo) lo.onclick = () => htModal();
-    const fe = $('#fEp'); if (fe) fe.onclick = () => epModal(it.vio ? 'kham' : isHutSrc(it) ? 'hut' : 'phoi', it.uid);
-    const pu = $('#fPlat'); if (pu) pu.onclick = () => afterRc(upgradePlatina(it), () => forgeModal(it));
-  });
-}
-/* Cuong hoa hang loat do dang mac: moi buoc nang mon re nhat chua dat muc tieu, trong ngan sach (% ngan luong). Bo qua ngua. */
-let BF = { tgt: 5, pct: 50 };
-const batchItems = () => SLOTS.map(([k]) => S.eq[k]).filter(it => it && it.d !== 10);
-function batchForge(target, budget) {
-  const st = { tries: 0, ok: 0, spent: 0, items: new Set() };
-  for (let g = 0; g < 600; g++) {
-    const c = batchItems().filter(it => (it.enh || 0) < target).sort((a, b) => enhCost(a) - enhCost(b))[0];
-    if (!c || enhCost(c) > S.gold || st.spent + enhCost(c) > budget) break;
-    const cost = enhCost(c), r = enhTry(c); if (r === null) break;
-    st.tries++; st.spent += cost; if (r) { st.ok++; st.items.add(c); }
+function rerollPreview(n) {
+  if (!owned(n) || !canReroll(n)) return;
+  const a = rrState(n),
+    e = rerollCostKeep(n, a.keep.size);
+  if (a.keep.size >= n.mag.length) {
+    toast("Phải để ít nhất 1 dòng tẩy luyện");
+    return;
   }
-  if (st.tries) { R.dirty = true; invDirty = true; log(`Cường hóa hàng loạt: ${st.tries} lần, ${st.ok} thành công, −${fmt(st.spent)} lượng`); save(); }
-  return st;
+  payGold(e) && ((a.cand = rollKeep(n, a.keep)), uiSfx("learn"), save(), forgeModal(n));
+}
+function rerollAccept(n) {
+  const a = rrState(n);
+  !a.cand ||
+    !owned(n) ||
+    ((n.mag = a.cand),
+    delete n.leg,
+    (a.cand = null),
+    (R.dirty = !0),
+    (invDirty = !0),
+    toast("Đã nhận dòng mới"),
+    save(),
+    forgeModal(n));
+}
+function magPowerDelta(n, a) {
+  const e = Object.assign({}, n, { mag: a }),
+    t = slotOfEquipped(n, S.eq);
+  if (t) {
+    const s = Object.assign({}, S.eq);
+    return ((s[t] = e), power(calc(s)) / Math.max(1, power(calc())) - 1);
+  }
+  return itemPower(e) / Math.max(1, itemPower(n)) - 1;
+}
+function afterRc(n, a) {
+  (toast(n.msg), uiSfx(n.ok ? "learn" : "use"), log(esc(n.msg)), (R.dirty = !0), (invDirty = !0), save(), a());
+}
+function platCard(n) {
+  if (!n.set || n.set.kind !== "platina") return "";
+  const a = n.plv || 0;
+  if (a >= PLAT_MAX)
+    return '<div class="card"><b>Thăng cấp Bạch Kim</b> <small class="dim">Đã tối đa +10</small></div>';
+  const e = PLAT_UP[a],
+    t =
+      S.gold >= platCost(e.cost.van) &&
+      matHave("misc", "wc") >= e.inputs[0].qty &&
+      matHave("misc", "mys") >= e.inputs[1].qty;
+  return `<div class="card"><b>Thăng cấp Bạch Kim</b> <small class="dim">+${a} → +${a + 1} · thành công ${e.rate}% · mỗi cấp +${Math.round(PLAT_STEP * 100)}% thuộc tính gốc</small><br>
+    <small>${e.inputs[0].qty} Thủy Tinh Trắng (có ${matHave("misc", "wc")}) · ${e.inputs[1].qty} Thần Bí Khoáng Thạch (có ${matHave("misc", "mys")}) · ${fmtL(platCost(e.cost.van))} lượng</small>
+    <div class="btnrow"><button class="btn" id="fPlat" ${t ? "" : "disabled"}>Thăng cấp</button></div></div>`;
+}
+function forgeModal(n) {
+  const a = n.enh || 0,
+    e = a >= ENH_MAX,
+    t = enhPowerGain(n),
+    s = rrState(n),
+    l = e
+      ? ""
+      : `<select id="fTgt">${Array.from({ length: ENH_MAX - a }, (c, o) => a + 1 + o)
+          .map(
+            (c) =>
+              `<option value="${c}" ${c === Math.min(ENH_MAX, a + 3) ? "selected" : ""}>+${c} (≈${fmt(enhExpected(n, c))})</option>`,
+          )
+          .join("")}</select>`,
+    i = s.keep.size,
+    d = rerollCostKeep(n, i),
+    u = (c) =>
+      c
+        .map(
+          (o, h) =>
+            `<div class="${h % 2 ? "h" : "m"}">${esc(
+              attrText(
+                attrName(o.a),
+                o.p.map((m) => (m === -1 ? 0 : m)),
+              ),
+            )}${h % 2 ? " (ẩn)" : ""}</div>`,
+        )
+        .join(""),
+    k = canReroll(n)
+      ? s.cand
+        ? (() => {
+            const c = magPowerDelta(n, s.cand),
+              o = c > 5e-4 ? "cp" : c < -5e-4 ? "cn" : "dim";
+            return `<div class="forgecmp"><div class="sl"><b>Dòng cũ</b>${u(n.mag)}</div><div class="sl"><b>Dòng mới</b>${u(s.cand)}</div></div>
+      <p class="small">${Object.values(S.eq).includes(n) ? "Sức mạnh nhân vật" : "Chỉ số món"} nếu nhận: <b class="${o}">${pctTxt(c)}</b></p>
+      <div class="btnrow"><button class="btn" id="fRrOk">Nhận dòng mới</button><button class="btn" id="fRrNo">Giữ dòng cũ</button></div>`;
+          })()
+        : `<small>Đánh dấu dòng muốn <b>giữ lại</b> (mỗi dòng +${REROLL_KEEP * 100}% giá). Kết quả hiện để so sánh trước khi nhận.</small>
+      ${n.mag
+        .map(
+          (c, o) =>
+            `<label class="keepl"><input type="checkbox" data-keep="${o}" ${s.keep.has(o) ? "checked" : ""}><span class="${o % 2 ? "h" : "m"}">${esc(
+              attrText(
+                attrName(c.a),
+                c.p.map((h) => (h === -1 ? 0 : h)),
+              ),
+            )}${o % 2 ? " (ẩn)" : ""}</span></label>`,
+        )
+        .join("")}
+      <div class="btnrow"><button class="btn red" id="fRe" ${S.gold >= d && i < n.mag.length ? "" : "disabled"}>Tẩy luyện (${fmtL(d)} lượng${i ? `, giữ ${i} dòng` : ""})</button></div>`
+      : '<small class="dim">Đồ trắng / đồ bộ / đồ Tím không tẩy luyện được</small>';
+  modal(
+    `<h3>Rèn đồ <small>${S.knb | 0} KNB · ${fmtL(S.gold)} lượng</small></h3>${itemHTML(n)}
+    ${
+      enhAllowed(n)
+        ? `    <div class="card"><b>Cường hóa</b> <small class="dim">+${a} / +${ENH_MAX} · mỗi cấp +${Math.round(ENH_STEP * 100)}% thuộc tính gốc, +${Math.round(ENH_LINE_STEP * 100)}% các dòng thuộc tính</small><br>
+      ${e ? '<small class="dim">Đã cường hóa tối đa</small>' : `<small>Giá ${enhCost(n)} KNB (có ${S.knb | 0}) · thành công ${Math.round(enhChance(n) * 100)}% · ${enhDrops(a) ? '<b class="cn">thất bại tụt về +' + (a - 1) + "</b>" : "thất bại chỉ mất KNB"}${t != null ? ` · sức mạnh <b class="cp">${pctTxt(t)}</b>` : ""}</small>`}
+      <div class="btnrow"><button class="btn" id="fEnh" ${e || (S.knb | 0) < enhCost(n) ? "disabled" : ""}>Cường hóa lên +${a + 1}</button></div>
+      ${e ? "" : `<div class="btnrow"><small>Liên tục tới</small>${l}<button class="btn" id="fEnhTo" ${(S.knb | 0) < enhCost(n) ? "disabled" : ""}>Cường hóa liên tục</button></div><small class="dim">≈ KNB kỳ vọng. Từ +6 trở lên thất bại tụt 1 cấp. Dừng khi đạt mức hoặc hết KNB.</small>`}</div>`
+        : '<div class="card"><b>Cường hóa</b><br><small class="dim">Ngựa không cường hóa được</small></div>'
+    }
+    <div class="card"><b>Tẩy luyện</b> <small class="dim">gieo lại ${(n.mag || []).length} dòng thuộc tính</small><br>${k}</div>
+    ${verVio() && !n.set && n.d >= 0 && n.d <= 9 && (isPhoiSrc(n) || n.vio) ? `<div class="card"><b>💎 Lò Ép Đồ</b> <small class="dim">${n.vio ? "khảm đá thuộc tính vào phôi Huyền Tinh này" : "lấy thuộc tính thành đá, hoặc chế tạo thành phôi Huyền Tinh"}</small><div class="btnrow"><button class="btn" id="fEp">Mở Lò Ép Đồ</button></div></div>` : ""}${platCard(n)}`,
+    () => {
+      const c = $("#fEnh");
+      c && (c.onclick = () => enhance(n));
+      const o = $("#fEnhTo");
+      o &&
+        (o.onclick = () => {
+          if (!owned(n)) return closeModal();
+          const r = enhanceTo(n, +$("#fTgt").value, S.knb | 0);
+          (toast(
+            r.tries
+              ? `+${r.from} → +${n.enh || 0}: ${r.tries} lần, ${r.fail} thất bại, −${r.spent} KNB`
+              : "Không đủ Kim Nguyên Bảo",
+          ),
+            uiSfx(r.ok ? "learn" : "use"),
+            forgeModal(n),
+            r.tries && enhFx((n.enh || 0) > r.from, n.enh || 0, (n.enh || 0) < r.from));
+        });
+      const h = $("#fRe");
+      h && (h.onclick = () => rerollPreview(n));
+      const m = $("#fRrOk"),
+        p = $("#fRrNo");
+      (m && (m.onclick = () => rerollAccept(n)),
+        p &&
+          (p.onclick = () => {
+            ((s.cand = null), toast("Giữ dòng cũ"), forgeModal(n));
+          }),
+        document.querySelectorAll("#mBody [data-keep]").forEach(
+          (r) =>
+            (r.onchange = () => {
+              const v = +r.dataset.keep;
+              (r.checked ? s.keep.add(v) : s.keep.delete(v), forgeModal(n));
+            }),
+        ));
+      const f = $("#fHtLo");
+      f && (f.onclick = () => htModal());
+      const g = $("#fEp");
+      g && (g.onclick = () => epModal(n.vio ? "kham" : isHutSrc(n) ? "hut" : "phoi", n.uid));
+      const b = $("#fPlat");
+      b && (b.onclick = () => afterRc(upgradePlatina(n), () => forgeModal(n)));
+    },
+  );
+}
+let BF = { tgt: 5, pct: 50 };
+const batchItems = () => SLOTS.map(([n]) => S.eq[n]).filter((n) => n && n.d !== 10);
+function batchForge(n, a) {
+  const e = { tries: 0, ok: 0, spent: 0, items: new Set() };
+  for (let t = 0; t < 600; t++) {
+    const s = batchItems()
+      .filter((d) => (d.enh || 0) < n)
+      .sort((d, u) => enhCost(d) - enhCost(u))[0];
+    if (!s || enhCost(s) > (S.knb | 0) || e.spent + enhCost(s) > a) break;
+    const l = enhCost(s),
+      i = enhTry(s);
+    if (i === null) break;
+    (e.tries++, (e.spent += l), i && (e.ok++, e.items.add(s)));
+  }
+  return (
+    e.tries &&
+      ((R.dirty = !0),
+      (invDirty = !0),
+      log(`Cường hóa hàng loạt: ${e.tries} lần, ${e.ok} thành công, −${e.spent} KNB`),
+      save()),
+    e
+  );
 }
 function batchForgeModal() {
-  const items = batchItems(), need = items.reduce((a, it) => a + enhExpected(it, Math.max(BF.tgt, it.enh || 0)), 0), budget = Math.floor(S.gold * BF.pct / 100);
-  modal(`<h3>Cường hóa hàng loạt <small>${fmt(S.gold)} lượng</small></h3>
-    <p class="desc">Nâng mọi món đang mặc (trừ ngựa) lên mức mục tiêu, mỗi bước chọn món rẻ nhất trước. Thất bại chỉ mất ngân lượng.</p>
-    <div class="card lootf"><div class="row">Mục tiêu <select id="bfT">${Array.from({ length: ENH_MAX }, (_, i) => i + 1).map(t => `<option value="${t}" ${t === BF.tgt ? 'selected' : ''}>+${t}</option>`).join('')}</select>
-      · ngân sách <select id="bfP">${[25, 50, 75, 100].map(p => `<option value="${p}" ${p === BF.pct ? 'selected' : ''}>${p}%</option>`).join('')}</select> (${fmt(budget)} lượng)</div>
-      <div class="stats">${items.map(it => `<span>${esc(it.n)}</span><span>+${it.enh || 0}${(it.enh || 0) < BF.tgt ? ` → +${BF.tgt} ≈${fmt(enhExpected(it, BF.tgt))}` : ' ✔'}</span>`).join('') || '<span class="dim">Chưa mặc trang bị</span><span></span>'}</div>
-      <p class="small">Chi phí kỳ vọng tổng: <b>${fmt(need)}</b> lượng${need > budget ? ' (vượt ngân sách: sẽ dừng giữa chừng)' : ''}</p>
-      <div class="btnrow"><button class="btn" id="bfGo" ${need > 0 && budget > 0 ? '' : 'disabled'}>Bắt đầu</button></div></div>`, () => {
-    $('#bfT').onchange = e => { BF.tgt = +e.target.value; batchForgeModal(); };
-    $('#bfP').onchange = e => { BF.pct = +e.target.value; batchForgeModal(); };
-    $('#bfGo').onclick = () => { const r = batchForge(BF.tgt, budget); toast(r.tries ? `${r.tries} lần, ${r.ok} thành công, −${fmt(r.spent)} lượng` : 'Không đủ ngân lượng'); uiSfx(r.ok ? 'learn' : 'use'); refresh(); batchForgeModal(); };
-  });
+  const n = batchItems(),
+    a = n.reduce((t, s) => t + enhExpected(s, Math.max(BF.tgt, s.enh || 0)), 0),
+    e = Math.floor(((S.knb | 0) * BF.pct) / 100);
+  modal(
+    `<h3>Cường hóa hàng loạt <small>${S.knb | 0} KNB</small></h3>
+    <p class="desc">Nâng mọi món đang mặc (trừ ngựa) lên mức mục tiêu, mỗi bước chọn món rẻ nhất trước. Từ +6 trở lên thất bại tụt 1 cấp.</p>
+    <div class="card lootf"><div class="row">Mục tiêu <select id="bfT">${Array.from(
+      { length: ENH_MAX },
+      (t, s) => s + 1,
+    )
+      .map((t) => `<option value="${t}" ${t === BF.tgt ? "selected" : ""}>+${t}</option>`)
+      .join("")}</select>
+      · ngân sách <select id="bfP">${[25, 50, 75, 100].map((t) => `<option value="${t}" ${t === BF.pct ? "selected" : ""}>${t}%</option>`).join("")}</select> (${e} KNB)</div>
+      <div class="stats">${n.map((t) => `<span>${esc(t.n)}</span><span>+${t.enh || 0}${(t.enh || 0) < BF.tgt ? ` → +${BF.tgt} ≈${fmt(enhExpected(t, BF.tgt))}` : " ✔"}</span>`).join("") || '<span class="dim">Chưa mặc trang bị</span><span></span>'}</div>
+      <p class="small">KNB kỳ vọng tổng: <b>${a}</b> KNB${a > e ? " (vượt ngân sách: sẽ dừng giữa chừng)" : ""}</p>
+      <div class="btnrow"><button class="btn" id="bfGo" ${a > 0 && e > 0 ? "" : "disabled"}>Bắt đầu</button></div></div>`,
+    () => {
+      (($("#bfT").onchange = (t) => {
+        ((BF.tgt = +t.target.value), batchForgeModal());
+      }),
+        ($("#bfP").onchange = (t) => {
+          ((BF.pct = +t.target.value), batchForgeModal());
+        }),
+        ($("#bfGo").onclick = () => {
+          const t = batchForge(BF.tgt, e);
+          (toast(t.tries ? `${t.tries} lần, ${t.ok} thành công, −${t.spent} KNB` : "Không đủ Kim Nguyên Bảo"),
+            uiSfx(t.ok ? "learn" : "use"),
+            refresh(),
+            batchForgeModal());
+        }));
+    },
+  );
 }
-/* Lo Huyen Tinh: hop tu 3 mon, thang cap Huyen Tinh va khoang */
-/* Lo Hoang Kim · Bach Kim: ghep manh + che Bach Kim. Huyen Tinh / da thuoc tinh: chi o Lo Ep Do (epdo.js) */
 function htModal() {
-  const shards = Object.keys(mats().shard), gpool = Object.values(S.eq).filter(x => x && canPlatBase(x)).concat(S.inv.filter(canPlatBase)).sort((a, b) => !platReady(b) - !platReady(a));
-  modal(`<h3>Lò Hoàng Kim · Bạch Kim <small>${fmt(S.gold)} lượng</small></h3>
-    ${verVio() ? `<div class="card"><b>💎 Huyền Tinh · đá thuộc tính · đồ Tím</b> <small class="dim">luyện / thăng cấp Huyền Tinh, lấy thuộc tính, chế phôi, khảm nạm đều ở Lò Ép Đồ</small><div class="btnrow"><button class="btn" id="htEp">Mở Lò Ép Đồ</button></div></div>` : ''}
+  const n = Object.keys(mats().shard),
+    a = Object.values(S.eq)
+      .filter((e) => e && canPlatBase(e))
+      .concat(S.inv.filter(canPlatBase))
+      .sort((e, t) => !platReady(t) - !platReady(e));
+  modal(
+    `<h3>Lò Hoàng Kim <small>${fmtL(S.gold)} lượng</small></h3>
+    ${verVio() ? '<div class="card"><b>💎 Huyền Tinh · đá thuộc tính · đồ Tím</b> <small class="dim">luyện / thăng cấp Huyền Tinh, lấy thuộc tính, chế phôi, khảm nạm đều ở Lò Ép Đồ</small><div class="btnrow"><button class="btn" id="htEp">Mở Lò Ép Đồ</button></div></div>' : ""}
     <div class="card"><b>Mảnh Hoàng Kim</b> <small class="dim">đủ mảnh ghép thành món bộ (rơi từ trùm)</small>
-      ${shards.map(n => `<div class="btnrow"><small>${esc(n)} ${matHave('shard', n)}/${SHARDS[n]}</small><button class="btn" data-sh="${esc(n)}" ${matHave('shard', n) >= SHARDS[n] ? '' : 'disabled'}>Ghép</button></div>`).join('') || '<small class="dim">Chưa có mảnh</small>'}</div>
-    <div class="card"><b>Chế Bạch Kim (Thiên Tứ…)</b> <small class="dim">2 món Hoàng Kim trùng tên (món phụ tự chọn trong hành trang) + ${PLAT_MAKE.inputs[1].qty} Thủy Tinh Trắng (có ${matHave('misc', 'wc')}) + ${PLAT_MAKE.inputs[2].qty} Thần Bí Khoáng Thạch (có ${matHave('misc', 'mys')}) + ${fmt(platCost(PLAT_MAKE.cost.van))} lượng · thành công ${PLAT_MAKE.rate}%, thất bại chỉ mất nguyên liệu. Món đang mặc chế xong tự mặc lại.</small>
-      ${gpool.map(i => { const res = platResult(i.n), fl = platFiller(i), why = platReady(i), worn = Object.values(S.eq).includes(i);
-        return `<div class="platrow"><span><b style="color:${RAR_COL[4]}">${esc(i.n)}</b>${worn ? ' <small class="cp">đang mặc</small>' : ''}${i.lock ? ' 🔒' : ''}<br><small>→ <span style="color:${RAR_COL[5]}">${esc(res ? res.n : '?')}</span><br>${fl ? 'Phụ: ' + esc(fl.n) + ' ✔' : `<span class="cn">${platLockedTwin(i) ? 'Món trùng tên đang khóa 🔒' : 'Chưa có món trùng tên'}</span>`}</small></span>
-          <span class="btnrow"><button class="btn sm" data-pm="${i.uid}" ${why ? `disabled title="${esc(why)}"` : ''}>Chế</button><button class="btn sm" data-pu="${i.uid}" ${why ? 'disabled' : ''}>Tới khi được</button></span></div>`; }).join('') || '<small class="dim">Chưa có Hoàng Kim nào chế được Bạch Kim</small>'}</div>`, () => {
-    const ep = $('#htEp'); if (ep) ep.onclick = () => epModal('tl');
-    document.querySelectorAll('#mBody [data-sh]').forEach(b => b.onclick = () => afterRc(combineShards(b.dataset.sh), htModal));
-    document.querySelectorAll('#mBody [data-pm]').forEach(b => b.onclick = () => { const it = gpool.find(i => i.uid === +b.dataset.pm); if (it) afterRc(makePlatina(it), htModal); });
-    document.querySelectorAll('#mBody [data-pu]').forEach(b => b.onclick = () => { const it = gpool.find(i => i.uid === +b.dataset.pu); if (it) afterRc(makePlatinaUntil(it), htModal); });
-  });
+      ${n.map((e) => `<div class="btnrow"><small>${esc(e)} ${matHave("shard", e)}/${SHARDS[e]}</small><button class="btn" data-sh="${esc(e)}" ${matHave("shard", e) >= SHARDS[e] ? "" : "disabled"}>Ghép</button></div>`).join("") || '<small class="dim">Chưa có mảnh</small>'}</div>
+${
+  verPlat()
+    ? `    <div class="card"><b>Chế Bạch Kim (Thiên Tứ…)</b> <small class="dim">2 món Hoàng Kim trùng tên (món phụ tự chọn trong hành trang) + ${PLAT_MAKE.inputs[1].qty} Thủy Tinh Trắng (có ${matHave("misc", "wc")}) + ${PLAT_MAKE.inputs[2].qty} Thần Bí Khoáng Thạch (có ${matHave("misc", "mys")}) + ${fmtL(platCost(PLAT_MAKE.cost.van))} lượng · thành công ${PLAT_MAKE.rate}%, thất bại chỉ mất nguyên liệu. Món đang mặc chế xong tự mặc lại.</small>
+      ${
+        a
+          .map((e) => {
+            const t = platResult(e.n),
+              s = platFiller(e),
+              l = platReady(e),
+              i = Object.values(S.eq).includes(e);
+            return `<div class="platrow"><span><b style="color:${RAR_COL[4]}">${esc(e.n)}</b>${i ? ' <small class="cp">đang mặc</small>' : ""}${e.lock ? " 🔒" : ""}<br><small>→ <span style="color:${RAR_COL[5]}">${esc(t ? t.n : "?")}</span><br>${s ? "Phụ: " + esc(s.n) + " ✔" : `<span class="cn">${platLockedTwin(e) ? "Món trùng tên đang khóa 🔒" : "Chưa có món trùng tên"}</span>`}</small></span>
+          <span class="btnrow"><button class="btn sm" data-pm="${e.uid}" ${l ? `disabled title="${esc(l)}"` : ""}>Chế</button><button class="btn sm" data-pu="${e.uid}" ${l ? "disabled" : ""}>Tới khi được</button></span></div>`;
+          })
+          .join("") || '<small class="dim">Chưa có Hoàng Kim nào chế được Bạch Kim</small>'
+      }</div>`
+    : ""
+}`,
+    () => {
+      const e = $("#htEp");
+      (e && (e.onclick = () => epModal("tl")),
+        document
+          .querySelectorAll("#mBody [data-sh]")
+          .forEach((t) => (t.onclick = () => afterRc(combineShards(t.dataset.sh), htModal))),
+        document.querySelectorAll("#mBody [data-pm]").forEach(
+          (t) =>
+            (t.onclick = () => {
+              const s = a.find((l) => l.uid === +t.dataset.pm);
+              s && afterRc(makePlatina(s), htModal);
+            }),
+        ),
+        document.querySelectorAll("#mBody [data-pu]").forEach(
+          (t) =>
+            (t.onclick = () => {
+              const s = a.find((l) => l.uid === +t.dataset.pu);
+              s && afterRc(makePlatinaUntil(s), htModal);
+            }),
+        ));
+    },
+  );
 }
