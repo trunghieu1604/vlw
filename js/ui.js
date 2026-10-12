@@ -939,15 +939,89 @@ function renderInv() {
       .querySelectorAll("#t-inv .invgrid .it")
       .forEach((l) => (l.onclick = () => itemModal(findItem(l.dataset.uid)))));
 }
+async function resetGameAll() {
+  if (
+    !confirm(
+      "Bạn có chắc chắn muốn xóa toàn bộ dữ liệu và chơi lại từ đầu không?\n\nToàn bộ nhân vật, trang bị, kho đồ và cài đặt sẽ bị xóa hoàn toàn!"
+    )
+  ) {
+    return;
+  }
+  try {
+    if (typeof SAVE_LOCK !== "undefined") SAVE_LOCK = true;
+    if (typeof save === "function") save = () => {};
+    window.onbeforeunload = null;
+  } catch (e) {}
+
+  try {
+    if (typeof API !== "undefined" && API && API.setToken) API.setToken(null);
+    if (typeof NET !== "undefined" && NET) NET.user = null;
+  } catch (e) {}
+
+  try {
+    localStorage.clear();
+  } catch (e) {}
+
+  try {
+    sessionStorage.clear();
+  } catch (e) {}
+
+  try {
+    if (window.indexedDB && indexedDB.databases) {
+      const dbs = await indexedDB.databases();
+      for (const db of dbs) {
+        if (db && db.name) indexedDB.deleteDatabase(db.name);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (e) {}
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        await reg.unregister();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+  } catch (e) {}
+
+  try {
+    if (location.protocol === "file:") {
+      location.reload();
+    } else {
+      location.href = location.pathname + "?reset=" + Date.now();
+    }
+  } catch (e) {
+    location.reload();
+  }
+}
+window.resetGameAll = resetGameAll;
+
 function renderMore() {
   setTimeout(() => {
+    const r = document.getElementById("bResetGame");
+    r && (r.onclick = () => resetGameAll());
     const e = document.getElementById("bGcode");
     e && (e.onclick = () => giftcodeModal());
     const o = document.getElementById("bLogout");
     o && typeof netLogout == "function" && (o.onclick = () => netLogout(o));
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
-  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>${
+  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>${
     n
       ? "" // online: saved on the server automatically; no cloud-save / slot / delete controls in our version
       : `<h3>Lưu game</h3><div class="card"><p class="dim small">Nhân vật lưu trong trình duyệt của từng thiết bị (3 slot). Để chơi trên thiết bị khác: bấm <b>Tải file lưu</b>, chuyển file <code>.jxsave</code> sang thiết bị kia (Zalo, Drive, cáp…), rồi mở game ở đó và bấm <b>Nạp từ file</b>. File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p>
