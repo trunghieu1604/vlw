@@ -422,6 +422,10 @@ function heroHit(t, n) {
   );
 }
 function enemyHit(t) {
+  if (typeof isGodMode == "function" && isGodMode()) {
+    addText(H.x, H.y - 30, "Bất tử", "#ffd24a", 11);
+    return;
+  }
   const n = typeof curseMod == "function" ? curseMod(t) : null;
   if (Math.random() * 100 >= hitPercent(t.ar * (n ? Math.max(0.1, 1 + n.ar / 100) : 1), R.P.def)) {
     addText(H.x, H.y - 30, "Né", "#9cf", 11);
@@ -1017,6 +1021,11 @@ function waveCleared() {
     typeof onStageChange == "function" && onStageChange());
 }
 function heroDeath() {
+  if (typeof isGodMode == "function" && isGodMode() && R.P) {
+    R.life = R.P.life;
+    R.hpDot = R.hpDotT = 0;
+    return;
+  }
   if (
     (R.enemies.some((t) => t.goldBoss && !t.dead) && (RW().gbT = GB_RETRY),
     (R.deadT = 3),

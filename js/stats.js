@@ -55,7 +55,7 @@ function slotOfEquipped(t, n) {
   return null;
 }
 function hiddenActive(t, n = S.eq) {
-  if (t.leg || (t.set && t.d === 10) || enoughToActive(n)) return 3;
+  if (t.leg || (t.set && t.d === 10) || enoughToActive(n)) return 10;
   const e = slotOfEquipped(t, n);
   if (!e) return 0;
   if (e === "horse") return 3;

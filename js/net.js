@@ -563,6 +563,79 @@ async function netRedeem(t) {
     };
   }
 
+  // Giftcode Càn Khôn Giới Chỉ (Tân Thủ)
+  if (t === "NEWBIE") {
+    if (S.inv.length >= INV_MAX) throw new Error(`Hành trang đã đầy (${S.inv.length}/${INV_MAX})! Cần ít nhất 1 ô trống.`);
+    const ring = {
+      uid: S.uid++,
+      d: 3, // Ring
+      k: 0,
+      p: 9,
+      n: "Càn Khôn Giới Chỉ",
+      ic: "img/i/g44.png",
+      lvl: 1,
+      s: -1,
+      base: [],
+      req: [[36, 1]],
+      price: 9999999,
+      mag: [
+        { a: 114, p: [60, 60, 0], n: "Kháng tất cả", pre: 1 },
+        { a: 85, p: [5000, 5000, 0], n: "Sinh lực tối đa", pre: 0 },
+        { a: 89, p: [5000, 5000, 0], n: "Nội lực tối đa", pre: 1 },
+        { a: 86, p: [50, 50, 0], n: "Sinh lực tối đa", pre: 0 },
+        { a: 139, p: [5, 0, 0], n: "Tất cả kỹ năng", pre: 1 },
+        { a: 111, p: [60, 60, 0], n: "Tốc độ di chuyển", pre: 0 },
+        { a: 115, p: [50, 50, 0], n: "Tốc độ đánh", pre: 1 },
+        { a: 116, p: [50, 50, 0], n: "Tốc độ xuất chiêu", pre: 0 },
+        { a: 67, p: [25, 25, 0], n: "Hút sinh lực", pre: 1 },
+        { a: 68, p: [25, 25, 0], n: "Hút nội lực", pre: 0 },
+        { a: 135, p: [100, 100, 0], n: "May mắn", pre: 1 },
+        { a: 71, p: [30, 30, 0], n: "Tấn công chí mạng", pre: 0 },
+        { a: 88, p: [500, 500, 0], n: "Phục hồi sinh lực", pre: 1 },
+        { a: 160, p: [15, 15, 0], n: "Kháng tối đa", pre: 0 },
+      ],
+      r: 2, // Hoàng Kim
+      leg: 1, // Kích hoạt toàn bộ thuộc tính
+      rareH: 1,
+    };
+    S.inv.unshift(ring);
+    typeof recItem == "function" && recItem(ring);
+    S.gc[t] = Date.now();
+    typeof invDirty != "undefined" && (invDirty = !0);
+    R.dirty = !0;
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công trang bị Hoàng Kim <b>${esc(ring.n)}</b>!`);
+    return {
+      note: "Càn Khôn Giới Chỉ (Hoàng Kim)",
+      out: ["Càn Khôn Giới Chỉ"],
+    };
+  }
+
+  // Giftcode Danh hiệu Administrator (Bất tử)
+  if (t === "TRUNGHIEUKHOAITO") {
+    const rw = RW();
+    rw.titles = rw.titles || {};
+    rw.titles.admin = 1;
+    rw.title = "admin"; // Đeo ngay danh hiệu
+    S.gc[t] = Date.now();
+    R.dirty = !0;
+    if (R.P) {
+      R.life = R.P.life;
+      R.mana = R.P.mana;
+      R.hpDot = R.hpDotT = 0;
+    }
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận và kích hoạt Danh hiệu <b>«Administrator»</b> (Bất tử)!`);
+    return {
+      note: "Danh hiệu Administrator (Bất tử khi đeo)",
+      out: ["Danh hiệu «Administrator» (Bất tử)"],
+    };
+  }
+
   if (NET && NET.user && typeof netCall == "function") {
     await netSyncChar().catch(() => {});
     const e = (await netCall((a) => a.post("/api/giftcode", { code: t, cname: S.name }))) || {};

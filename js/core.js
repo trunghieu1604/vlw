@@ -291,3 +291,11 @@ const STAGES = ZONES.length * ZONE_STAGES,
   },
   attrName = (n) => J.attr[n] || "#" + n,
   bossName = (n, t) => (MON[n] && /^Tiểu Boss/i.test(MON[n].n) ? `Bá Chủ ${t || ""}`.trim() : MON[n] ? MON[n].n : "");
+
+function isGodMode() {
+  if (typeof S === "undefined" || !S) return false;
+  if (S.rw && S.rw.title === "admin") return true;
+  if (typeof R !== "undefined" && R && R.admGod && typeof admOk === "function" && admOk()) return true;
+  return false;
+}
+window.isGodMode = isGodMode;

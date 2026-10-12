@@ -223,6 +223,16 @@ const CAMP = {
       ["allres_p", 4],
     ],
     ["rich", "Phú Giáp Nhất Phương", "Giang hồ", 3, () => S.gold >= 1e7, "Có 10 triệu lượng", ["lucky_v", 12]],
+    [
+      "admin",
+      "ADMINISTRATOR",
+      "Đặc biệt",
+      5,
+      () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
+      "Danh hiệu GM · Bất tử khi đeo",
+      ["allres_p", 99],
+      true,
+    ],
   ],
   TITLE_BY = Object.fromEntries(TITLES.map((n) => [n[0], n])),
   titleName = (n) => (typeof n[1] == "function" ? n[1]() : n[1]),
@@ -262,17 +272,18 @@ function titleModal() {
   titleCheck();
   const n = TT(),
     t = titleWorn(),
-    h = [...new Set(TITLES.map((i) => i[2]))],
-    c = TITLES.filter((i) => n[i[0]]).length,
+    list = TITLES.filter((a) => !a[7] || n[a[0]]),
+    h = [...new Set(list.map((i) => i[2]))],
+    c = list.filter((i) => n[i[0]]).length,
     s = CAMP_INFO[campOf(S.fac)];
   modal(
-    `<h3>🎖 Danh hiệu <small>${c}/${TITLES.length}</small></h3>
+    `<h3>🎖 Danh hiệu <small>${c}/${list.length}</small></h3>
     <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">«${esc(titleName(t))}»</b>` : "Chưa đeo danh hiệu."}</p>
     ${h
       .map(
         (i) =>
           `<h3>${i}</h3>` +
-          TITLES.filter((a) => a[2] === i)
+          list.filter((a) => a[2] === i)
             .map((a) => {
               const e = !!n[a[0]],
                 l = t === a;

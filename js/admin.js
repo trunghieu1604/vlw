@@ -62,7 +62,7 @@ function admDo(fn) {
   S.adm = 1;
   R.dirty = !0;
   typeof invDirty != "undefined" && (invDirty = !0);
-  log(`<span class="admlog">[Admin]</span> ${msg}`);
+  log(`<span class="admlog">[Hệ Thống]</span> ${msg}`);
   toast(msg.replace(/<[^>]+>/g, ""));
   uiSfx("use");
   save();
@@ -657,7 +657,7 @@ function admModal() {
     ls = $("#mBody .admlist"),
     lsc = ls ? ls.scrollTop : 0;
   modal(
-    `<div class="admbox"><h3><img src="${ADM_IC}" alt="" class="admic"> ${ADM_NAME} <small>${admHostOk() ? "admin online" : "offline"} · phím 0</small></h3>
+    `<div class="admbox"><h3><img src="${ADM_IC}" alt="" class="admic"> ${ADM_NAME} <small>${admHostOk() ? "admin online" : "v3.0.6 Final"}</small></h3>
     <div class="dtabs admtabs">${ADM_TABS.map(([k, n]) => `<button data-at="${k}" class="${k === admTab ? "on" : ""}">${n}</button>`).join("")}</div>
     ${admChRow()}<div class="admbody">${body()}</div></div>`,
     () => {
