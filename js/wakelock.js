@@ -63,6 +63,13 @@
     }, { passive: true });
   });
 
+  // Mở khóa xoay màn hình tự do (cho phép xoay ngang trên Android)
+  try {
+    if (window.screen && window.screen.orientation && typeof window.screen.orientation.unlock === "function") {
+      window.screen.orientation.unlock();
+    }
+  } catch (e) {}
+
   // Khởi động ngay
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", requestWakeLock);
