@@ -229,8 +229,8 @@ const CAMP = {
       "Đặc biệt",
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
-      "Đặc Quyền Chí Tôn · Vòng Sáng Chuyển Sinh 5",
-      [["allres_p", 99], ["lifemax_p", 50], ["fastwalkrun_p", 30], ["lucky_v", 99]],
+      "Vòng Sáng Hoàng Kim",
+      ["allres_p", 99],
       true,
     ],
   ],
@@ -294,7 +294,7 @@ function titleModal() {
                 l = t === a,
                 isAdm = a[0] === "admin";
               const royalStyle = isAdm ? `style="background:linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22));border:1.5px solid #ffd700;box-shadow:0 0 10px rgba(255,180,0,0.35);border-radius:6px;padding:6px 8px;margin:4px 0"` : "";
-              const royalTitle = isAdm ? `<b style="color:#ffd700;text-shadow:0 0 8px #ff9900;font-size:13px">${esc(titleName(a))}</b> <span style="background:#ff3b30;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:bold;margin-left:4px">ĐẶC QUYỀN ADMIN</span>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
+              const royalTitle = isAdm ? `<b style="color:#ffd700;text-shadow:0 0 8px #ff9900;font-size:13px">${esc(titleName(a))}</b> <small class="dim">${TIER[a[3]].n}</small>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
               const attrStr = Array.isArray(a[6][0]) ? a[6].map((x) => attrText(x[0], [x[1], 0, 0])).join(" · ") : attrText(a[6][0], [a[6][1], 0, 0]);
               return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])} · ${esc(attrStr)}</small></span><small></small>
         <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${isAdm && !l ? "background:#c98d1a;color:#fff;border-color:#ffd700" : ""}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;

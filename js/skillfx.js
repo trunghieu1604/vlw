@@ -27,9 +27,54 @@ function heroStates() {
   }
   return ((R.stKey = f), (R.stList = e), e);
 }
+let CS_GOLD_CV = null;
+function getCsGold(r) {
+  if (!r || !r.complete || !r.naturalWidth) return r;
+  if (CS_GOLD_CV && CS_GOLD_CV._src === r.src && CS_GOLD_CV.width === r.naturalWidth) {
+    return CS_GOLD_CV;
+  }
+  const cv = document.createElement("canvas");
+  cv.width = r.naturalWidth;
+  cv.height = r.naturalHeight;
+  const ctx = cv.getContext("2d");
+  ctx.drawImage(r, 0, 0);
+  try {
+    const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 5) continue;
+      const lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+      const t = lum / 255;
+      if (t <= 0.45) {
+        const k = t / 0.45;
+        d[i] = Math.min(255, Math.round(255 * (0.35 + 0.65 * k)));
+        d[i + 1] = Math.min(255, Math.round(55 + 105 * k));
+        d[i + 2] = Math.min(255, Math.round(4 + 16 * k));
+      } else {
+        const k = (t - 0.45) / 0.55;
+        d[i] = 255;
+        d[i + 1] = Math.min(255, Math.round(160 + 85 * k));
+        d[i + 2] = Math.min(255, Math.round(20 + 175 * k));
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } catch (err) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(r, 0, 0);
+    ctx.globalCompositeOperation = "color";
+    ctx.fillStyle = "#ff9500";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.drawImage(r, 0, 0);
+  }
+  cv._src = r.src;
+  CS_GOLD_CV = cv;
+  return cv;
+}
 function drawState(s, t, f, c, n, e, o, i = 1) {
-  const r = img(t.f);
-  if (!r.complete || !r.naturalWidth) return;
+  let r = img(t.f);
+  if (!r || !r.complete || !r.naturalWidth) return;
+  if (t.gold) r = getCsGold(r);
   const u = Math.floor((e * 1e3) / t.ms) % t.n,
     a = c;
   ((o *= ST_K),
@@ -43,7 +88,8 @@ const JXCS = {
   3: { f: "fx/cs_3.webp", n: 15, w: 125, h: 128, ax: 63, ay: 90, ms: 80, pos: "foot" },
   4: { f: "fx/cs_4.webp", n: 14, w: 113, h: 61, ax: 57, ay: 31, ms: 100, pos: "foot" },
   5: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
-};
+},
+JXCS_ROYAL = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", gold: true };
 // JX1 (KNpcRes::Draw) draws a state SPR at the npc's position with its own centre, raised by a FIXED height
 // (scene z, drawn as z*887/1024 screen px), never by the current animation frame:
 //   head: z 70, +28 on a horse      body: z 0, +38 on a horse      foot: z 0 (ground, under the horse)
@@ -60,9 +106,12 @@ function drawHeroStates(s, t, f) {
   if (t === "under" && S.lookFx !== !1) {
     const tw = typeof titleWorn == "function" && titleWorn();
     const isRoyal = tw && tw[0] === "admin";
-    const rb = typeof rebornN == "function" ? rebornN() : 0;
-    const n = isRoyal ? 5 : Math.min(5, rb);
-    n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
+    if (isRoyal) {
+      drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
+    } else if (typeof rebornN == "function") {
+      const n = Math.min(5, rebornN());
+      n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
+    }
   }
   for (const n of heroStates())
     (n.pos === "foot") == (t === "under") &&
@@ -93,5 +142,6 @@ function drawEnemyState(s, t, f, c, n) {
   }
 }
 window.JXCS = JXCS;
+window.JXCS_ROYAL = JXCS_ROYAL;
 window.drawState = drawState;
 window.ST_HERO_K = ST_HERO_K;
