@@ -71,10 +71,55 @@ function getCsGold(r) {
   CS_GOLD_CV = cv;
   return cv;
 }
+let CS_RED_CV = null;
+function getCsRed(r) {
+  if (!r || !r.complete || !r.naturalWidth) return r;
+  if (CS_RED_CV && CS_RED_CV._src === r.src && CS_RED_CV.width === r.naturalWidth) {
+    return CS_RED_CV;
+  }
+  const cv = document.createElement("canvas");
+  cv.width = r.naturalWidth;
+  cv.height = r.naturalHeight;
+  const ctx = cv.getContext("2d");
+  ctx.drawImage(r, 0, 0);
+  try {
+    const imgData = ctx.getImageData(0, 0, cv.width, cv.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 5) continue;
+      const lum = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+      const t = lum / 255;
+      if (t <= 0.45) {
+        const k = t / 0.45;
+        d[i] = Math.min(255, Math.round(255 * (0.45 + 0.55 * k)));
+        d[i + 1] = Math.min(255, Math.round(15 + 40 * k));
+        d[i + 2] = Math.min(255, Math.round(5 + 15 * k));
+      } else {
+        const k = (t - 0.45) / 0.55;
+        d[i] = 255;
+        d[i + 1] = Math.min(255, Math.round(55 + 135 * k));
+        d[i + 2] = Math.min(255, Math.round(20 + 160 * k));
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } catch (err) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(r, 0, 0);
+    ctx.globalCompositeOperation = "color";
+    ctx.fillStyle = "#ff1e00";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.drawImage(r, 0, 0);
+  }
+  cv._src = r.src;
+  CS_RED_CV = cv;
+  return cv;
+}
 function drawState(s, t, f, c, n, e, o, i = 1) {
   let r = img(t.f);
   if (!r || !r.complete || !r.naturalWidth) return;
   if (t.gold) r = getCsGold(r);
+  else if (t.red) r = getCsRed(r);
   const u = Math.floor((e * 1e3) / t.ms) % t.n,
     a = c;
   ((o *= ST_K),
@@ -89,7 +134,8 @@ const JXCS = {
   4: { f: "fx/cs_4.webp", n: 14, w: 113, h: 61, ax: 57, ay: 31, ms: 100, pos: "foot" },
   5: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
 },
-JXCS_ROYAL = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", gold: true };
+JXCS_ROYAL = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", gold: true },
+JXCS_RED = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", red: true };
 // JX1 (KNpcRes::Draw) draws a state SPR at the npc's position with its own centre, raised by a FIXED height
 // (scene z, drawn as z*887/1024 screen px), never by the current animation frame:
 //   head: z 70, +28 on a horse      body: z 0, +38 on a horse      foot: z 0 (ground, under the horse)
@@ -105,8 +151,9 @@ function drawHeroStates(s, t, f) {
   const c = R.clock || 0;
   if (t === "under" && S.lookFx !== !1) {
     const tw = typeof titleWorn == "function" && titleWorn();
-    const isRoyal = tw && tw[0] === "admin";
-    if (isRoyal) {
+    if (tw && tw[0] === "vlmc") {
+      drawState(s, JXCS_RED, H.x, H.y, f, c, ST_HERO_K, 0.98);
+    } else if (tw && tw[0] === "admin") {
       drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
     } else if (typeof rebornN == "function") {
       const n = Math.min(5, rebornN());
@@ -143,5 +190,6 @@ function drawEnemyState(s, t, f, c, n) {
 }
 window.JXCS = JXCS;
 window.JXCS_ROYAL = JXCS_ROYAL;
+window.JXCS_RED = JXCS_RED;
 window.drawState = drawState;
 window.ST_HERO_K = ST_HERO_K;

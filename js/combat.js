@@ -31,10 +31,10 @@ const R = {
   },
   inZone = (t) => ((t - 1) % ZONE_STAGES) + 1;
 function stageLevel(t) {
-  if (t > STAGES) return MAX_LEVEL;
+  if (t > STAGES) return BASE_CAP;
   const n = zoneOf(t),
     e = Math.round(n.lo + ((inZone(t) - 1) * (n.hi - n.lo)) / (ZONE_STAGES - 1));
-  return n.lo >= 160 ? Math.min(levelCap(), e) : e;
+  return n.lo >= 160 ? Math.min(BASE_CAP, e) : e;
 }
 const POISON_TIME = 3,
   SERIES_BONUS = 0.1,
@@ -177,17 +177,25 @@ const LV_NEED_FROM = 90,
   LV_NEED_MUL = 10,
   LV_NEED_GROWTH = 1.05,
   lvNeed = (L) => {
-    const b = J.exp[L - 1] || 0,
-      f = expCfg("lvNeed.from", LV_NEED_FROM);
-    return L >= f ? Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f)) : b;
+    const maxIdx = J.exp ? J.exp.length : 200;
+    const b = (J.exp && (L <= maxIdx ? J.exp[L - 1] : J.exp[maxIdx - 1])) || 2e9;
+    const f = expCfg("lvNeed.from", LV_NEED_FROM);
+    if (L < f) return b;
+    if (L <= maxIdx) {
+      return Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f));
+    }
+    const at200 = Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), maxIdx - f));
+    return at200 + (L - maxIdx) * 1e8;
   };
 const XP_OVER = 25,
   XP_SLOW_FROM = 30,
   XP_SLOW_K = 6,
   XP_SLOW_P = 1,
-  xpSlow = (t) => (t <= XP_SLOW_FROM ? 1 : 1 + XP_SLOW_K * Math.pow((t - XP_SLOW_FROM) / 120, XP_SLOW_P));
+  xpSlow = (t) => (t <= XP_SLOW_FROM ? 1 : 1 + XP_SLOW_K * Math.pow((Math.min(t, 200) - XP_SLOW_FROM) / 120, XP_SLOW_P));
 function expFor(t) {
-  return (J.exp[clamp(t, 1, levelCap()) - 1] / (10 + t * 1.4)) * xpPace(t);
+  const maxIdx = J.exp ? J.exp.length : 200;
+  const expVal = (J.exp && J.exp[clamp(t, 1, maxIdx) - 1]) || 2e9;
+  return (expVal / (10 + Math.min(t, 200) * 1.4)) * xpPace(t);
 }
 const XP_DRAG = 14,
   XP_DRAG_LV = [40, 70];
@@ -235,6 +243,7 @@ function monReach(t) {
 }
 const MON_WEAK = [3, 0, 4, 2, 1];
 function makeEnemy(t, n, e, o, i) {
+  n = clamp(Math.round(n) || 1, 1, BASE_CAP);
   const s = MON[t],
     r = zoneOf(S.stage),
     a = enemyStats(n, e),
@@ -990,8 +999,10 @@ function gainXp(t) {
       (1 + buffP("xp")) *
       (1 + buffP("tt"))) /
     xpSlow(S.lvl);
-  for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl);)
-    ((S.xp -= lvNeed(S.lvl)),
+  for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl);) {
+    const need = lvNeed(S.lvl);
+    if (!need || need <= 0) break;
+    ((S.xp -= need),
       S.lvl++,
       (S.attrPts += PTS_PER_LEVEL),
       (S.skPts += SKILL_PTS_PER_LEVEL),
@@ -1001,6 +1012,7 @@ function gainXp(t) {
         `<b class="up">${typeof PCTX < "u" && PCTX ? esc(S.name) + " lên" : "Lên"} cấp ${S.lvl}!</b> +${PTS_PER_LEVEL} tiềm năng, +${SKILL_PTS_PER_LEVEL} kỹ năng`,
       ),
       typeof onLevelUp == "function" && onLevelUp());
+  }
   return e;
 }
 function waveCleared() {

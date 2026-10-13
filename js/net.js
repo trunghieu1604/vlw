@@ -518,54 +518,78 @@ async function netRedeem(t) {
   if (!t) throw new Error("Nhập giftcode");
   if (!/^[A-Z0-9_-]{3,32}$/.test(t)) throw new Error("Giftcode không hợp lệ");
 
-  // Giftcode mở Admin Panel không giới hạn số lần
-  if (t === "ADMINPANEL") {
-    setTimeout(() => {
-      closeModal(!0);
-      setTimeout(() => {
-        if (typeof admOpenDirect == "function") admOpenDirect();
-        else if (typeof admModal == "function") {
-          window.admUnlocked = true;
-          admModal();
-        } else if (typeof admUse == "function") admUse();
-      }, 60);
-    }, 120);
-    return {
-      note: "Mở Lệnh Bài Admin",
-      out: ["Mở Lệnh Bài Admin thành công!"],
-    };
-  }
 
   S.gc = S.gc || {};
   if (S.gc[t]) throw new Error("Mã giftcode này đã được sử dụng!");
 
-  // Giftcode Sư tử (cấp 1) offline
-  if (t === "TRUNGHIEUDEPTRAI") {
+  // Giftcode Tân Thủ (200 Kim Nguyên Bảo)
+  if (t === "TANTHU") {
+    S.knb = (S.knb || 0) + 200;
+    S.gc[t] = Date.now();
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công <b>200 Kim Nguyên Bảo</b>!`);
+    return {
+      note: "Quà Tân Thủ",
+      out: ["200 Kim Nguyên Bảo"],
+    };
+  }
+
+  // Giftcode Tân Thủ 2 (10 bình Tiên Thảo Lộ)
+  if (t === "TANTHU2") {
+    if (typeof addBuff == "function") addBuff("tt", 0.5, 600);
+    S.gc[t] = Date.now();
+    R.dirty = !0;
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công <b>10 bình Tiên Thảo Lộ</b> (+50% kinh nghiệm trong 600 phút)!`);
+    return {
+      note: "Quà Tân Thủ 2",
+      out: ["10 bình Tiên Thảo Lộ (600 phút +50% EXP)"],
+    };
+  }
+
+  // Giftcode Danh hiệu Võ Lâm Minh Chủ (Mở Lệnh Bài Admin tại NPC Trung Hiếu)
+  if (t === "ANDYTRAN") {
+    const rw = RW();
+    rw.titles = rw.titles || {};
+    rw.titles.vlmc = 1;
+    rw.title = "vlmc"; // Đeo ngay danh hiệu
+    S.gc[t] = Date.now();
+    R.dirty = !0;
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận và kích hoạt Danh hiệu <b>VÕ LÂM MINH CHỦ</b>!`);
+    return {
+      note: "Danh hiệu Võ Lâm Minh Chủ",
+      out: ["Danh hiệu VÕ LÂM MINH CHỦ"],
+    };
+  }
+
+  // Giftcode Sư tử Tân Thủ (cấp 1, chỉ +50% tốc độ chạy, không tính trong Trại Ngựa)
+  if (t === "NEWBIE2") {
     if (S.inv.length >= INV_MAX) throw new Error(`Hành trang đã đầy (${S.inv.length}/${INV_MAX})! Cần ít nhất 1 ô trống.`);
-    let lion = null;
-    if (typeof makeItem == "function") lion = makeItem(10, 22, 1, 0);
-    if (!lion) {
-      lion = {
-        uid: S.uid++,
-        d: 10,
-        k: 22,
-        p: 220,
-        n: "Sư tử",
-        ic: "img/i/10_220.png",
-        lvl: 1,
-        s: 5,
-        base: [[111, 120, 120], [93, 1500, 1500], [233, 1500, 1500], [150, 700, 700], [241, 20, 20]],
-        req: [[36, 1]],
-        price: 500000,
-        mag: [],
-        r: 2,
-        rareH: 1,
-      };
-    } else {
-      lion.req = [[36, 1]];
-      lion.r = 2;
-      lion.rareH = 1;
-    }
+    const lion = {
+      uid: S.uid++,
+      d: 10,
+      k: 22,
+      p: 220,
+      n: "Sư tử",
+      ic: "img/i/10_220.png",
+      lvl: 1,
+      s: 5,
+      base: [[111, 50, 50]], // Xóa tất cả dòng, chỉ mỗi dòng tốc độ 50%
+      req: [[36, 1]], // Cấp 1
+      price: 500000,
+      mag: [],
+      r: 2,
+      rareH: 1,
+      gift: 1,
+      noHc: 1, // Không tính trong Trại Ngựa / Bộ sưu tập Mã Trường
+    };
     S.inv.unshift(lion);
     typeof recItem == "function" && recItem(lion);
     S.gc[t] = Date.now();
@@ -574,10 +598,10 @@ async function netRedeem(t) {
     save();
     refresh();
     uiSfx("levelup");
-    log(`<span class="admlog">[Giftcode]</span> Nhận thành công thú cưỡi <b>${esc(lion.n)}</b> (cấp 1)!`);
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công thú cưỡi <b>${esc(lion.n)}</b> (cấp 1, +50% tốc độ di chuyển)!`);
     return {
       note: "Thú cưỡi Sư tử (cấp 1)",
-      out: ["Thú cưỡi Sư tử (cấp 1)"],
+      out: ["Thú cưỡi Sư tử (cấp 1, +50% tốc độ di chuyển)"],
     };
   }
 
@@ -618,12 +642,12 @@ async function netRedeem(t) {
     };
   }
 
-  // Giftcode Danh hiệu Administrator (Bất tử)
-  if (t === "TRUNGHIEUKHOAITO") {
+  // Giftcode Danh hiệu Vô Song Vương Giả
+  if (t === "VOSONG") {
     const rw = RW();
     rw.titles = rw.titles || {};
     rw.titles.admin = 1;
-    rw.title = "admin"; // Đeo ngay danh hiệu
+    rw.title = "admin"; // Đeo ngay danh hiệu Vô Song Vương Giả
     S.gc[t] = Date.now();
     R.dirty = !0;
     if (R.P) {
@@ -634,10 +658,10 @@ async function netRedeem(t) {
     save();
     refresh();
     uiSfx("levelup");
-    log(`<span class="admlog">[Giftcode]</span> Nhận và kích hoạt Danh hiệu <b>«Administrator»</b> (Bất tử)!`);
+    log(`<span class="admlog">[Giftcode]</span> Nhận và kích hoạt Danh hiệu <b>Vô Song Vương Giả</b> (+50% kháng tất cả)!`);
     return {
-      note: "Danh hiệu Administrator (Bất tử khi đeo)",
-      out: ["Danh hiệu «Administrator» (Bất tử)"],
+      note: "Danh hiệu Vô Song Vương Giả",
+      out: ["Danh hiệu Vô Song Vương Giả (+50% kháng)"],
     };
   }
 

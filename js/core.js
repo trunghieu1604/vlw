@@ -81,10 +81,10 @@ const SERIES = J.series,
   IDLE_LIFE_PER_LEVEL = 0,
   PTS_PER_LEVEL = 5,
   SKILL_PTS_PER_LEVEL = 1,
-  MAX_LEVEL = Math.min(200, J.exp.length),
+  MAX_LEVEL = 9999,
   BASE_CAP = 200,
-  levelCap = () => MAX_LEVEL,
   rebornN = () => (typeof S < "u" && S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0,
+  levelCap = () => (rebornN() >= 5 ? 9999 : 200),
   REB_EQ_LV = 200,
   eqLevel = () => S.lvl + REB_EQ_LV * rebornN(),
   ATTR_ID = Object.fromEntries(J.attr.map((n, t) => [n, t])),
@@ -295,7 +295,6 @@ const STAGES = ZONES.length * ZONE_STAGES,
 
 function isGodMode() {
   if (typeof S === "undefined" || !S) return false;
-  if (S.rw && S.rw.title === "admin") return true;
   if (typeof R !== "undefined" && R && R.admGod && typeof admOk === "function" && admOk()) return true;
   return false;
 }

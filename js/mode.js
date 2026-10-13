@@ -1,7 +1,7 @@
 "use strict";
 const BOSS_ROUNDS = 3,
   zoneFirst = (t) => t * ZONE_STAGES + 1,
-  effLv = () => (rebornN() ? MAX_LEVEL : S.lvl),
+  effLv = () => (rebornN() ? Math.max(BASE_CAP, S.lvl) : S.lvl),
   zoneOpen = (t) => !!ZONES[t] && (ZONES[t].lo <= effLv() + 3 || S.maxStage >= zoneFirst(t));
 function bestZoneIdx(t = S.lvl) {
   let n = 0;

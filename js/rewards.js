@@ -300,7 +300,7 @@ function towerStart() {
     (R.banner = { t: 2, text: `Tháp thử thách · tầng ${R.tower.floor}`, sub: "Gục ngã là rời tháp" }),
     closeModal(!0));
 }
-const towerLevel = (t) => Math.min(levelCap(), 10 + t * 4);
+const towerLevel = (t) => Math.min(BASE_CAP, 10 + t * 4);
 function towerSpawn() {
   const t = R.tower.floor,
     n = towerLevel(t),

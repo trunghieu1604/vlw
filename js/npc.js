@@ -63,7 +63,7 @@ function npcSync() {
     NPCV.list.push({
       id: "admin_trunghieu",
       n: "Trung Hiếu",
-      lvl: 999,
+      lvl: 9999,
       reborn: 5,
       tt: "VÕ LÂM MINH CHỦ",
       nameCol: "#bf55ec", // Tên màu tím
@@ -120,9 +120,10 @@ function npcVisible() {
 function npcDraw(c, n) {
   if (n.heroLook) {
     const hov = NPCV.hover === n || NPCV.tgt === n || (NPCV.open && NPCV.open.n === n);
-    // 1. Chuyển sinh 5 lần (vòng sáng lục giác JXCS[5] dưới chân)
-    if (typeof JXCS != "undefined" && JXCS[5] && typeof drawState == "function") {
-      drawState(c, JXCS[5], n.x, n.y, 0, (R && R.clock) || 0, (typeof ST_HERO_K != "undefined" ? ST_HERO_K : 1 / 0.6), 0.95);
+    // 1. Chuyển sinh 5 lần (vòng sáng Chuyển Sinh 5 màu đỏ dưới chân cho NPC Võ Lâm Minh Chủ)
+    const csAura = (typeof JXCS_RED != "undefined" && JXCS_RED) || (typeof JXCS != "undefined" && JXCS[5]);
+    if (csAura && typeof drawState == "function") {
+      drawState(c, csAura, n.x, n.y, 0, (R && R.clock) || 0, (typeof ST_HERO_K != "undefined" ? ST_HERO_K : 1 / 0.6), 0.98);
     }
     // 2. Thân nhân vật Cái Bang, Đằng Long 180 +10, Cưỡi Sư Tử
     const L = typeof presLook == "function" ? presLook(n.heroLook) : null;
@@ -163,7 +164,7 @@ function npcDraw(c, n) {
       12,
       1,
       "#4fd04f",
-      n.tt ? `«${n.tt}»` : "«ADMINISTRATOR»",
+      n.tt || "VÕ LÂM MINH CHỦ",
       n.titleCol || "#ff3333"
     );
     return;
@@ -405,7 +406,7 @@ function viewAdminEquip() {
         name: "Trung Hiếu",
         fac: "gaibang",
         sex: 0,
-        lvl: 999,
+        lvl: 9999,
         reborn: 5,
         main: 357,
         title: "TRANG BỊ",
@@ -428,7 +429,19 @@ function npcTalk(n) {
   H.dir = dirOf(n.x - H.x, n.y - H.y);
   const ops = [];
   switch (n.k) {
-    case "admin_npc":
+    case "admin_npc": {
+      const tw = typeof titleWorn === "function" && titleWorn();
+      const isVlmc = tw && tw[0] === "vlmc";
+      if (isVlmc) {
+        ops.push({
+          t: "Lệnh Bài Admin",
+          f: () => {
+            if (typeof admOpenDirect === "function") admOpenDirect();
+            else if (typeof admModal === "function") admModal();
+            else if (typeof admUse === "function") admUse();
+          },
+        });
+      }
       ops.push({
         t: "Xem trang bị",
         f: () => viewAdminEquip(),
@@ -466,6 +479,7 @@ function npcTalk(n) {
         },
       });
       break;
+    }
     case "shop":
       ops.push({ t: "Giao dịch", f: () => npcShop(n) });
       /dược|thuốc/i.test(n.n + n.tt) &&

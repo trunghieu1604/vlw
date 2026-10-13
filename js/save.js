@@ -156,7 +156,7 @@ function migrate(n) {
       misc: Object.assign({}, (n.mats || {}).misc),
     }),
     (e.rw = n.rw && typeof n.rw == "object" ? n.rw : {}),
-    (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, MAX_LEVEL)),
+    (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, e.rw && e.rw.stat && e.rw.stat.reborn >= 5 ? 9999 : 200)),
     (e.xp = Math.max(0, +e.xp || 0)),
     (e.gold = Number.isFinite(+e.gold) ? Math.max(0, +e.gold) : 0),
     (e.skPts = Math.max(0, Math.floor(+e.skPts) || 0)),
@@ -296,7 +296,15 @@ function migrate(n) {
   }
   for (const o of (e.inv || []).concat(Object.values(e.eq || {}), e.epBox || [], e.stable || [])) {
     if (o && o.d === 10 && (o.n === "Sư tử" || o.k === 22)) {
-      o.req = [[36, 1]];
+      if (o.gift || o.noHc || (o.req && o.req.some((r) => r[0] === 36 && r[1] === 1))) {
+        o.gift = 1;
+        o.noHc = 1;
+        o.req = [[36, 1]];
+        o.base = [[111, 50, 50]];
+        o.mag = [];
+      } else {
+        o.req = [[36, 150]];
+      }
     }
   }
   return ((e.v = 1), e);

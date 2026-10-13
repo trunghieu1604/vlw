@@ -809,7 +809,6 @@ const sexReqOkFor = (t, n) => {
   sexOk = (t) => sexReqOk(t.req);
 function reqOk(t) {
   if (!sexOk(t)) return !1;
-  if (t && t.d === 10 && (t.n === "Sư tử" || t.k === 22)) return !0;
   for (const [n, e] of t.req || [])
     if (
       (n === 36 && eqLevel() < e) ||

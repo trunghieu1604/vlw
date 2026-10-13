@@ -31,7 +31,7 @@ let admTab = "lv",
   admSetFac = "mine",
   admHorse = "";
 const ADM_PASS = "16104";
-let admUnlocked = false;
+let admUnlocked = true;
 
 // Logged in to our own server with an account flagged is_admin (sent by /api/auth/*).
 function admHostOk() {
@@ -88,8 +88,11 @@ function admGive(items) {
 function admLvLoop() {
   const cap = levelCap();
   let up = 0;
-  for (; S.lvl < cap && S.xp >= lvNeed(S.lvl);)
-    ((S.xp -= lvNeed(S.lvl)), S.lvl++, (S.attrPts += PTS_PER_LEVEL), (S.skPts += SKILL_PTS_PER_LEVEL), up++);
+  for (; S.lvl < cap && S.xp >= lvNeed(S.lvl);) {
+    const need = lvNeed(S.lvl);
+    if (!need || need <= 0) break;
+    ((S.xp -= need), S.lvl++, (S.attrPts += PTS_PER_LEVEL), (S.skPts += SKILL_PTS_PER_LEVEL), up++);
+  }
   S.lvl >= cap && (S.xp = 0);
   if (up) {
     // Same bookkeeping as gainXp() (combat.js), once for the whole jump.
@@ -104,11 +107,15 @@ function admLvTo(n) {
     to = clamp(Math.floor(+n) || 0, 1, cap),
     from = S.lvl;
   if (to <= from) return (toast(to < from ? "Chỉ tăng cấp được (giảm cấp: dùng Tẩy Tủy)" : `Đang ở cấp ${from}`), "");
-  let need = -S.xp;
-  for (let l = from; l < to; l++) need += lvNeed(l);
-  S.xp += need;
-  admLvLoop();
-  return `Lên cấp ${from} → <b>${S.lvl}</b> (+${(S.lvl - from) * PTS_PER_LEVEL} tiềm năng, +${(S.lvl - from) * SKILL_PTS_PER_LEVEL} kỹ năng)`;
+  const diff = to - from;
+  S.lvl = to;
+  S.xp = 0;
+  S.attrPts = (S.attrPts || 0) + diff * PTS_PER_LEVEL;
+  S.skPts = (S.skPts || 0) + diff * SKILL_PTS_PER_LEVEL;
+  R.dirty = !0;
+  uiSfx("levelup");
+  typeof onLevelUp == "function" && onLevelUp();
+  return `Lên cấp ${from} → <b>${S.lvl}</b> (+${diff * PTS_PER_LEVEL} tiềm năng, +${diff * SKILL_PTS_PER_LEVEL} kỹ năng)`;
 }
 function admXp(f) {
   if (S.lvl >= levelCap()) return (toast("Đã đạt cấp tối đa"), "");
@@ -814,7 +821,6 @@ function admChRow() {
 // ---------- Modal ----------
 function admModal() {
   if (!admOk()) return toast(ADM_DENY);
-  if (!admUnlocked) return admPromptPass();
   const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld }[admTab] || admTabLv,
     body = () => admInCh(admTab, body0),
     old = $("#mBody .admbody"),
@@ -992,8 +998,8 @@ function admPromptPass(onSuccess) {
 function admUse() {
   if (!S || !S.fac) return;
   if (!admOk()) return toast(ADM_DENY);
-  admUnlocked = false;
-  admPromptPass();
+  admUnlocked = true;
+  admModal();
 }
 function admOpenDirect() {
   if (!S || !S.fac) return toast("Chưa tạo nhân vật");
@@ -1082,22 +1088,6 @@ function admInstall() {
     btn.addEventListener("pointerdown", (e) => {
       (e.preventDefault(), e.stopPropagation(), e.button !== 2 && admUse());
     });
-  window.addEventListener("keydown", (e) => {
-    if (e.repeat || e.key !== "0" || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName)) return;
-    if (!S || !S.fac) return;
-    const mb = $("#modal");
-    if (mb && !mb.classList.contains("hidden") && $("#mBody .admbox")) return (admUnlocked = false, closeModal());
-    admUse();
-  });
-
-
-  if (typeof closeModal == "function") {
-    const origClose = closeModal;
-    closeModal = function (n) {
-      if ($("#mBody .admbox")) admUnlocked = false;
-      return origClose.apply(this, arguments);
-    };
-  }
   admSyncBtn();
   setInterval(() => {
     try {

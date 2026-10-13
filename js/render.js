@@ -617,8 +617,27 @@ function flushLabels() {
     t.ic && labelIcon(t, n);
     if (t.sub) {
       const r = e - t.size - 2;
+      const isVlmc = t.sub.includes("VÕ LÂM MINH CHỦ");
       const isRoyal = t.sub.includes("Vô Song Vương Giả");
-      if (isRoyal) {
+      if (isVlmc) {
+        CX.save();
+        CX.font = `bold ${t.size}px "IBM Plex Mono", monospace`;
+        const tw = CX.measureText(t.sub).width;
+        const grad = CX.createLinearGradient(t.x - tw / 2, 0, t.x + tw / 2, 0);
+        grad.addColorStop(0, "#ff3300");
+        grad.addColorStop(0.25, "#ff7700");
+        grad.addColorStop(0.5, "#ffcc44");
+        grad.addColorStop(0.75, "#ff5500");
+        grad.addColorStop(1, "#ff2200");
+        CX.shadowColor = "#ff2200";
+        CX.shadowBlur = 9 + 3 * Math.sin(Date.now() / 200);
+        CX.lineWidth = 3.5;
+        CX.strokeStyle = "#380000";
+        CX.strokeText(t.sub, t.x, r);
+        CX.fillStyle = grad;
+        CX.fillText(t.sub, t.x, r);
+        CX.restore();
+      } else if (isRoyal) {
         CX.save();
         CX.font = `bold ${t.size}px "IBM Plex Mono", monospace`;
         const tw = CX.measureText(t.sub).width;

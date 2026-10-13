@@ -110,7 +110,7 @@ function setRepair(t) {
 if (typeof JX != "undefined" && JX.items && JX.items[10] && JX.items[10].list) {
   for (const h of JX.items[10].list) {
     if (h.n === "Sư tử" || h.k === 22) {
-      h.req = (h.req || []).map((r) => (r[0] === 36 ? [36, 1] : r));
+      h.req = (h.req || []).map((r) => (r[0] === 36 ? [36, 150] : r));
     }
   }
 }

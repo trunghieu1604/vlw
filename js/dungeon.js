@@ -170,7 +170,7 @@ function wbBossTid() {
 const DG_SPAN = 10,
   dgRoomL = (t) => clamp(Math.round(t.d.lv + (DG_SPAN * (t.room - 1)) / Math.max(1, t.d.rooms - 1)), 1, 200),
   dgGoldF = (t) => (1 + Math.min(S.lvl, t.lv + DG_SPAN) / 10) / (1 + S.lvl / 10),
-  dgLevel = (t) => clamp(Math.max(S.lvl, stageLevel(Math.max(1, S.maxStage - DG_STAGE_BACK))) + t, 1, levelCap()),
+  dgLevel = (t) => clamp(Math.max(Math.min(BASE_CAP, S.lvl), stageLevel(Math.max(1, S.maxStage - DG_STAGE_BACK))) + t, 1, BASE_CAP),
   zoneForLevel = (t) => ZONES.find((n) => t <= n.hi) || ZONES[ZONES.length - 1];
 function dgMap(t) {
   const n = t && t.map && window.JMO && window.JMO[String(t.map)] ? t.map : null;

@@ -230,7 +230,17 @@ const CAMP = {
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
       "Vòng Sáng Hoàng Kim",
-      ["allres_p", 99],
+      ["allres_p", 50],
+      true,
+    ],
+    [
+      "vlmc",
+      "VÕ LÂM MINH CHỦ",
+      "Đặc biệt",
+      5,
+      () => !!(typeof RW == "function" && RW().titles && RW().titles.vlmc),
+      "Vòng Sáng Quyền Lực · Mở Admin Panel tại NPC Trung Hiếu",
+      null,
       true,
     ],
   ],
@@ -283,7 +293,7 @@ function titleModal() {
     s = CAMP_INFO[campOf(S.fac)];
   modal(
     `<h3>🎖 Danh hiệu <small>${c}/${list.length}</small></h3>
-    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">${t[0] === "admin" ? esc(titleName(t)) : `«${esc(titleName(t))}»`}</b>` : "Chưa đeo danh hiệu."}</p>
+    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">${t[0] === "admin" || t[0] === "vlmc" ? esc(titleName(t)) : `«${esc(titleName(t))}»`}</b>` : "Chưa đeo danh hiệu."}</p>
     ${h
       .map(
         (i) =>
@@ -292,12 +302,18 @@ function titleModal() {
             .map((a) => {
               const e = !!n[a[0]],
                 l = t === a,
-                isAdm = a[0] === "admin";
-              const royalStyle = isAdm ? `style="background:linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22));border:1.5px solid #ffd700;box-shadow:0 0 10px rgba(255,180,0,0.35);border-radius:6px;padding:6px 8px;margin:4px 0"` : "";
-              const royalTitle = isAdm ? `<b style="color:#ffd700;text-shadow:0 0 8px #ff9900;font-size:13px">${esc(titleName(a))}</b> <small class="dim">${TIER[a[3]].n}</small>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
-              const attrStr = Array.isArray(a[6][0]) ? a[6].map((x) => attrText(x[0], [x[1], 0, 0])).join(" · ") : attrText(a[6][0], [a[6][1], 0, 0]);
-              return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])} · ${esc(attrStr)}</small></span><small></small>
-        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${isAdm && !l ? "background:#c98d1a;color:#fff;border-color:#ffd700" : ""}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
+                isVlmc = a[0] === "vlmc",
+                isAdm = a[0] === "admin" || isVlmc;
+              const royalCol = isVlmc ? "#ff4500" : "#ffd700";
+              const royalShadow = isVlmc ? "#ff2200" : "#ff9900";
+              const royalBorder = isVlmc ? "#ff4500" : "#ffd700";
+              const royalBox = isVlmc ? "rgba(255,69,0,0.4)" : "rgba(255,180,0,0.35)";
+              const royalBg = isVlmc ? "linear-gradient(90deg,rgba(255,69,0,0.22),rgba(180,20,0,0.22),rgba(255,69,0,0.22))" : "linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22))";
+              const royalStyle = isAdm ? `style="background:${royalBg};border:1.5px solid ${royalBorder};box-shadow:0 0 10px ${royalBox};border-radius:6px;padding:6px 8px;margin:4px 0"` : "";
+              const royalTitle = isAdm ? `<b style="color:${royalCol};text-shadow:0 0 8px ${royalShadow};font-size:13px">${esc(titleName(a))}</b> <small class="dim">${TIER[a[3]].n}</small>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
+              const attrStr = a[6] ? (Array.isArray(a[6][0]) ? a[6].map((x) => attrText(x[0], [x[1], 0, 0])).join(" · ") : attrText(a[6][0], [a[6][1], 0, 0])) : "";
+              return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])}${attrStr ? " · " + esc(attrStr) : ""}</small></span><small></small>
+        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${isAdm && !l ? (isVlmc ? "background:#c93a1a;color:#fff;border-color:#ff4500" : "background:#c98d1a;color:#fff;border-color:#ffd700") : ""}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
             })
             .join(""),
       )

@@ -52,8 +52,8 @@ function heroLook() {
     l = partTint(n.helm);
   let e = null;
   const tw = typeof titleWorn == "function" && titleWorn();
-  if (tw && tw[0] === "admin") {
-    e = { c: "#ffd700", c2: "#ff3b30", k: 1.8, royal: true };
+  if (tw && (tw[0] === "admin" || tw[0] === "vlmc")) {
+    e = { c: tw[0] === "vlmc" ? "#ff2200" : "#ffd700", c2: "#ff3b30", k: 1.8, royal: true };
   } else if (typeof enoughToActive == "function" && enoughToActive(n)) {
     const c = f.filter((s) => s.set && s.set.kind === "platina").length,
       g = f.filter((s) => s.set && s.set.kind === "gold").length;

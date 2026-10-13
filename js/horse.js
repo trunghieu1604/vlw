@@ -14,7 +14,7 @@ const HORSE_MAX = 20,
 if (typeof J != "undefined" && J.items && J.items[10] && J.items[10].list) {
   for (const h of J.items[10].list) {
     if (h.n === "Sư tử" || h.k === 22) {
-      h.req = (h.req || []).map((r) => (r[0] === 36 ? [36, 1] : r));
+      h.req = (h.req || []).map((r) => (r[0] === 36 ? [36, 150] : r));
     }
   }
 }
@@ -60,7 +60,8 @@ const horseBook = () => S.hbook || (S.hbook = {}),
   },
   hcKey = (n) => (n.n || "").replace(/\s+\d+$/, "").toLowerCase();
 function hcTier(n) {
-  return isHorse(n) ? (n.k <= 4 ? (n.lvl <= 4 ? 0 : n.lvl <= 8 ? 1 : 2) : (HC_KIND[n.k] ?? -1)) : -1;
+  if (!isHorse(n) || n.noHc || n.gift) return -1;
+  return n.k <= 4 ? (n.lvl <= 4 ? 0 : n.lvl <= 8 ? 1 : 2) : (HC_KIND[n.k] ?? -1);
 }
 let HC_ALL = null;
 function hcAll() {
@@ -77,6 +78,7 @@ function hcAll() {
 function hcOwned() {
   const n = new Map();
   for (const s of stable().concat(isHorse(S.eq.horse) ? [S.eq.horse] : [])) {
+    if (s.noHc || s.gift) continue;
     const t = hcTier(s);
     t >= 0 && n.set(hcKey(s), t);
   }
@@ -89,7 +91,7 @@ function hcBonus() {
   return { n: n.size, hp: n.size, xp: s };
 }
 function horseFixReq(n) {
-  if (!isHorse(n) || !n.req) return;
+  if (!isHorse(n) || !n.req || n.noHc || n.gift) return;
   const s = n.req.find((e) => e[0] === 36);
   if (!s) return;
   let t = null;
