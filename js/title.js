@@ -229,7 +229,7 @@ const CAMP = {
       "Đặc biệt",
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
-      "Đặc Quyền Chí Tôn · Hào Quang Đế Vương",
+      "Đặc Quyền Chí Tôn · Vòng Sáng Chuyển Sinh 5",
       [["allres_p", 99], ["lifemax_p", 50], ["fastwalkrun_p", 30], ["lucky_v", 99]],
       true,
     ],

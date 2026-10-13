@@ -57,8 +57,11 @@ const heroStateLift = (pos) => {
 };
 function drawHeroStates(s, t, f) {
   const c = R.clock || 0;
-  if (t === "under" && S.lookFx !== !1 && typeof rebornN == "function") {
-    const n = Math.min(5, rebornN());
+  if (t === "under" && S.lookFx !== !1) {
+    const tw = typeof titleWorn == "function" && titleWorn();
+    const isRoyal = tw && tw[0] === "admin";
+    const rb = typeof rebornN == "function" ? rebornN() : 0;
+    const n = isRoyal ? 5 : Math.min(5, rb);
     n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
   }
   for (const n of heroStates())

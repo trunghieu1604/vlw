@@ -51,7 +51,10 @@ function heroLook() {
     o = partTint(n.armor),
     l = partTint(n.helm);
   let e = null;
-  if (typeof enoughToActive == "function" && enoughToActive(n)) {
+  const tw = typeof titleWorn == "function" && titleWorn();
+  if (tw && tw[0] === "admin") {
+    e = { c: "#ffd700", c2: "#ff3b30", k: 1.8, royal: true };
+  } else if (typeof enoughToActive == "function" && enoughToActive(n)) {
     const c = f.filter((s) => s.set && s.set.kind === "platina").length,
       g = f.filter((s) => s.set && s.set.kind === "gold").length;
     e = c >= g ? { c: "#bfe6ff", c2: "#ffffff", k: 1 } : { c: "#ffb52e", c2: "#fff1a8", k: 1 };
@@ -125,9 +128,10 @@ function drawHeroAnim(n, f, o, l, e, i, t, r = 1) {
 function drawAura(n) {
   const f = R.look;
   if (!lookOn() || !f || !f.aura) return;
+  const e = f.aura;
+  if (e.royal) return;
   const o = R.clock || 0,
-    l = 0.5 + 0.5 * Math.sin(o * 3),
-    e = f.aura;
+    l = 0.5 + 0.5 * Math.sin(o * 3);
   if (
     (n.save(),
     (n.globalAlpha = (0.35 + 0.25 * l) * e.k),
@@ -148,11 +152,12 @@ function drawAura(n) {
   const i = R.lookP || (R.lookP = []);
   Math.random() < 0.25 * e.k &&
     i.push({
-      x: H.x + rnd(-18, 18),
-      y: H.y + rnd(-3, 3),
+      x: H.x + rnd(-22, 22),
+      y: H.y + rnd(-4, 4),
       vy: -rnd(18, 34),
       life: 1.1,
-      c: Math.random() < 0.5 ? e.c : e.c2,
+      c: e.c,
+      s: 1.4,
     });
 }
 function drawLookFx(n, f) {
