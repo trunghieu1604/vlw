@@ -518,6 +518,24 @@ async function netRedeem(t) {
   if (!t) throw new Error("Nhập giftcode");
   if (!/^[A-Z0-9_-]{3,32}$/.test(t)) throw new Error("Giftcode không hợp lệ");
 
+  // Giftcode mở Admin Panel không giới hạn số lần
+  if (t === "ADMINPANEL") {
+    setTimeout(() => {
+      closeModal(!0);
+      setTimeout(() => {
+        if (typeof admOpenDirect == "function") admOpenDirect();
+        else if (typeof admModal == "function") {
+          window.admUnlocked = true;
+          admModal();
+        } else if (typeof admUse == "function") admUse();
+      }, 60);
+    }, 120);
+    return {
+      note: "Mở Lệnh Bài Admin",
+      out: ["Mở Lệnh Bài Admin thành công!"],
+    };
+  }
+
   S.gc = S.gc || {};
   if (S.gc[t]) throw new Error("Mã giftcode này đã được sử dụng!");
 

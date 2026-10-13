@@ -465,23 +465,94 @@ function admSetGive(wear) {
   return `Nhận ${n} món bộ <b style="color:${col}">${esc(g.n)}</b>${wear ? (weared ? `, đã mặc ${weared}/${n} món` : " (chưa đủ cấp/điểm để mặc)") : ""}`;
 }
 function admHorses() {
-  const it = J.items[10];
-  if (!it) return [];
-  const m = new Map();
-  for (const r of it.list) {
-    if (!sexReqOk(r.req)) continue;
-    const o = m.get(r.k);
-    (!o || r.lvl > o.lvl) && m.set(r.k, r);
+  const res = [];
+  // 1. Toàn bộ Thần Mã từ THAN_MA (thanma.js)
+  if (typeof THAN_MA != "undefined" && Array.isArray(THAN_MA)) {
+    for (const tm of THAN_MA) {
+      res.push({
+        id: "tm_" + tm[0],
+        n: `★ [Thần Mã] ${tm[3]} (Cấp ${tm[4]})`,
+        group: "★ Thần Mã Cực Phẩm (14 loại)",
+        isTm: true,
+        tmId: tm[0],
+        lvl: tm[4],
+      });
+    }
   }
-  return [...m.values()];
+
+  // 2. Toàn bộ 54 loại ngựa chuẩn trong game từ J.items[10].list
+  const it = typeof J != "undefined" && J.items && J.items[10];
+  if (it && it.list) {
+    const nameMap = new Map();
+    for (const r of it.list) {
+      if (!sexReqOk(r.req)) continue;
+      const cur = nameMap.get(r.n);
+      if (!cur || r.lvl > cur.lvl) nameMap.set(r.n, r);
+    }
+
+    for (const r of nameMap.values()) {
+      const reqLv = (r.req.find((x) => x[0] === 36) || [0, 0])[1];
+      let group = "Ngựa Thường & Đại Uyển (Cấp 25 - 72)";
+      if (r.k >= 14 && r.k <= 17) {
+        group = "Thú Cưỡi Hổ Vương (Cấp 150 - 180)";
+      } else if (r.k >= 22 && r.k <= 29) {
+        group = "Thú Cưỡi Đặc Biệt (Sư tử, Lạc đà, Hươu...)";
+      } else if (r.k >= 19 && r.k <= 21) {
+        group = "Dòng Ngựa Phong Vân (Cấp 150)";
+      } else if (r.k === 5) {
+        group = "Ngũ Đại Danh Mã (Cấp 80)";
+      } else if (reqLv >= 80 || (typeof HORSE_RARE != "undefined" && HORSE_RARE.includes(r.k))) {
+        group = "Danh Mã & Bảo Mã Hiếm (Cấp 80 - 150)";
+      }
+
+      res.push({
+        id: `h_${r.k}_${r.lvl}`,
+        n: `${r.n} (Cấp ${reqLv})`,
+        group: group,
+        isTm: false,
+        k: r.k,
+        lvl: r.lvl,
+        reqLv: reqLv,
+      });
+    }
+  }
+  return res;
+}
+function admHorseOpts(hs, cur) {
+  const groups = new Map();
+  for (const h of hs) {
+    const g = h.group || "Khác";
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(h);
+  }
+  let out = "";
+  for (const [grp, list] of groups) {
+    out += `<optgroup label="${esc(grp)}">`;
+    for (const h of list) {
+      out += `<option value="${h.id}"${String(h.id) === String(cur) ? " selected" : ""}>${esc(h.n)}</option>`;
+    }
+    out += `</optgroup>`;
+  }
+  return out;
 }
 function admHorseGive() {
-  const r = admHorses().find((x) => String(x.k) === String(admHorse));
+  const hs = admHorses();
+  const curId = (typeof $ == "function" && $("#admHorse") && $("#admHorse").value) || admHorse;
+  const r = hs.find((x) => String(x.id) === String(curId));
   if (!r) return (toast("Chọn ngựa"), "");
   if (admInvFree() < 1) return (toast("Hành trang đầy"), "");
-  const h = makeItem(10, r.k, r.lvl, 0);
-  if (!h) return "";
-  typeof HORSE_RARE != "undefined" && HORSE_RARE.includes(r.k) && ((h.r = 2), (h.rareH = 1));
+  let h = null;
+  if (r.isTm) {
+    if (typeof makeThanMa == "function") {
+      h = makeThanMa(r.tmId);
+    }
+  } else {
+    h = makeItem(10, r.k, r.lvl, 0);
+    if (h) {
+      typeof HORSE_RARE != "undefined" && HORSE_RARE.includes(r.k) && ((h.r = 2), (h.rareH = 1));
+    }
+  }
+  if (!h) return (toast("Không thể tạo ngựa"), "");
   return admGive([h]) ? `Nhận ngựa <b>${esc(h.n)}</b>` : "";
 }
 function admTabEq() {
@@ -494,7 +565,7 @@ function admTabEq() {
   const sets = admSets(),
     hs = admHorses();
   sets.some((g) => String(g.id) === String(admSet)) || (admSet = sets.length ? String(sets[0].id) : "");
-  hs.some((h) => String(h.k) === String(admHorse)) || (admHorse = hs.length ? String(hs[hs.length - 1].k) : "");
+  hs.some((h) => String(h.id) === String(admHorse)) || (admHorse = hs.length ? String(hs[0].id) : "");
   const opt = (v, cur, label) => `<option value="${v}"${String(v) === String(cur) ? " selected" : ""}>${esc(label)}</option>`;
   return `<p class="dim small">Hành trang trống ${admInvFree()} / ${INV_MAX} ô. Đồ tạo bằng bộ sinh đồ của game (như đồ rơi). Tự mặc chỉ mặc món đủ yêu cầu (thiếu sức mạnh / thân pháp: thêm tiềm năng ở thẻ Cấp).</p>
   <div class="admh">Tạo món lẻ</div>
@@ -530,8 +601,8 @@ function admTabEq() {
     <button class="btn sm on" data-a="set">Nhận trọn bộ</button>
     <button class="btn sm" data-a="setwear">Nhận & Tự mặc</button>
   </div>
-  <div class="admh">Ngựa</div>
-  <div class="admf"><select id="admHorse">${hs.map((h) => opt(h.k, admHorse, `${h.n} (cấp ${(h.req.find((x) => x[0] === 36) || [0, 0])[1]})`)).join("")}</select><button class="btn sm" data-a="horse">Nhận ngựa</button></div>`;
+  <div class="admh">Ngựa & Thú Cưỡi (Đầy đủ ${hs.length} loại · Cả Thần Mã)</div>
+  <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button></div>`;
 }
 
 // ---------- Chiến đấu ----------
@@ -683,6 +754,7 @@ function admModal() {
         typeof thFilter == "function" &&
         (v("admThQ").oninput = () => thFilter($("#mBody .admlist"), v("admThQ").value));
     },
+    true
   );
 }
 function admAct(a) {
@@ -779,16 +851,19 @@ function admPromptPass(onSuccess) {
         <img src="${ADM_IC}" alt="" class="admic"> Lệnh Bài Admin
       </h3>
       <p style="margin:8px 0;color:var(--dim,#bdb59a);font-size:12px">Nhập mật khẩu:</p>
-      <div style="margin:12px 0 8px;display:flex;justify-content:center;gap:6px">
-        <input type="password" id="admPassInput" placeholder="Nhập mật khẩu..." style="padding:6px 10px;background:#111;color:#eee;border:1px solid #555;border-radius:4px;font-size:14px;text-align:center;width:150px" autofocus>
-        <button id="admPassSubmit" class="btn primary" style="padding:6px 14px;cursor:pointer">Mở</button>
-      </div>
+      <form id="admPassForm" onsubmit="return false;" style="margin:0">
+        <div style="margin:12px 0 8px;display:flex;justify-content:center;gap:6px">
+          <input type="password" id="admPassInput" autocomplete="current-password" placeholder="Nhập mật khẩu..." style="padding:6px 10px;background:#111;color:#eee;border:1px solid #555;border-radius:4px;font-size:14px;text-align:center;width:140px">
+          <button id="admPassSubmit" class="btn primary" type="submit" style="padding:6px 12px;cursor:pointer">Mở</button>
+          <button id="admPassCancel" class="btn" type="button" style="padding:6px 12px;cursor:pointer">Hủy</button>
+        </div>
+      </form>
       <div id="admPassErr" style="color:#ff6a5a;font-size:11px;min-height:16px;margin-top:4px"></div>
     </div>`,
     () => {
-      const inp = $("#admPassInput"), btn = $("#admPassSubmit"), err = $("#admPassErr");
+      const inp = $("#admPassInput"), btn = $("#admPassSubmit"), err = $("#admPassErr"), form = $("#admPassForm"), cancel = $("#admPassCancel");
       if (!inp) return;
-      setTimeout(() => inp && inp.focus(), 50);
+      setTimeout(() => inp && inp.focus(), 100);
       const check = () => {
         if (inp.value === ADM_PASS) {
           admUnlocked = true;
@@ -801,10 +876,10 @@ function admPromptPass(onSuccess) {
         }
       };
       btn && (btn.onclick = check);
-      inp.onkeydown = (e) => {
-        if (e.key === "Enter") check();
-      };
-    }
+      form && (form.onsubmit = (e) => { e.preventDefault(); check(); return false; });
+      cancel && (cancel.onclick = () => closeModal(!0));
+    },
+    true
   );
 }
 function admUse() {
@@ -813,6 +888,12 @@ function admUse() {
   admUnlocked = false;
   admPromptPass();
 }
+function admOpenDirect() {
+  if (!S || !S.fac) return toast("Chưa tạo nhân vật");
+  admUnlocked = true;
+  admModal();
+}
+window.admOpenDirect = admOpenDirect;
 
 // ---------- Hooks ----------
 function admGuardNet() {}
@@ -887,6 +968,7 @@ function admInstall() {
   document.head.appendChild(st);
   admGuardNet();
   admHookCombat();
+  window.admUse = admUse;
   const btn = $("#bAdm");
   btn &&
     btn.addEventListener("pointerdown", (e) => {
@@ -899,20 +981,8 @@ function admInstall() {
     if (mb && !mb.classList.contains("hidden") && $("#mBody .admbox")) return (admUnlocked = false, closeModal());
     admUse();
   });
-  const hn = $("#heroName");
-  if (hn) {
-    let clicks = 0, timer = null;
-    hn.addEventListener("pointerdown", () => {
-      clicks++;
-      clearTimeout(timer);
-      if (clicks >= 3) {
-        clicks = 0;
-        admUse();
-      } else {
-        timer = setTimeout(() => { clicks = 0; }, 600);
-      }
-    });
-  }
+
+
   if (typeof closeModal == "function") {
     const origClose = closeModal;
     closeModal = function (n) {

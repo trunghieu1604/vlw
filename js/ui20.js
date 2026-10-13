@@ -46,7 +46,7 @@ function u20Init() {
       `<div id="u20side">${U20_SIDE.map(([n, i], u) => `<button class="u20sq" data-s="${u}" data-n="${i}">${n}</button>`).join("")}</div>`,
     ),
     t(
-      '<div id="u20r"><button class="u20rb" id="u20gift">Phần<br>thưởng</button><button class="u20rb" id="u20ktc">Kỳ Trân<br>Các</button></div>',
+      '<div id="u20r"><button class="u20rb" id="u20fs" title="Toàn màn hình">Toàn<br>màn</button><button class="u20rb" id="u20gift">Phần<br>thưởng</button><button class="u20rb" id="u20ktc">Kỳ Trân<br>Các</button></div>',
     ),
     t(
       '<div id="u20gold"><span><img src="img/ep/knb.png" alt=""><b id="u20knb">0</b></span><span>🪙 <b id="u20g">0</b></span></div>',
@@ -81,6 +81,7 @@ function u20Init() {
     ($("#u20zb").onclick = () => {
       (u20ZoneList(), u20Front($("#u20zone")));
     });
+  $("#u20fs") && ($("#u20fs").onclick = () => typeof toggleFullscreen == "function" && toggleFullscreen());
   $("#u20gift") && ($("#u20gift").onclick = () => giftModal(!0));
   $("#u20ktc") && ($("#u20ktc").onclick = () => ktcModal());
   if (typeof modal == "function") {

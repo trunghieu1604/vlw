@@ -21,6 +21,8 @@ body.u20 #battle {
   flex: none !important;
   height: auto !important;
   width: auto !important;
+  padding-left: var(--safe-l, 0px) !important;
+  padding-right: var(--safe-r, 0px) !important;
 }
 /* thanh trang thai tren cung */
 body.u20 #hud {
@@ -121,6 +123,11 @@ body.u20 #panel::before {
 }
 .u20rb:hover {
   filter: brightness(1.25);
+}
+.u20rb.on {
+  background: radial-gradient(#8a6f3a, #3a2a12);
+  border-color: #ffd24a;
+  box-shadow: 0 0 8px #ffd24a88;
 }
 #u20gold {
   position: fixed;

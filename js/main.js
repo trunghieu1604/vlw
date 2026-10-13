@@ -179,6 +179,42 @@ function fitApp() {
   const n = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   (n > 0 && document.documentElement.style.setProperty("--app-h", Math.round(n) + "px"), CV && resizeArena());
 }
+function toggleFullscreen() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if (!isFs) {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) {
+      req.call(el, { navigationUI: "hide" }).catch(() => {
+        req.call(el).catch(() => {});
+      });
+    }
+    try {
+      if (window.screen && window.screen.orientation && typeof window.screen.orientation.unlock === "function") {
+        window.screen.orientation.unlock();
+      }
+    } catch {}
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  }
+}
+window.toggleFullscreen = toggleFullscreen;
+function updateFsBtn() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const b1 = $("#fsBtn");
+  if (b1) {
+    b1.textContent = isFs ? "🗗" : "⛶";
+    b1.classList.toggle("on", isFs);
+  }
+  const b2 = $("#u20fs");
+  if (b2) {
+    b2.innerHTML = isFs ? "Thu<br>nhỏ" : "Toàn<br>màn";
+    b2.classList.toggle("on", isFs);
+  }
+}
+document.addEventListener("fullscreenchange", updateFsBtn);
+document.addEventListener("webkitfullscreenchange", updateFsBtn);
 function setCompact(n) {
   (setUiPref({ compact: n }), !n && S.fac && refresh());
 }
@@ -196,7 +232,7 @@ function init() {
       const i = t.target.closest("button[data-t]");
       i && (i.dataset.t === "more" && typeof u20MoreMode < "u" && (u20MoreMode = "sys"), showTab(i.dataset.t));
     }),
-    ($("#mClose").onclick = () => closeModal()),
+    ($("#mClose").onclick = () => closeModal(!0)),
     ($("#giftBtn").onclick = () => {
       S.fac && (uiSfx("click"), giftModal(!0));
     }),
@@ -209,7 +245,8 @@ function init() {
     window.addEventListener("resize", fitApp),
     window.addEventListener("orientationchange", fitApp),
     window.visualViewport && window.visualViewport.addEventListener("resize", fitApp),
-    ($("#compactBtn").onclick = () => setCompact(!document.body.classList.contains("compact"))),
+    ($("#compactBtn") && ($("#compactBtn").onclick = () => setCompact(!document.body.classList.contains("compact")))),
+    ($("#fsBtn") && ($("#fsBtn").onclick = toggleFullscreen)),
     applyUiPrefs(),
     fitApp(),
     bindControls());
