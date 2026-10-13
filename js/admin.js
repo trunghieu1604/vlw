@@ -126,8 +126,26 @@ function admTabLv() {
   <div class="admf"><label>Đặt cấp <input type="number" id="admLv" min="${S.lvl + 1}" max="${cap}" value="${Math.min(cap, Math.max(S.lvl + 1, 80))}"></label><button class="btn sm" data-a="lvset">Đặt</button></div>
   <div class="admh">Kinh nghiệm (theo cấp hiện tại)</div><div class="btnrow"><button class="btn sm" data-a="xp:0.1">+10%</button><button class="btn sm" data-a="xp:0.5">+50%</button><button class="btn sm" data-a="xp:1">+100%</button></div>
   <div class="admh">Điểm</div><div class="btnrow"><button class="btn sm" data-a="ap:10">+10 tiềm năng</button><button class="btn sm" data-a="ap:100">+100 tiềm năng</button><button class="btn sm" data-a="sp:5">+5 kỹ năng</button><button class="btn sm" data-a="sp:50">+50 kỹ năng</button><button class="btn sm on" data-a="spend">Tự cộng hết điểm</button></div>
+  <div class="admh">Danh Hiệu Giang Hồ</div><div class="btnrow"><button class="btn sm on" data-a="titleall">🎖 Mở khóa mọi Danh Hiệu</button><button class="btn sm" data-a="titlemodal">Xem & Đeo Danh Hiệu</button></div>
   ${typeof isNovice == "function" && isNovice() && S.lvl >= NOVICE_LV ? `<div class="btnrow"><button class="btn sm on" data-a="join">Gia nhập môn phái</button></div>` : ""}
   <p class="dim small">Lên cấp đi theo đường lên cấp của game (cộng tiềm năng / kỹ năng mỗi cấp, tự cộng điểm nếu bật, tự đổi bãi, mốc quà cấp).</p>`;
+}
+function admTitleAll() {
+  const t = typeof TT == "function" ? TT() : null;
+  if (!t || typeof TITLES == "undefined") return (toast("Lỗi dữ liệu danh hiệu"), "");
+  let n = 0;
+  for (const c of TITLES) {
+    if (!t[c[0]]) {
+      t[c[0]] = 1;
+      n++;
+    }
+  }
+  const rw = typeof RW == "function" ? RW() : null;
+  if (rw && !rw.title) rw.title = "admin";
+  R.dirty = !0;
+  save();
+  typeof refresh == "function" && refresh();
+  return `Đã mở khóa toàn bộ ${TITLES.length} Danh Hiệu (gồm cả «Vô Song Vương Giả»)!`;
 }
 
 // ---------- Tiền ----------
@@ -190,7 +208,7 @@ function admTabItem() {
           `<button class="shoprow" data-a="misc:${k}:${q}"><img src="${ic}" alt=""><span><b>${n}</b><small>đang có ${matHave("misc", k)}</small></span><em>+${q}</em></button>`,
       )
       .join("");
-  return `<div class="btnrow"><button class="btn sm on" data-a="potall">Mọi loại thuốc +100</button></div>
+  return `<div class="btnrow"><button class="btn sm on" data-a="potall">Mọi loại thuốc +100</button><button class="btn sm on" data-a="matpack">🎁 Gói Nguyên Liệu Ép Đồ (HT10, Đá c6...)</button></div>
   <div class="shoplist admlist"><div class="admh">Thuốc</div>${pots}
   <div class="admh">Phù · nguyên liệu</div>${misc}
   <div class="shoprow admrow"><img src="img/ep/ht.png" alt=""><span><b>Huyền Tinh Khoáng Thạch</b><small>chọn cấp</small></span><span class="btnrow"><select id="admHt">${Array.from({ length: HT_MAX }, (_, i) => `<option${i + 1 === Math.min(HT_MAX, Math.floor(S.lvl / 15) + 1) ? " selected" : ""}>${i + 1}</option>`).join("")}</select><button class="btn sm" data-a="ht:10">+10</button></span></div>
@@ -555,6 +573,77 @@ function admHorseGive() {
   if (!h) return (toast("Không thể tạo ngựa"), "");
   return admGive([h]) ? `Nhận ngựa <b>${esc(h.n)}</b>` : "";
 }
+function admHorseAll() {
+  const all = typeof hcAll == "function" ? hcAll() : null;
+  if (!all) return (toast("Lỗi dữ liệu Mã Trường"), "");
+  const owned = typeof hcOwned == "function" ? hcOwned() : new Map();
+  const st = typeof stable == "function" ? stable() : (S.stable || (S.stable = []));
+  let added = 0;
+  for (const [key, val] of all.entries()) {
+    if (owned.has(key)) continue;
+    const [name, tier] = val;
+    const itemDef = J.items && J.items[10] && J.items[10].list.find((r) => hcKey(r) === key);
+    if (!itemDef) continue;
+    const h = makeItem(10, itemDef.k, itemDef.lvl, 0);
+    if (h) {
+      typeof HORSE_RARE != "undefined" && HORSE_RARE.includes(itemDef.k) && ((h.r = 2), (h.rareH = 1));
+      st.push(h);
+      owned.set(key, tier);
+      added++;
+    }
+  }
+  R.dirty = !0;
+  typeof invDirty != "undefined" && (invDirty = !0);
+  typeof recalc == "function" && recalc();
+  return added > 0
+    ? `Đã thêm ${added} ngựa vào Mã Trường (Đủ trọn bộ 48/48 loài · +48% HP, +125% EXP)`
+    : "Mã Trường đã thu thập đủ trọn bộ 48 loài ngựa!";
+}
+function admEnhFull() {
+  const eq = S.eq;
+  if (!eq) return (toast("Không có trang bị"), "");
+  let count = 0;
+  const maxEnh = typeof ENH_MAX != "undefined" ? ENH_MAX : 10;
+  for (const [slot, item] of Object.entries(eq)) {
+    if (item && item.d !== 10) {
+      item.enh = maxEnh;
+      typeof recEnh == "function" && recEnh(item);
+      count++;
+    }
+  }
+  R.dirty = !0;
+  typeof invDirty != "undefined" && (invDirty = !0);
+  typeof recalc == "function" && recalc();
+  typeof renderPad == "function" && renderPad();
+  save();
+  return count > 0
+    ? `Đã cường hóa +${maxEnh} tối đa cho ${count} món trang bị đang mặc!`
+    : (toast("Chưa mặc trang bị nào (hoặc chỉ có ngựa)"), "");
+}
+function admMatPack() {
+  const addMat = typeof matAdd == "function" ? matAdd : (k, t, n) => {
+    const m = S.mats || (S.mats = {});
+    m[k] = m[k] || {};
+    m[k][t] = (m[k][t] || 0) + n;
+  };
+  addMat("ht", 10, 99);
+  addMat("misc", "wc", 99);
+  addMat("misc", "mys", 99);
+  if (typeof RW == "function") RW().fd = (RW().fd || 0) + 10000;
+  let oreCount = 0;
+  for (let place = 0; place < 6; place++) {
+    const defaultA = [126, 166, 115, 58, 43, 150][place];
+    const pool = typeof orePool == "function" ? orePool(place) : null;
+    const a = pool && pool.length ? pool[0] : defaultA;
+    const s = place % 2 === 1 ? (S.fac && typeof FAC != "undefined" && FAC[S.fac] ? FAC[S.fac].series : 0) : -1;
+    const k = typeof oreKey == "function" ? oreKey(place, a, 6, s) : `${place}:${a}:6` + (s >= 0 && place % 2 ? `:${s}` : "");
+    addMat("ore", k, 5);
+    oreCount += 5;
+  }
+  R.dirty = !0;
+  save();
+  return `Đã nhận: <b>99× Huyền Tinh cấp 10</b>, <b>${oreCount}× Đá thuộc tính cấp 6</b> (đủ 6 vị trí), <b>99× Thủy Tinh</b>, <b>99× Thần Bí K.T</b> và <b>+10.000 Phúc Duyên</b>!`;
+}
 function admTabEq() {
   const e = admEq,
     ds = Object.keys(J.items)
@@ -578,6 +667,11 @@ function admTabEq() {
     <label>Số lượng<input type="number" id="admEqQ" min="1" max="20" value="${e.q}"></label>
   </div>
   <div class="btnrow"><button class="btn sm on" data-a="eqmake">Tạo</button><button class="btn sm" data-a="eqfull:0">Trọn bộ 10 món</button><button class="btn sm" data-a="eqfull:1">Trọn bộ + tự mặc</button></div>
+  <div class="admh">Cường Hóa & Tinh Luyện (Lò Rèn)</div>
+  <div class="btnrow">
+    <button class="btn sm on" data-a="enhfull" title="Cường hóa +10 tối đa cho toàn bộ 10 món trang bị đang mặc">⚡ Full Cường Hóa +10 toàn thân</button>
+    <button class="btn sm" data-a="matpack" title="Nhận 99x Huyền Tinh c10, Đá thuộc tính c6, Thủy Tinh, Thần Bí KT, Phúc Duyên">🎁 Gói Nguyên Liệu Khảm & Ép Đồ</button>
+  </div>
   <div class="admh">Bộ Trang Bị (Hoàng Kim & Bạch Kim)</div>
   <div class="admgrid" style="grid-template-columns:1fr 1fr">
     <label>Loại bộ<select id="admSetCat">
@@ -602,7 +696,7 @@ function admTabEq() {
     <button class="btn sm" data-a="setwear">Nhận & Tự mặc</button>
   </div>
   <div class="admh">Ngựa & Thú Cưỡi (Đầy đủ ${hs.length} loại · Cả Thần Mã)</div>
-  <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button></div>`;
+  <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button><button class="btn sm on" data-a="horseall" title="Thu thập đủ 48 loài ngựa vào Mã Trường">⚡ Đủ 48 ngựa Mã Trường</button></div>`;
 }
 
 // ---------- Chiến đấu ----------
@@ -728,7 +822,7 @@ function admModal() {
     ls = $("#mBody .admlist"),
     lsc = ls ? ls.scrollTop : 0;
   modal(
-    `<div class="admbox"><h3><img src="${ADM_IC}" alt="" class="admic"> ${ADM_NAME} <small>${admHostOk() ? "admin online" : "v3.0.6 Final"}</small></h3>
+    `<div class="admbox"><h3 style="margin:0 0 6px"><img src="${ADM_IC}" alt="" class="admic"> ${ADM_NAME} <small>${admHostOk() ? "admin online" : "v3.0.6 Final"}</small></h3>
     <div class="dtabs admtabs">${ADM_TABS.map(([k, n]) => `<button data-at="${k}" class="${k === admTab ? "on" : ""}">${n}</button>`).join("")}</div>
     ${admChRow()}<div class="admbody">${body()}</div></div>`,
     () => {
@@ -753,14 +847,17 @@ function admModal() {
       v("admThQ") &&
         typeof thFilter == "function" &&
         (v("admThQ").oninput = () => thFilter($("#mBody .admlist"), v("admThQ").value));
-    },
-    true
+    }
   );
 }
 function admAct(a) {
   const [k, x, y] = a.split(":"),
     v = (id) => ($("#" + id) || {}).value;
-  const tab = { lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", eqmake: "eq", eqfull: "eq", set: "eq", setwear: "eq", horse: "eq", skmax: "skill", cd: "skill", full: "skill" }[k] || k;
+  const tab = {
+    lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv",
+    eqmake: "eq", eqfull: "eq", set: "eq", setwear: "eq", horse: "eq", horseall: "eq", enhfull: "eq", matpack: "eq",
+    skmax: "skill", cd: "skill", full: "skill"
+  }[k] || k;
   admDo(() => admInCh(tab, () => {
     switch (k) {
       case "lv":
@@ -826,6 +923,16 @@ function admAct(a) {
         return admSetGive(!0);
       case "horse":
         return admHorseGive();
+      case "horseall":
+        return admHorseAll();
+      case "enhfull":
+        return admEnhFull();
+      case "matpack":
+        return admMatPack();
+      case "titleall":
+        return admTitleAll();
+      case "titlemodal":
+        return (setTimeout(() => typeof titleModal == "function" && titleModal(), 50), "Mở bảng Danh Hiệu");
       case "skmax":
         return admMaxSkills();
       case "cd":
@@ -931,6 +1038,7 @@ const ADM_CSS = `
 img[src$="ldt.png?adm"],#pad .pbtn.adm i{filter:hue-rotate(-40deg) saturate(1.8) brightness(1.1)}
 #pad .pbtn.adm i{background-image:url(img/ep/ldt.png)}
 .pbtn.adm{background:radial-gradient(#c93a3a,#3a0808)}
+#modal #mClose{display:flex !important;align-items:center;justify-content:center;z-index:100 !important}
 .admic{height:18px;vertical-align:middle;image-rendering:pixelated}
 .admbox h3 small{font-weight:normal}
 .admtabs{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}

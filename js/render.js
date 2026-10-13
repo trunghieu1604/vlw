@@ -617,10 +617,31 @@ function flushLabels() {
     t.ic && labelIcon(t, n);
     if (t.sub) {
       const r = e - t.size - 2;
-      ((CX.font = `${t.size - 1}px "IBM Plex Mono", monospace`),
-        CX.strokeText(t.sub, t.x, r),
-        (CX.fillStyle = t.subCol || t.col),
-        CX.fillText(t.sub, t.x, r));
+      const isRoyal = t.sub.includes("Vô Song Vương Giả");
+      if (isRoyal) {
+        CX.save();
+        CX.font = `bold ${t.size}px "IBM Plex Mono", monospace`;
+        const tw = CX.measureText(t.sub).width;
+        const grad = CX.createLinearGradient(t.x - tw / 2, 0, t.x + tw / 2, 0);
+        grad.addColorStop(0, "#ffb800");
+        grad.addColorStop(0.25, "#ffe875");
+        grad.addColorStop(0.5, "#ffffff");
+        grad.addColorStop(0.75, "#ff4500");
+        grad.addColorStop(1, "#ffb800");
+        CX.shadowColor = "#ffaa00";
+        CX.shadowBlur = 8 + 3 * Math.sin(Date.now() / 250);
+        CX.lineWidth = 3.5;
+        CX.strokeStyle = "#2b0500";
+        CX.strokeText(t.sub, t.x, r);
+        CX.fillStyle = grad;
+        CX.fillText(t.sub, t.x, r);
+        CX.restore();
+      } else {
+        ((CX.font = `${t.size - 1}px "IBM Plex Mono", monospace`),
+          CX.strokeText(t.sub, t.x, r),
+          (CX.fillStyle = t.subCol || t.col),
+          CX.fillText(t.sub, t.x, r));
+      }
     }
   }
   LABELS.length = 0;
@@ -668,8 +689,8 @@ function drawHeroEnt(t, i, k) {
     12,
     R.life / Math.max(1, R.P.life),
     "#4fd04f",
-    d ? `«${titleName(d)}»` : "",
-    d ? TIER[d[3]].c : "",
+    d ? (d[0] === "admin" ? titleName(d) : `«${titleName(d)}»`) : "",
+    d ? (d[0] === "admin" ? "#ffd700" : TIER[d[3]].c) : "",
     void 0,
     k ? mainSkIcon() : "",
   ),

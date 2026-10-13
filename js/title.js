@@ -229,8 +229,8 @@ const CAMP = {
       "Đặc biệt",
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.admin),
-      "Danh Hiệu Cao Quý",
-      ["allres_p", 99],
+      "Đặc Quyền Chí Tôn · Hào Quang Đế Vương",
+      [["allres_p", 99], ["lifemax_p", 50], ["fastwalkrun_p", 30], ["lucky_v", 99]],
       true,
     ],
   ],
@@ -266,7 +266,12 @@ const titleWorn = () => {
 };
 function titleAttr(n) {
   const t = titleWorn();
-  t && addAttr(n, t[6][0], [t[6][1], 0, 0]);
+  if (!t || !t[6]) return;
+  if (Array.isArray(t[6][0])) {
+    for (const a of t[6]) addAttr(n, a[0], [a[1], 0, 0]);
+  } else {
+    addAttr(n, t[6][0], [t[6][1], 0, 0]);
+  }
 }
 function titleModal() {
   titleCheck();
@@ -278,7 +283,7 @@ function titleModal() {
     s = CAMP_INFO[campOf(S.fac)];
   modal(
     `<h3>🎖 Danh hiệu <small>${c}/${list.length}</small></h3>
-    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">«${esc(titleName(t))}»</b>` : "Chưa đeo danh hiệu."}</p>
+    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">${t[0] === "admin" ? esc(titleName(t)) : `«${esc(titleName(t))}»`}</b>` : "Chưa đeo danh hiệu."}</p>
     ${h
       .map(
         (i) =>
@@ -286,9 +291,13 @@ function titleModal() {
           list.filter((a) => a[2] === i)
             .map((a) => {
               const e = !!n[a[0]],
-                l = t === a;
-              return `<div class="qrow${e ? "" : " lock"}"><span><b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small><small>${esc(a[5])} · ${esc(attrText(a[6][0], [a[6][1], 0, 0]))}</small></span><small></small>
-        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"}>${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
+                l = t === a,
+                isAdm = a[0] === "admin";
+              const royalStyle = isAdm ? `style="background:linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22));border:1.5px solid #ffd700;box-shadow:0 0 10px rgba(255,180,0,0.35);border-radius:6px;padding:6px 8px;margin:4px 0"` : "";
+              const royalTitle = isAdm ? `<b style="color:#ffd700;text-shadow:0 0 8px #ff9900;font-size:13px">${esc(titleName(a))}</b> <span style="background:#ff3b30;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:bold;margin-left:4px">ĐẶC QUYỀN ADMIN</span>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
+              const attrStr = Array.isArray(a[6][0]) ? a[6].map((x) => attrText(x[0], [x[1], 0, 0])).join(" · ") : attrText(a[6][0], [a[6][1], 0, 0]);
+              return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])} · ${esc(attrStr)}</small></span><small></small>
+        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${isAdm && !l ? "background:#c98d1a;color:#fff;border-color:#ffd700" : ""}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
             })
             .join(""),
       )
