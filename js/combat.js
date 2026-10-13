@@ -177,15 +177,13 @@ const LV_NEED_FROM = 90,
   LV_NEED_MUL = 10,
   LV_NEED_GROWTH = 1.05,
   lvNeed = (L) => {
+    if (L >= 200) {
+      return Math.round(1e7 + (L - 200) * 5e5);
+    }
     const maxIdx = J.exp ? J.exp.length : 200;
     const b = (J.exp && (L <= maxIdx ? J.exp[L - 1] : J.exp[maxIdx - 1])) || 2e9;
     const f = expCfg("lvNeed.from", LV_NEED_FROM);
-    if (L < f) return b;
-    if (L <= maxIdx) {
-      return Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f));
-    }
-    const at200 = Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), maxIdx - f));
-    return at200 + (L - maxIdx) * 1e8;
+    return L >= f ? Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f)) : b;
   };
 const XP_OVER = 25,
   XP_SLOW_FROM = 30,
@@ -961,9 +959,9 @@ function killCheck() {
 // EXP from kills, every map / zone / dungeon, main and disciples (balance: 1/4 of the original idle game rate)
 const KILL_XP_RATE = 0.25;
 function killXp(t) {
-  const e = xpPenK(t.L - S.lvl);
+  const e = xpPenK(t.L - Math.min(BASE_CAP, S.lvl));
   return (
-    expFor(Math.min(t.L, S.lvl + expCfg("over", XP_OVER))) * expCfg("classXp." + t.cls, CLS[t.cls].xp) * newbieXp() * e * diffOf().rew * xpMonK(t.L) * densK(t) *
+    expFor(Math.min(t.L, Math.min(BASE_CAP, S.lvl) + expCfg("over", XP_OVER))) * expCfg("classXp." + t.cls, CLS[t.cls].xp) * newbieXp() * e * diffOf().rew * xpMonK(t.L) * densK(t) *
     expCfg("killRate", KILL_XP_RATE) * xpZoneK()
   );
 }
@@ -992,14 +990,16 @@ const XP_EVENT = 5;
 function gainXp(t) {
   const n = levelCap();
   if (S.lvl >= n) return 0;
-  const e =
+  let e =
     (t *
       expCfg("event", XP_EVENT) *
       (1 + rebornBonus().xp + (R.P && R.P.expPct ? R.P.expPct / 100 : 0)) *
       (1 + buffP("xp")) *
       (1 + buffP("tt"))) /
-    xpSlow(S.lvl);
-  for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl);) {
+    xpSlow(Math.min(BASE_CAP, S.lvl));
+  if (S.lvl >= 200) e = Math.min(2500, e);
+  let upCount = 0;
+  for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl) && upCount < 50; upCount++) {
     const need = lvNeed(S.lvl);
     if (!need || need <= 0) break;
     ((S.xp -= need),

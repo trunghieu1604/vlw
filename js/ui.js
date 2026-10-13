@@ -1210,9 +1210,11 @@ function updateTop() {
         ? "Boss tuần"
         : R.dg.d.n
     : `${modeOf()[1]} ${zoneOf(Math.min(S.stage, STAGES)).n} ${R.field && !R.town ? ` · hạ ${fmt(R.field.kills)}` : ""}`;
-  const t = lvNeed(S.lvl) || 1;
-  (($("#xpBar").style.width = (S.xp / t) * 100 + "%"),
-    ($("#xpTxt").textContent = `${((S.xp / t) * 100).toFixed(1)}%`),
+  const cap = typeof levelCap === "function" ? levelCap() : 200,
+    isMax = S.lvl >= cap,
+    t = lvNeed(S.lvl) || 1;
+  (($("#xpBar").style.width = isMax ? "100%" : Math.min(100, (S.xp / t) * 100) + "%"),
+    ($("#xpTxt").textContent = isMax ? "Tối đa" : `${((S.xp / t) * 100).toFixed(1)}%`),
     ($("#hpBar").style.width = (R.life / n.life) * 100 + "%"),
     ($("#hpTxt").textContent = `${fmt(R.life)} / ${fmt(n.life)}`),
     ($("#mpBar").style.width = (R.mana / n.mana) * 100 + "%"),
