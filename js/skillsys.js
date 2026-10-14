@@ -162,8 +162,20 @@ function skillSysTick(t) {
         const b = d.curse || (d.curse = {});
         ((b[a] = e + Math.min(f, 60)), typeof castFx == "function" && castFx({ id: +a }));
         typeof jmSupFx == "function" && jmSupFx(+a, d);
-        for (const u of R.enemies)
-          u !== d && !u.dead && jxdE(d, u) < 120 && ((u.curse || (u.curse = {}))[a] = e + Math.min(f, 60));
+        const stn = skVal(l, "stun_p", p);
+        if (stn && stn[0] && Math.random() * 100 < stn[0]) {
+          const stDur = Math.max(0.6, (stn[1] || 18) / 18);
+          d.stun = Math.max(d.stun || 0, stDur);
+          typeof addText == "function" && addText(d.x, d.y - (d.r || 30) - 8, "Hôn mê!", "#ff4444", 12);
+        }
+        for (const u of R.enemies) {
+          if (u !== d && !u.dead && jxdE(d, u) < 120) {
+            (u.curse || (u.curse = {}))[a] = e + Math.min(f, 60);
+            if (stn && stn[0] && Math.random() * 100 < stn[0]) {
+              u.stun = Math.max(u.stun || 0, Math.max(0.6, (stn[1] || 18) / 18));
+            }
+          }
+        }
       }
     }
   }
@@ -173,7 +185,22 @@ function curseMod(t) {
   const e = t.curse;
   if (!e) return null;
   const s = clk(),
-    n = { res: {}, def: 0, ar: 0, dmg: 0, ret: 0, slow: 0, regen: 0, poison: 0, crit: 0 };
+    n = {
+      res: {},
+      def: 0,
+      ar: 0,
+      dmg: 0,
+      ret: 0,
+      retRange: 0,
+      slow: 0,
+      slowMove: 0,
+      atkSpeed: 0,
+      freezeRed: 0,
+      stunRed: 0,
+      regen: 0,
+      poison: 0,
+      crit: 0,
+    };
   let c = !1;
   for (const a in e) {
     if (e[a] <= s) continue;
@@ -190,22 +217,19 @@ function curseMod(t) {
         else if (/res_p$/.test(i)) {
           const f = i.startsWith("physics") ? "phys" : i.startsWith("lighting") ? "light" : i.replace("res_p", "");
           n.res[f] = (n.res[f] || 0) + r;
-        } else
-          i === "adddefense_v"
-            ? (n.def += r)
-            : i === "attackratingenhance_p"
-              ? (n.ar += r)
-              : i === "addphysicsdamage_p"
-                ? (n.dmg += r)
-                : i === "meleedamagereturn_p"
-                  ? (n.ret += -r)
-                  : i === "fasthitrecover_v"
-                    ? (n.slow += -r)
-                    : i === "lifereplenish_v"
-                      ? (n.regen += r)
-                      : i === "poisontimereduce_p"
-                        ? (n.poison += -r)
-                        : i === "deadlystrikeenhance_p" && (n.crit += r);
+        } else if (i === "adddefense_v") n.def += r;
+        else if (i === "attackratingenhance_p") n.ar += r;
+        else if (i === "addphysicsdamage_p") n.dmg += r;
+        else if (i === "meleedamagereturn_p") n.ret += -r;
+        else if (i === "rangedamagereturn_p") n.retRange += -r;
+        else if (i === "fasthitrecover_v") n.slow += -r;
+        else if (i === "fastwalkrun_p") n.slowMove += r;
+        else if (i === "castspeed_v" || i === "attackspeed_v") n.atkSpeed += r;
+        else if (i === "freezetimereduce_p") n.freezeRed += r;
+        else if (i === "stuntimereduce_p") n.stunRed += r;
+        else if (i === "lifereplenish_v") n.regen += r;
+        else if (i === "poisontimereduce_p") n.poison += -r;
+        else if (i === "deadlystrikeenhance_p") n.crit += r;
       }
     }
   }

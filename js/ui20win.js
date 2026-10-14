@@ -111,7 +111,10 @@ function renderChar20() {
       ["Né tránh", Math.round(n.def)],
       ["Chí mạng", Math.round(n.main.crit) + "%"],
       ["Tốc độ đánh", n.aspd.toFixed(2)],
-    ].concat(ELEM.map((e) => ["Kháng " + ELEM_VI[e], Math.round(n.res[e]) + "%"])),
+    ]
+      .concat(ELEM.map((e) => ["Kháng " + ELEM_VI[e], Math.round(n.res[e]) + "%"]))
+      .concat(n.returnRes ? [["Kháng phản đòn", n.returnRes + "%"]] : [])
+      .concat(n.fatallyRes ? [["Kháng chí tử", n.fatallyRes + "%"]] : []),
     u =
       n.plusSkill || Object.keys(n.skAdd || {}).length
         ? `<div class="u2note cp">Kỹ năng từ trang bị: ${n.plusSkill ? `tất cả +${n.plusSkill}` : ""}${Object.entries(

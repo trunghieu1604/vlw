@@ -229,6 +229,8 @@ function calc(t) {
       av(n, "anti_allres_p") + av(n, "anti_" + (r === "phys" ? "physics" : r === "light" ? "lighting" : r) + "res_p");
   ((a.dmg2mana = av(n, "damage2addmana_p")),
     (a.retRangeP = av(n, "rangedamagereturn_p")),
+    (a.returnRes = clamp(av(n, "returnres_p"), 0, 90)),
+    (a.fatallyRes = clamp(av(n, "fatallystrikeres_p"), 0, 80)),
     (a.stunAdd = av(n, "do_stun_p")),
     (a.expPct = av(n, "expenhance_p")),
     (a.stunRed = clamp(av(n, "stuntimereduce_p"), 0, 80)),

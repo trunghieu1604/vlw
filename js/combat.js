@@ -401,13 +401,18 @@ function heroHit(t, n) {
   const T = counters(t.series, n.series),
     g = counters(n.series, t.series);
   (T ? (s *= 1 + SERIES_BONUS) : g && (s *= 1 - SERIES_BONUS),
-    t.parts.cold && !(n.slowT > 0) && (n.slowT = t.coldT || ELEM_SLOW_T));
-  const k = 1 + (R.P.stunLong || 0) / 100;
+    t.parts.cold && !(n.slowT > 0) && (n.slowT = (t.coldT || ELEM_SLOW_T) * (1 - ((e && e.freezeRed) || 0) / 100)));
+  const k = (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
   if (
     (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
     (n.hp -= s),
     n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
+    (n.retMeleeP || n.retMelee) && !t.ranged && (() => {
+      const retP = Math.max(0, (n.retMeleeP || 0) * (1 - (R.P.returnRes || 0) / 100));
+      const refDmg = Math.max(0, (n.retMelee || 0) + (s * retP) / 100);
+      refDmg > 0 && ((R.life = Math.max(1, R.life - refDmg)), addText(H.x, H.y - 40, "-" + fmt(refDmg) + " ↩", "#ff8844", 11));
+    })(),
     (n.hitT = 0.12),
     n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid] ? MON[n.tid].anim : (heroGfx() && heroGfx().anim), "hurt", 0.3)),
     (t.stun || R.P.stunAdd) &&
@@ -449,7 +454,11 @@ function enemyHit(t) {
     return;
   }
   const e = SERIES_ELEM[t.series] || "phys";
+  const baseFatal = t.cls === "boss" ? 16 : t.cls === "elite" ? 8 : 0;
+  const fatalChance = Math.max(0, baseFatal - (R.P.fatallyRes || 0));
+  const isFatal = fatalChance > 0 && Math.random() * 100 < fatalChance;
   let o = t.dmg * rnd(0.8, 1.2) * (n ? Math.max(0.1, 1 + n.dmg / 100) : 1);
+  if (isFatal) o *= 1.4;
   if (
     ((o = applyPart(o, e, t.series, R.P.series, R.P.res, R.P.resMax || PLAYER_RES_MAX, 10)),
     counters(t.series, R.P.series)
@@ -485,7 +494,8 @@ function enemyHit(t) {
       ((H.act = "hurt"), (H.actT = 0), (R.atkT = Math.max(R.atkT || 0, 0.25 * (1 - (R.P.hitRec || 0) / 100)))),
     R.P.retMelee || R.P.retMeleeP || R.P.retRangeP)
   ) {
-    const i = t.ranged ? (o * (R.P.retRangeP || 0)) / 100 : R.P.retMelee + (o * R.P.retMeleeP) / 100;
+    const retCurse = n && (t.ranged ? n.retRange : n.ret) ? Math.max(0, 1 + (t.ranged ? n.retRange : n.ret) / 100) : 1;
+    const i = (t.ranged ? (o * (R.P.retRangeP || 0)) / 100 : R.P.retMelee + (o * R.P.retMeleeP) / 100) * retCurse;
     i > 0 && (t.hp -= i * cheatK());
   }
   addText(H.x + rnd(-10, 10), H.y - 36, "-" + fmt(o), "#ff6a5a", 12);
@@ -820,15 +830,18 @@ function heroAttack(pool) {
   );
 }
 function enemyAI(t, n) {
-  if ((t.resBrkT > 0 && (t.resBrkT -= n), t.curse)) {
-    const s = curseMod(t);
-    s && s.regen < 0 && (t.hp += s.regen * 2 * n);
+  const crs = t.curse && typeof curseMod == "function" ? curseMod(t) : null;
+  if (t.resBrkT > 0) t.resBrkT -= n;
+  if (crs && crs.regen < 0) {
+    const drain = Math.abs(crs.regen) * (15 + (t.L || 1) * 2);
+    t.hp -= drain * n;
   }
   if (t.stun > 0) {
     t.stun -= n;
     return;
   }
   const e = t.slowT > 0 ? ((t.slowT -= n), ELEM_SLOW) : 1;
+  const moveSpdMod = crs && crs.slowMove ? Math.max(0.2, 1 + crs.slowMove / 100) : 1;
   if ((t.poison > 0 && ((t.poison -= n), (t.hp -= t.poisonDmg * n)), t.home && fieldIdle(t, n))) return;
   // target: the nearest party member (js/party.js); T is its actor (H for the main character)
   const pk = typeof partyAggro == "function" ? partyAggro(t, n) : 0,
@@ -836,7 +849,7 @@ function enemyAI(t, n) {
     o = jxdE(t, T),
     i = t.ranged ? t.reach || 200 : Math.max((t.r + 24) / JX_K, Math.min(t.reach || 0, 90));
   ((t.seeT = (t.seeT || 0) - n) <= 0 && ((t.seeT = 0.25), (t.see = o > i + 4 || obsSee(t.x, t.y, T.x, T.y))),
-    (t.moving = (o > i || !t.see) && navGo(t, T.x, T.y, t.spd * e * n, 1) > 0),
+    (t.moving = (o > i || !t.see) && navGo(t, T.x, T.y, t.spd * e * moveSpdMod * n, 1) > 0),
     // face the way it walks (around walls too); face its target when standing / attacking
     (t.moving && navFace(t)) || ((t.face = T.x >= t.x ? 1 : -1), (t.dir = dirOf(T.x - t.x, T.y - t.y))),
     navSep(t, R.enemies, 14),
@@ -845,7 +858,7 @@ function enemyAI(t, n) {
     o <= i + 4 &&
       t.see &&
       t.atkCd <= 0 &&
-      ((t.atkCd = t.cd * (t.curse && typeof curseMod == "function" ? 1 + ((curseMod(t) || {}).slow || 0) / 100 : 1)),
+      ((t.atkCd = t.cd * (crs ? (1 + (crs.slow || 0) / 100) * (1 - (crs.atkSpeed || 0) / 100) : 1)),
       pk ? withChar(pk, () => enemyHit(t)) : enemyHit(t),
       (t.act = "at"),
       (t.actT = 0),

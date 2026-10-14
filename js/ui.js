@@ -340,7 +340,9 @@ function renderChar() {
           `<div class="attr"><span>${ATTR_VI[o]}</span><b>${Math.round(n[o])}</b><span class="pm"><button class="plus" data-a="${o}" ${S.attrPts ? "" : "disabled"}>+</button><button class="minus" data-a="${o}" title="Rút lại 1 điểm" ${S.attr[o] > 0 ? "" : "disabled"}>−</button></span></div>`,
       )
       .join(""),
-    d = ELEM.map((o) => `<span>Kháng ${ELEM_VI[o]}</span><span>${Math.round(n.res[o])}%</span>`).join("");
+    d = ELEM.map((o) => `<span>Kháng ${ELEM_VI[o]}</span><span>${Math.round(n.res[o])}%</span>`).join("") +
+      (n.returnRes ? `<span>Kháng phản đòn</span><span>${n.returnRes}%</span>` : "") +
+      (n.fatallyRes ? `<span>Kháng chí tử</span><span>${n.fatallyRes}%</span>` : "");
   (($("#t-char").innerHTML =
     `<div class="card"><b style="color:${SERIES_COL[t.series]}">${esc(t.n)}</b> · hệ ${SERIES[t.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">chuyển sinh ${rebornN()} · mặc đồ như cấp ${eqLevel()}</small>` : ""}<br><small class="dim">Lực tay trái ${lucTay(n.basic)} · Lực tay phải ${lucTay(n.main)}</small> <button class="btn sm" id="bTitle">🎖 Danh hiệu</button> <button class="btn sm${hasRealName() ? "" : " on"}" id="bName">${hasRealName() ? "✏ " + esc(S.name) : "✏ Đặt tên"}</button> <button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">👥 Dự Bị</button>${matHave("misc", "ldp") > 0 ? ` <button class="btn sm on" id="bDoiPhai">Đổi phái (${matHave("misc", "ldp")})</button>` : ""}</div>
     <div class="eqgrid">${c}</div>${e.length ? `<div class="reqbad"><b>⚠ ${e.length} món đang mặc chưa đủ điều kiện, không được cộng chỉ số:</b><br>${e.map((o) => `${esc(o.n)}: ${esc(reqProblems(o).join("; "))}`).join("<br>")}</div>` : ""}
@@ -464,6 +466,10 @@ function skillEffectLines(n, t) {
     const i =
       attrText(a, c) + (a === "dynamicmagicshield_v" ? ` (tối đa ${Math.round(DMG_SHIELD_MAX * 100)}% mỗi đòn)` : "");
     i && !/^\s*$/.test(i) && e.push(i);
+  }
+  if (n.id === 69 && typeof WXG_POISON !== "undefined") {
+    const dmg = WXG_POISON[Math.min(t, WXG_POISON.length) - 1] || 1;
+    e.push(`Độc sát quanh thân: ${dmg} điểm/lần (bán kính 200, mỗi 4 giây)`);
   }
   const s = new Set();
   for (const a in n.attr)
