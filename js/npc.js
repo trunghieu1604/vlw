@@ -430,6 +430,13 @@ function npcTalk(n) {
   const ops = [];
   switch (n.k) {
     case "admin_npc": {
+      n.l = "Chào hiệp sĩ! Ta là Trung Hiếu, trọng trách ban thưởng Boss Thế Giới, phong tặng vòng sáng và danh hiệu võ lâm. Ngươi cần việc gì?";
+      ops.push({
+        t: "Nhận Vòng Sáng",
+        f: () => {
+          if (typeof openLequanHaloModal === "function") openLequanHaloModal();
+        },
+      });
       const tw = typeof titleWorn === "function" && titleWorn();
       const isVlmc = tw && tw[0] === "vlmc";
       if (isVlmc) {
@@ -491,8 +498,14 @@ function npcTalk(n) {
     case "bank":
       ops.push({ t: "Gửi / rút đồ (Kho chung)", f: () => stashModal() });
       break;
-    case "xaphu":
-      return npcXaPhu(n);
+  }
+  if (n && n.n && /lễ quan|lệ quan/i.test(n.n)) {
+    ops.unshift({
+      t: "Nhận Vòng Sáng",
+      f: () => {
+        if (typeof openLequanHaloModal === "function") openLequanHaloModal();
+      },
+    });
   }
   ops.push(npcBye());
   npcShow(n, n.l || "Khách quan có việc gì không?", ops);

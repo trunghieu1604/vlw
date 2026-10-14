@@ -107,6 +107,13 @@ body.u20 #panel::before {
   z-index: 8;
   display: flex;
   gap: 6px;
+  align-items: flex-start;
+}
+.u20r-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
 }
 .u20rb {
   width: 46px;
@@ -128,6 +135,15 @@ body.u20 #panel::before {
   background: radial-gradient(#8a6f3a, #3a2a12);
   border-color: #ffd24a;
   box-shadow: 0 0 8px #ffd24a88;
+}
+#u20wb.wbup {
+  color: #ffd24a;
+  border-color: #ffd24a;
+  box-shadow: 0 0 10px #ffaa00aa;
+  animation: wbPulse 1.2s infinite alternate;
+}
+@keyframes wbPulse {
+  to { filter: brightness(1.4); transform: scale(1.06); }
 }
 #u20gold {
   position: fixed;
@@ -379,6 +395,41 @@ body.u20 #modal .mbox {
     0 0 0 1px #000,
     0 -2px 8px #000a;
   align-items: flex-end;
+}
+.u20mi-tg {
+  width: 22px;
+  height: 30px;
+  background: linear-gradient(#3e3e32, #1d1d16);
+  border: 1px solid #7d6a3c;
+  color: #ffd24a;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: filter 0.15s, border-color 0.15s;
+  box-shadow: 0 1px 3px #000;
+  margin-right: 2px;
+}
+.u20mi-tg:hover {
+  filter: brightness(1.3);
+  color: #fff;
+  border-color: #ffd24a;
+}
+#u20menu.collapsed {
+  border-radius: 8px 8px 3px 3px;
+  padding: 4px 6px;
+}
+#u20menu.collapsed .u20mi:not([data-u="more"]) {
+  display: none !important;
+}
+body.u2s .u20mi-tg {
+  width: 26px;
+  height: 34px;
+  font-size: 14px;
 }
 .u20mi {
   width: 30px;
@@ -1803,7 +1854,7 @@ body.u20 #panel {
     height: 34px !important;
   }
   body.u2s #u20ct {
-    margin-left: 44px;
+    margin-left: 0;
   }
   body.u2s #u20ct button {
     height: 24px !important;
@@ -2011,14 +2062,16 @@ body.u20:has(#chatBox.open) #u20log {
   background: linear-gradient(#1d4a38, #0a1d15) !important;
   border: 1px solid #000 !important;
   box-shadow: inset 0 0 0 1px #3f7a62;
-  margin-right: 2px;
-  align-self: flex-end;
+  margin-left: 2px !important;
+  margin-bottom: 3px;
 }
 #u20lt.on {
   box-shadow: inset 0 0 0 1px #e0c060;
 }
 body.u20 #u20ct {
-  align-items: flex-end;
+  align-items: flex-start;
+  margin-left: 0 !important;
+  margin-bottom: 2px;
 }
 body.u20logoff #u20lines,
 body.u20logoff #u20ct button[data-lt] {
@@ -2036,6 +2089,7 @@ body.u20logoff #u20ct button[data-lt] {
   body.u2s #u20lt {
     width: 40px !important;
     height: 34px !important;
+    margin-left: 2px !important;
   }
   #u20trk .u2trh {
     padding: 6px 2px;

@@ -347,7 +347,7 @@ function hitPercent(t, n, e = 0) {
   return (i > MAX_HIT + 4 && (i = MAX_HIT), Math.max(MIN_HIT, i));
 }
 function applyPart(t, n, e, o, i, s, r) {
-  let a = i[n];
+  let a = (i && i[n] != null) ? i[n] : 0;
   return (
     counters(e, o) ? (a -= r) : counters(o, e) && (a += r),
     (a = clamp(a, -s, Math.min(s, MAX_RESIST))),
@@ -357,8 +357,8 @@ function applyPart(t, n, e, o, i, s, r) {
 function heroHit(t, n) {
   ((n.aggro = !0), t && t.id && SK[t.id] && SK[t.id].tier === 90 && ((n.hitSk || (n.hitSk = {}))[t.id] = 1));
   const e = typeof curseMod == "function" ? curseMod(n) : null;
-  if (t.useAR && Math.random() * 100 >= hitPercent(t.ar || R.P.ar, Math.max(0, n.def + (e ? e.def : 0)), t.ignore))
-    return (addText(n.x, n.y - n.r - 8, "Trượt", "#aaa", 11), 0);
+  if (t.useAR && Math.random() * 100 >= hitPercent(t.ar || R.P.ar, Math.max(0, (n.def || 0) + (e ? e.def : 0)), t.ignore))
+    return (addText(n.x, n.y - (n.r || 30) - 8, "Trượt", "#aaa", 11), 0);
   t.ev2 || stateOnHit(t, n);
   const o = Math.random() * 100 < t.crit,
     i = (R.P.heavy > 0 || t.fatal > 0) && Math.random() * 100 < (R.P.heavy || 0) + (t.ev2 ? 0 : t.fatal || 0);
@@ -367,14 +367,15 @@ function heroHit(t, n) {
     a = 0;
   const f = n.cls === "boss" || n.cls === "elite";
   if (f && Math.random() * 100 < (n.cls === "boss" ? 6 : 3) - (R.P.antiBlock || 0))
-    return (addText(n.x, n.y - n.r - 8, "Hóa giải", "#ccc", 11), 0);
+    return (addText(n.x, n.y - (n.r || 30) - 8, "Hóa giải", "#ccc", 11), 0);
+  const nRes = n.res || { phys: 25, fire: 25, cold: 25, light: 25, poison: 25 };
   const u = n.resBrkT > 0 ? 10 : 0,
     c = R.P.anti,
     m =
       (c && ELEM.some((l) => c[l])) || u
-        ? Object.fromEntries(ELEM.map((l) => [l, n.res[l] - ((c && c[l]) || 0) - u]))
-        : n.res,
-    y = e ? Object.fromEntries(ELEM.map((l) => [l, m[l] + (e.res[l] || 0)])) : m,
+        ? Object.fromEntries(ELEM.map((l) => [l, (nRes[l] != null ? nRes[l] : 25) - ((c && c[l]) || 0) - u]))
+        : nRes,
+    y = e ? Object.fromEntries(ELEM.map((l) => [l, (m[l] != null ? m[l] : 25) + ((e.res && e.res[l]) || 0)])) : m,
     M = R.P.antiMax ? Math.max(0, 75 - R.P.antiMax / 4) : 75;
   for (const l in t.parts) {
     let d = t.parts[l] * rnd(0.85, 1.15);
@@ -406,8 +407,9 @@ function heroHit(t, n) {
     (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
     (n.hp -= s),
+    n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
     (n.hitT = 0.12),
-    n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid].anim, "hurt", 0.3)),
+    n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid] ? MON[n.tid].anim : (heroGfx() && heroGfx().anim), "hurt", 0.3)),
     (t.stun || R.P.stunAdd) &&
       Math.random() * 100 < (t.stun || 0) + (R.P.stunAdd || 0) &&
       (n.stun = Math.max(n.stun, 0.8 * k)),
@@ -847,7 +849,7 @@ function enemyAI(t, n) {
       pk ? withChar(pk, () => enemyHit(t)) : enemyHit(t),
       (t.act = "at"),
       (t.actT = 0),
-      npcSfx(t.animKey || MON[t.tid].anim, "at", 0.35),
+      npcSfx(t.animKey || (t.tid != null && MON[t.tid] ? MON[t.tid].anim : (typeof heroGfx == "function" && heroGfx() ? heroGfx().anim : "mon_1")), "at", 0.35),
       t.ranged && fxLine(t, T, { parts: { phys: 1 } })));
 }
 function tick(t) {
@@ -955,9 +957,9 @@ function killCheck() {
       !t.dead &&
       ((t.dead = !0),
       onKill(t),
-      npcSfx(MON[t.tid].anim, "die", 0.5),
+      npcSfx(MON[t.tid] ? MON[t.tid].anim : (heroGfx() && heroGfx().anim), "die", 0.5),
       R.quiet || ((t.act = "die"), (t.actT = 0), R.corpses.push(t)));
-  !fieldMode() && R.enemies.length && R.enemies.every((t) => t.dead) && ((R.enemies = []), waveCleared());
+  !fieldMode() && !(R.dg && R.dg.kind === "worldboss") && R.enemies.length && R.enemies.every((t) => t.dead) && ((R.enemies = []), waveCleared());
 }
 // EXP of a kill for the character in S (the main, or a disciple swapped in by withChar)
 // EXP from kills, every map / zone / dungeon, main and disciples (balance: 1/4 of the original idle game rate)

@@ -265,6 +265,7 @@ function dgExit() {
 }
 function dgSpawn() {
   const t = R.dg;
+  if (!t || t.kind === "worldboss") return;
   if (((R.enemies = []), (R.stall = 0), t.kind === "boat")) {
     boatSpawn();
     return;
@@ -310,14 +311,27 @@ function dgSpawn() {
 }
 function dgTick(t) {
   const n = R.dg;
-  n &&
-    ((n.t += t),
+  if (!n) return;
+  if (n.kind === "worldboss") {
+    n.t += t;
+    R.stall = 0;
+    if (n.t >= n.limit) {
+      if (typeof handleBossDefeated === "function") {
+        handleBossDefeated(true);
+      } else if (typeof exitWorldBoss === "function") {
+        exitWorldBoss(true);
+      }
+    }
+    return;
+  }
+  ((n.t += t),
     (R.stall = 0),
     n.kind === "wb" && n.boss && (n.dmg = Math.max(n.dmg, n.boss.max - Math.max(0, n.boss.hp))),
     n.t >= n.limit && (n.kind === "wb" ? wbFinish(!1) : dgFail("Hết thời gian")));
 }
 function dgCleared() {
   const t = R.dg;
+  if (!t || t.kind === "worldboss") return;
   if (t.kind === "boat") {
     boatCleared();
     return;
@@ -471,14 +485,16 @@ function drawDgHud(t) {
     s = Math.floor(o / 60),
     e = String(Math.floor(o % 60)).padStart(2, "0"),
     i =
-      n.kind === "wb"
-        ? `Boss tuần · ${fmt(n.dmg)} (${(() => {
-            const a = (n.dmg / Math.max(1, n.boss ? n.boss.max : 1)) * 100;
-            return a < 10 ? a.toFixed(1) : Math.round(a);
-          })()}%) · ${s}:${e}`
-        : n.kind === "boat"
-          ? `⛵ Phong Lăng Độ · đoạn ${n.room}/${BOAT_SEGS} · ${s}:${e}`
-          : `${n.d.n} · phòng ${n.room}/${n.d.rooms} · ${s}:${e}`;
+      n.kind === "worldboss"
+        ? `⚔ Boss Thế Giới: Trung Hiếu · Còn: ${s}:${e}`
+        : n.kind === "wb"
+          ? `Boss tuần · ${fmt(n.dmg)} (${(() => {
+              const a = (n.dmg / Math.max(1, n.boss ? n.boss.max : 1)) * 100;
+              return a < 10 ? a.toFixed(1) : Math.round(a);
+            })()}%) · ${s}:${e}`
+          : n.kind === "boat"
+            ? `⛵ Phong Lăng Độ · đoạn ${n.room}/${BOAT_SEGS} · ${s}:${e}`
+            : `${n.d.n} · phòng ${n.room}/${n.d.rooms} · ${s}:${e}`;
   ((t.font = '12px "IBM Plex Mono", monospace'), (t.textAlign = "center"));
   const d = t.measureText(i).width + 18;
   ((t.fillStyle = "#000b"),

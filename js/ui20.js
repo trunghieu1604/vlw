@@ -9,9 +9,7 @@ const U20_TABS = [
     ["more", "more", "Hệ thống", "Hệ thống"],
   ],
   U20_SIDE = [],
-  U20_LOGT = [
-    ["sys", "Hệ thống"],
-  ];
+  U20_LOGT = [];
 let u20LogT = "sys",
   u20Cur = null;
 const u20On = () =>
@@ -25,8 +23,9 @@ function u20Init() {
     const i = document.createElement("div");
     ((i.innerHTML = n), document.body.appendChild(i.firstElementChild));
   };
+  const isMenuCol = S ? S.u20MenuOff !== false : true;
   (t(
-    `<div id="u20menu">${U20_TABS.map(([n, i, u]) => `<button class="u20mi" data-u="${n}" title="${u}" style="background-image:url(img/u2/${i}.png)"><i class="dot"></i></button>`).join("")}</div>`,
+    `<div id="u20menu" class="${isMenuCol ? "collapsed" : ""}"><button id="u20menuTg" class="u20mi-tg" title="${isMenuCol ? "Mở rộng thanh công cụ" : "Thu gọn thanh công cụ"}">${isMenuCol ? "«" : "»"}</button>${U20_TABS.map(([n, i, u]) => `<button class="u20mi" data-u="${n}" title="${u}" style="background-image:url(img/u2/${i}.png)"><i class="dot"></i></button>`).join("")}</div>`,
   ),
     t(
       '<div id="u20rc"><div id="u20trk" style="display:none"></div><button id="u20stb" title="Mã Trường: bộ sưu tập ngựa"><b id="u20stbN"></b></button></div>',
@@ -46,18 +45,32 @@ function u20Init() {
       `<div id="u20side">${U20_SIDE.map(([n, i], u) => `<button class="u20sq" data-s="${u}" data-n="${i}">${n}</button>`).join("")}</div>`,
     ),
     t(
-      '<div id="u20r"><button class="u20rb" id="u20fs" title="Toàn màn hình">Toàn<br>màn</button><button class="u20rb" id="u20gift">Phần<br>thưởng</button><button class="u20rb" id="u20ktc">Kỳ Trân<br>Các</button></div>',
+      '<div id="u20r"><button class="u20rb" id="u20fs" title="Toàn màn hình">Toàn<br>màn</button><button class="u20rb" id="u20gift">Phần<br>thưởng</button><div class="u20r-col"><button class="u20rb" id="u20ktc" title="Kỳ Trân Các">Kỳ Trân<br>Các</button><button class="u20rb" id="u20wb" title="Boss thế giới">Boss<br>thế giới</button></div></div>',
     ),
     t(
       '<div id="u20gold"><span><img src="img/ep/knb.png" alt=""><b id="u20knb">0</b></span><span>🪙 <b id="u20g">0</b></span></div>',
     ),
     t(
-      `<div id="u20log"><div id="u20lines"></div><div id="u20ct"><button id="u20lt" title="Ẩn / hiện khung thông báo">📜</button>${U20_LOGT.map(([n, i]) => `<button data-lt="${n}" class="${n === u20LogT ? "on" : ""}">${i}</button>`).join("")}</div></div>`,
+      '<div id="u20log"><div id="u20ct"><button id="u20lt" title="Ẩn / hiện khung thông báo">📜</button></div><div id="u20lines"></div></div>',
     ),
     t('<div id="u20boss"><div class="t"></div><div class="b"><i></i><span></span></div></div>'));
   (document
       .querySelectorAll("#u20menu .u20mi")
       .forEach((n) => (n.onclick = () => (n.dataset.u === "ride" ? toggleMount() : u20Toggle(n.dataset.u)))),
+    ($("#u20menuTg") && ($("#u20menuTg").onclick = () => {
+      const menu = $("#u20menu");
+      if (!menu) return;
+      const isCol = menu.classList.toggle("collapsed");
+      if (S) {
+        S.u20MenuOff = isCol;
+        if (typeof save === "function") save();
+      }
+      const btn = $("#u20menuTg");
+      if (btn) {
+        btn.textContent = isCol ? "«" : "»";
+        btn.title = isCol ? "Mở rộng thanh công cụ" : "Thu gọn thanh công cụ";
+      }
+    })),
     (u20TrkOn = !S || S.u20trk !== !1),
     document.querySelectorAll("#u20side .u20sq").forEach((n) => (n.onclick = () => U20_SIDE[+n.dataset.s][2]())),
     ($("#u20lt").onclick = () => {
@@ -84,6 +97,7 @@ function u20Init() {
   $("#u20fs") && ($("#u20fs").onclick = () => typeof toggleFullscreen == "function" && toggleFullscreen());
   $("#u20gift") && ($("#u20gift").onclick = () => giftModal(!0));
   $("#u20ktc") && ($("#u20ktc").onclick = () => ktcModal());
+  $("#u20wb") && ($("#u20wb").onclick = () => typeof openWorldBossModal == "function" && openWorldBossModal());
   if (typeof modal == "function") {
     const n = modal;
     modal = (...i) => {
@@ -537,12 +551,6 @@ function u20Tick() {
   (u20TrkDraw(), u20ZoneName(), u20StbTick());
   // loot picked up: main.js re-renders the bag only when it is the focused window (curTab)
   typeof invDirty < "u" && invDirty && curTab !== "inv" && u20IsOpen("inv") && u20RenderOne("inv");
-  {
-    $("#u20mail") && ($("#u20mail").style.display = "none");
-    $("#u20mkt") && ($("#u20mkt").style.display = "none");
-    const u = $("#u20rank");
-    u && (u.style.display = "none");
-  }
   const t = $("#chatBox");
   t && t.parentNode !== document.body && document.body.appendChild(t);
   for (const n of document.querySelectorAll('#u20menu [data-u="ride"], #tabRide'))

@@ -619,6 +619,7 @@ function flushLabels() {
       const r = e - t.size - 2;
       const isVlmc = t.sub.includes("VÕ LÂM MINH CHỦ");
       const isRoyal = t.sub.includes("Vô Song Vương Giả");
+      const isTop1Btg = t.sub.includes("TOP 1 BTG");
       if (isVlmc) {
         CX.save();
         CX.font = `bold ${t.size}px "IBM Plex Mono", monospace`;
@@ -629,9 +630,32 @@ function flushLabels() {
         grad.addColorStop(0.5, "#ffcc44");
         grad.addColorStop(0.75, "#ff5500");
         grad.addColorStop(1, "#ff2200");
-        CX.shadowColor = "#ff2200";
-        CX.shadowBlur = 9 + 3 * Math.sin(Date.now() / 200);
-        CX.lineWidth = 3.5;
+        // Hào quang viền kép (tránh shadowBlur vì WebKit/Safari trên iOS bị lỗi hộp chữ nhật đặc màu)
+        const pulse = 0.5 + 0.3 * Math.sin(Date.now() / 200);
+        CX.lineWidth = 4.5;
+        CX.strokeStyle = `rgba(255, 50, 0, ${pulse})`;
+        CX.strokeText(t.sub, t.x, r);
+        CX.lineWidth = 2.5;
+        CX.strokeStyle = "#380000";
+        CX.strokeText(t.sub, t.x, r);
+        CX.fillStyle = grad;
+        CX.fillText(t.sub, t.x, r);
+        CX.restore();
+      } else if (isTop1Btg) {
+        CX.save();
+        CX.font = `bold ${t.size}px "IBM Plex Mono", monospace`;
+        const tw = CX.measureText(t.sub).width;
+        const grad = CX.createLinearGradient(t.x - tw / 2, 0, t.x + tw / 2, 0);
+        grad.addColorStop(0, "#ffd700");
+        grad.addColorStop(0.25, "#ffffff");
+        grad.addColorStop(0.5, "#ffd700");
+        grad.addColorStop(0.75, "#ff4500");
+        grad.addColorStop(1, "#ffd700");
+        const pulse = 0.55 + 0.35 * Math.sin(Date.now() / 200);
+        CX.lineWidth = 4.5;
+        CX.strokeStyle = `rgba(255, 215, 0, ${pulse})`;
+        CX.strokeText(t.sub, t.x, r);
+        CX.lineWidth = 2.5;
         CX.strokeStyle = "#380000";
         CX.strokeText(t.sub, t.x, r);
         CX.fillStyle = grad;
@@ -647,9 +671,12 @@ function flushLabels() {
         grad.addColorStop(0.5, "#ffffff");
         grad.addColorStop(0.75, "#ff4500");
         grad.addColorStop(1, "#ffb800");
-        CX.shadowColor = "#ffaa00";
-        CX.shadowBlur = 8 + 3 * Math.sin(Date.now() / 250);
-        CX.lineWidth = 3.5;
+        // Hào quang viền kép (tránh shadowBlur vì WebKit/Safari trên iOS bị lỗi hộp chữ nhật đặc màu)
+        const pulse = 0.5 + 0.3 * Math.sin(Date.now() / 250);
+        CX.lineWidth = 4.5;
+        CX.strokeStyle = `rgba(255, 170, 0, ${pulse})`;
+        CX.strokeText(t.sub, t.x, r);
+        CX.lineWidth = 2.5;
         CX.strokeStyle = "#2b0500";
         CX.strokeText(t.sub, t.x, r);
         CX.fillStyle = grad;
@@ -797,6 +824,44 @@ function draw(i) {
     }
     if (e.disc) {
       withChar(e.disc, () => drawHeroEnt(t, i, e.disc));
+      continue;
+    }
+    if (e.heroLook) {
+      if (typeof drawHalo === "function") {
+        drawHalo(t, "zw", e.x, e.y, 0.98);
+      }
+      const csAura = (typeof JXCS_RED != "undefined" && JXCS_RED) || (typeof JXCS != "undefined" && JXCS[5]);
+      if (csAura && typeof drawState == "function") {
+        drawState(t, csAura, e.x, e.y, 0, (R && R.clock) || 0, (typeof ST_HERO_K != "undefined" ? ST_HERO_K : 1 / 0.6), 0.98);
+      }
+      t.fillStyle = "#0007";
+      t.beginPath();
+      t.ellipse(e.x, e.y, 24, 9, 0, 0, 7);
+      t.fill();
+      stepAct(e, e.stun > 0 ? 0 : e.slowT > 0 ? i * ELEM_SLOW : i, e.moving ? "run" : "st");
+      const L = typeof presLook == "function" ? presLook(e.heroLook) : null;
+      let h = 0;
+      if (L && typeof drawJxHero == "function") {
+        h = drawJxHero(e.act || "st", e.dir || 0, e.actT || 0, e.x, e.y, HERO_SCALE * 1.15, e.hitT > 0 ? 0.75 : 1, null, L);
+      }
+      if (!h) {
+        const g = typeof heroGfx == "function" ? heroGfx(e.heroLook.f, e.heroLook.x) : null;
+        h = g && g.anim ? drawAnim(g.anim, e.act || "st", e.dir || 0, e.actT || 0, e.x, e.y, HERO_SCALE * 1.15, e.hitT > 0 ? 0.75 : 1) : 0;
+      }
+      e.hitT > 0 && (e.hitT -= i);
+      const topH = h ? Math.min(h, 140) : 110;
+      const f = e.y - topH - 8;
+      label(
+        e.x,
+        f,
+        `${e.n} · Lv${e.L || 200}`,
+        "#ffd700",
+        12,
+        e.hp / e.max,
+        "#ff3030",
+        "«BOSS THẾ GIỚI»",
+        "#ff2200"
+      );
       continue;
     }
     const l = 1;

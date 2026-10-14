@@ -243,12 +243,59 @@ const CAMP = {
       null,
       true,
     ],
+    [
+      "top1_btg",
+      "TOP 1 BTG",
+      "Boss Thế Giới",
+      5,
+      () => {
+        const rw = typeof RW === "function" ? RW() : (S && S.rw);
+        const exp = rw && rw.titleExp && rw.titleExp.top1_btg;
+        if (exp && Date.now() < exp) return true;
+        if (rw && rw.titles && rw.titles.top1_btg) delete rw.titles.top1_btg;
+        if (rw && rw.title === "top1_btg") rw.title = "";
+        return false;
+      },
+      "TOP 1 Sát Thương Boss Thế Giới · Hiệu lực 1 ngày (+20% Sinh Lực, +20% May Mắn)",
+      [["lifemax_p", 20], ["lucky_v", 20]],
+      true,
+    ],
+    [
+      "top2_btg",
+      "TOP 2-5 BTG",
+      "Boss Thế Giới",
+      4,
+      () => {
+        const rw = typeof RW === "function" ? RW() : (S && S.rw);
+        const exp = rw && rw.titleExp && rw.titleExp.top2_btg;
+        if (exp && Date.now() < exp) return true;
+        if (rw && rw.titles && rw.titles.top2_btg) delete rw.titles.top2_btg;
+        if (rw && rw.title === "top2_btg") rw.title = "";
+        return false;
+      },
+      "TOP 2-5 Sát Thương Boss Thế Giới · Hiệu lực 1 ngày (+10% Kháng Tất Cả)",
+      ["allres_p", 10],
+      true,
+    ],
   ],
   TITLE_BY = Object.fromEntries(TITLES.map((n) => [n[0], n])),
   titleName = (n) => (typeof n[1] == "function" ? n[1]() : n[1]),
   TT = () => {
     const n = RW();
     n.titles = n.titles || {};
+    delete n.titles.bachu;
+    delete n.titles.tuyetthe;
+    delete n.titles.thanlong;
+    if (n.titleExp) {
+      const now = Date.now();
+      for (const k in n.titleExp) {
+        if (n.titleExp[k] && now >= n.titleExp[k]) {
+          delete n.titles[k];
+          delete n.titleExp[k];
+          if (n.title === k) n.title = "";
+        }
+      }
+    }
     for (const t in n.ach || {}) TITLE_BY[t] && (n.titles[t] = 1);
     return n.titles;
   };
@@ -290,30 +337,44 @@ function titleModal() {
     list = TITLES.filter((a) => !a[7] || n[a[0]]),
     h = [...new Set(list.map((i) => i[2]))],
     c = list.filter((i) => n[i[0]]).length,
-    s = CAMP_INFO[campOf(S.fac)];
+    s = CAMP_INFO[campOf(S.fac)],
+    rwObj = typeof RW === "function" ? RW() : (S && S.rw);
+  if (rwObj && (rwObj.title === "bachu" || rwObj.title === "tuyetthe" || rwObj.title === "thanlong")) {
+    rwObj.title = "";
+  }
   modal(
     `<h3>🎖 Danh hiệu <small>${c}/${list.length}</small></h3>
-    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng 1 chỉ số. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">${t[0] === "admin" || t[0] === "vlmc" ? esc(titleName(t)) : `«${esc(titleName(t))}»`}</b>` : "Chưa đeo danh hiệu."}</p>
+    <p class="desc">Phe: <b style="color:${s.c}">${s.n}</b>. Màu tên đổi ở Đồ đệ › Màu tổ đội. Đeo 1 danh hiệu: hiện phía trên tên và cộng chỉ số. Mỗi danh hiệu có Vòng Sáng riêng. ${t ? `Đang đeo: <b style="color:${TIER[t[3]].c}">${t[0] === "admin" || t[0] === "vlmc" || t[0] === "top1_btg" ? esc(titleName(t)) : `«${esc(titleName(t))}»`}</b>` : "Chưa đeo danh hiệu."}</p>
     ${h
       .map(
         (i) =>
           `<h3>${i}</h3>` +
           list.filter((a) => a[2] === i)
             .map((a) => {
-              const e = !!n[a[0]],
+              const e = !(!n[a[0]]),
                 l = t === a,
                 isVlmc = a[0] === "vlmc",
-                isAdm = a[0] === "admin" || isVlmc;
-              const royalCol = isVlmc ? "#ff4500" : "#ffd700";
-              const royalShadow = isVlmc ? "#ff2200" : "#ff9900";
-              const royalBorder = isVlmc ? "#ff4500" : "#ffd700";
-              const royalBox = isVlmc ? "rgba(255,69,0,0.4)" : "rgba(255,180,0,0.35)";
-              const royalBg = isVlmc ? "linear-gradient(90deg,rgba(255,69,0,0.22),rgba(180,20,0,0.22),rgba(255,69,0,0.22))" : "linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22))";
+                isTop1 = a[0] === "top1_btg",
+                isAdm = a[0] === "admin" || isVlmc || isTop1;
+              const royalCol = isVlmc ? "#ff2200" : isTop1 ? "#ffd700" : "#ffd700";
+              const royalShadow = isVlmc ? "#cc0000" : isTop1 ? "#ff5500" : "#ff9900";
+              const royalBorder = isVlmc ? "#ff3300" : isTop1 ? "#ffd700" : "#ffd700";
+              const royalBox = isVlmc ? "rgba(255,34,0,0.4)" : isTop1 ? "rgba(255,180,0,0.35)" : "rgba(255,180,0,0.35)";
+              const royalBg = isVlmc ? "linear-gradient(90deg,rgba(255,34,0,0.25),rgba(180,10,0,0.2),rgba(255,34,0,0.25))" : isTop1 ? "linear-gradient(90deg,rgba(255,215,0,0.22),rgba(180,50,0,0.18),rgba(255,215,0,0.22))" : "linear-gradient(90deg,rgba(255,180,0,0.22),rgba(180,20,0,0.18),rgba(255,180,0,0.22))";
               const royalStyle = isAdm ? `style="background:${royalBg};border:1.5px solid ${royalBorder};box-shadow:0 0 10px ${royalBox};border-radius:6px;padding:6px 8px;margin:4px 0"` : "";
               const royalTitle = isAdm ? `<b style="color:${royalCol};text-shadow:0 0 8px ${royalShadow};font-size:13px">${esc(titleName(a))}</b> <small class="dim">${TIER[a[3]].n}</small>` : `<b style="color:${e ? TIER[a[3]].c : "#777"}">«${esc(titleName(a))}»</b> <small class="dim">${TIER[a[3]].n}</small>`;
               const attrStr = a[6] ? (Array.isArray(a[6][0]) ? a[6].map((x) => attrText(x[0], [x[1], 0, 0])).join(" · ") : attrText(a[6][0], [a[6][1], 0, 0])) : "";
-              return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])}${attrStr ? " · " + esc(attrStr) : ""}</small></span><small></small>
-        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${isAdm && !l ? (isVlmc ? "background:#c93a1a;color:#fff;border-color:#ff4500" : "background:#c98d1a;color:#fff;border-color:#ffd700") : ""}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
+              let expStr = "";
+              if (rwObj && rwObj.titleExp && rwObj.titleExp[a[0]]) {
+                const rem = Math.max(0, rwObj.titleExp[a[0]] - Date.now());
+                const rd = Math.floor(rem / 86400000);
+                const rh = Math.floor((rem % 86400000) / 3600000);
+                const rm = Math.floor((rem % 3600000) / 60000);
+                expStr = rem > 0 ? (rd > 0 ? ` <b style="color:#ffcc00">· Còn ${rd} ngày ${rh} giờ</b>` : ` <b style="color:#ffcc00">· Còn ${rh} giờ ${rm} phút</b>`) : " <b style=\"color:#f55\">· Đã hết hạn</b>";
+              }
+              const btnStyle = isAdm && !l ? (isVlmc ? "background:#c92010;color:#fff;border-color:#ff2200" : "background:#c98d1a;color:#fff;border-color:#ffd700") : "";
+              return `<div class="qrow${e ? "" : " lock"}" ${royalStyle}><span>${royalTitle}<small style="${isAdm ? "color:#ffe8a8" : ""}">${esc(a[5])}${attrStr ? " · " + esc(attrStr) : ""}${expStr}</small></span><small></small>
+        <button class="btn sm${l ? " on" : ""}" data-tt="${a[0]}" ${e ? "" : "disabled"} style="${btnStyle}">${l ? "Tháo" : e ? "Đeo" : "Chưa đạt"}</button></div>`;
             })
             .join(""),
       )

@@ -150,14 +150,18 @@ const heroStateLift = (pos) => {
 function drawHeroStates(s, t, f) {
   const c = R.clock || 0;
   if (t === "under" && S.lookFx !== !1) {
-    const tw = typeof titleWorn == "function" && titleWorn();
-    if (tw && tw[0] === "vlmc") {
-      drawState(s, JXCS_RED, H.x, H.y, f, c, ST_HERO_K, 0.98);
-    } else if (tw && tw[0] === "admin") {
-      drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
-    } else if (typeof rebornN == "function") {
-      const n = Math.min(5, rebornN());
-      n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
+    if (typeof drawActiveHalo === "function" && drawActiveHalo(s, H.x, H.y)) {
+      // Đã vẽ vòng sáng JX1 webp đích thực từ s1volam.esport9.com
+    } else {
+      const tw = typeof titleWorn == "function" && titleWorn();
+      if (tw && tw[0] === "vlmc") {
+        drawState(s, JXCS_RED, H.x, H.y, f, c, ST_HERO_K, 0.98);
+      } else if (tw && tw[0] === "admin") {
+        drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
+      } else if (typeof rebornN == "function") {
+        const n = Math.min(5, rebornN());
+        n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
+      }
     }
   }
   for (const n of heroStates())
