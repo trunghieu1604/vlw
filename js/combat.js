@@ -169,10 +169,15 @@ function enemyStats(t, n) {
 }
 // admin console "exp" document (docs/admin-console.md, js/gcfg/exp.js): value or the built-in constant
 const expCfg = (k, d) => (self.GCFG ? GCFG.get("exp", k, d) : d),
-  xpPenK = (d) => (d < -expCfg("penalty.far", 10) ? expCfg("penalty.farK", 0.2) : d < -expCfg("penalty.near", 5) ? expCfg("penalty.nearK", 0.6) : 1),
+  xpPenK = (d) => {
+    if (typeof S < "u" && S && S.lvl < 200) {
+      return d < -20 ? 0.6 : d < -10 ? 0.8 : 1;
+    }
+    return d < -expCfg("penalty.far", 10) ? expCfg("penalty.farK", 0.2) : d < -expCfg("penalty.near", 5) ? expCfg("penalty.nearK", 0.6) : 1;
+  },
   xpMonK = (L) => Math.pow(lerpK(MON_HP_K, L), expCfg("monRewP", 0.4)),
   xpZoneK = () => (typeof S < "u" && S && S.stage > 0 ? expCfg("zones." + zoneOf(S.stage).id, 1) : 1);
-// EXP to go from level L to L+1: J.exp × (from level LV_NEED_FROM on) mul × growth^(L - from) — admin "exp" lvNeed
+// EXP to go from level L to L+1: J.exp for L < 200, and balanced progression for L >= 200
 const LV_NEED_FROM = 90,
   LV_NEED_MUL = 10,
   LV_NEED_GROWTH = 1.05,
@@ -181,15 +186,13 @@ const LV_NEED_FROM = 90,
       return Math.round(1e7 + (L - 200) * 5e5);
     }
     const maxIdx = J.exp ? J.exp.length : 200;
-    const b = (J.exp && (L <= maxIdx ? J.exp[L - 1] : J.exp[maxIdx - 1])) || 2e9;
-    const f = expCfg("lvNeed.from", LV_NEED_FROM);
-    return L >= f ? Math.round(b * expCfg("lvNeed.mul", LV_NEED_MUL) * Math.pow(expCfg("lvNeed.growth", LV_NEED_GROWTH), L - f)) : b;
+    return (J.exp && (L <= maxIdx ? J.exp[L - 1] : J.exp[maxIdx - 1])) || 2e9;
   };
 const XP_OVER = 25,
   XP_SLOW_FROM = 30,
   XP_SLOW_K = 6,
   XP_SLOW_P = 1,
-  xpSlow = (t) => (t <= XP_SLOW_FROM ? 1 : 1 + XP_SLOW_K * Math.pow((Math.min(t, 200) - XP_SLOW_FROM) / 120, XP_SLOW_P));
+  xpSlow = (t) => (t < 200 ? 1 : 1 + XP_SLOW_K * Math.pow((Math.min(t, 200) - XP_SLOW_FROM) / 120, XP_SLOW_P));
 function expFor(t) {
   const maxIdx = J.exp ? J.exp.length : 200;
   const expVal = (J.exp && J.exp[clamp(t, 1, maxIdx) - 1]) || 2e9;
@@ -203,6 +206,7 @@ function oldMonHp(t) {
 const MON_HP_SCALE = 0.4,
   hpRatio = (t) => 1;
 function xpDrag() {
+  if (typeof S < "u" && S && S.lvl < 200) return 1;
   if (rebornN() > 0) return XP_DRAG;
   const [t, n] = XP_DRAG_LV;
   return 1 + (XP_DRAG - 1) * clamp((S.lvl - t) / (n - t), 0, 1);

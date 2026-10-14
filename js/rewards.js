@@ -344,8 +344,9 @@ function rebornHard() {
   return { hp: 1 + REB_HP * t, dmg: 1 + REB_DMG * t };
 }
 function rebornBonus() {
-  const t = (S.rw && S.rw.stat && S.rw.stat.reborn) || 0;
-  return { xp: -0.1 * t, dmg: 0.1 * t };
+  const t = (S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0;
+  const xpPen = (typeof S < "u" && S && S.lvl < 200) ? 0 : -0.1 * t;
+  return { xp: xpPen, dmg: 0.1 * t };
 }
 function doReborn() {
   const t = RW();

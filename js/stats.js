@@ -20,8 +20,8 @@ const ATTR_ALIAS = {
   NEWBIE_LV = 30,
   NEWBIE_REGEN = { life: 0.03, mana: 0.05 },
   NEWBIE_XP = 2,
-  newbieXp = () => (typeof S < "u" && S && S.fac && expCfg("newbie.on", !0) && S.lvl < expCfg("newbie.maxLv", NEWBIE_LV) && !rebornN() ? 1 + expCfg("newbie.bonus", NEWBIE_XP) : 1),
-  newbieOn = () => typeof S < "u" && S && S.fac && S.lvl < NEWBIE_LV && !rebornN(),
+  newbieXp = () => (typeof S < "u" && S && S.fac && expCfg("newbie.on", !0) && S.lvl < expCfg("newbie.maxLv", NEWBIE_LV) ? 1 + expCfg("newbie.bonus", NEWBIE_XP) : 1),
+  newbieOn = () => typeof S < "u" && S && S.fac && S.lvl < NEWBIE_LV,
   ATTR_NOEFFECT = new Set([
     "indestructible_b",
     "staminareplenish_v",
