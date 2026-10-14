@@ -132,9 +132,9 @@ function spawnWorldBoss(force = false) {
 }
 
 /**
- * Updates Leaderboard sorted by damage
+ * Updates Leaderboard sorted strictly by damage
  */
-function updateWbLeaderboard(lastHitName = null) {
+function updateWbLeaderboard() {
   if (!WB.boss) return;
   const total = WB.boss.hpMax;
   const list = [
@@ -148,7 +148,6 @@ function updateWbLeaderboard(lastHitName = null) {
     name: item.name,
     dmg: item.dmg,
     share: Math.min(1, item.dmg / Math.max(1, total)),
-    last: lastHitName && item.name === lastHitName,
     isPlayer: item.isPlayer
   }));
 }
@@ -228,25 +227,23 @@ function handleBossDefeated(isTimeout = false) {
     S.rw.wbKilledDate = sched.todayKey;
   }
 
-  const lastHitName = isTimeout
-    ? "Quần Hùng Võ Lâm"
-    : (Math.random() < 0.4 || WB.playerDmg > 0 ? ((S && S.name) || "Hiệp Sĩ") : WB.bots[Math.floor(Math.random() * WB.bots.length)].name);
-  updateWbLeaderboard(lastHitName);
+  updateWbLeaderboard();
+  const top1 = (WB.top && WB.top[0]) || { name: "Hiệp Sĩ" };
+  const top1Name = top1.name;
 
-  const isPlayerLastHit = (!isTimeout && lastHitName === ((S && S.name) || "Hiệp Sĩ"));
   if (isTimeout) {
-    showWbBanner(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới!</b> Tổng kết sát thương quần hùng.`);
+    showWbBanner(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới!</b> Quán quân TOP 1: <b>${top1Name}</b>.`);
     if (typeof log === "function") {
-      log(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Đã tổng kết bảng xếp hạng sát thương và phát thưởng!`);
+      log(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b>!`);
     }
   } else {
-    showWbBanner(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị <b>${lastHitName}</b> hạ gục!`);
+    showWbBanner(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị đánh bại! TOP 1 Sát Thương: <b>${top1Name}</b>!`);
     if (typeof log === "function") {
-      log(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị <b>${lastHitName}</b> hạ gục! Danh hiệu TOP 1 BTG và vòng sáng Tử Vân đã được phong tặng!`);
+      log(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị đánh bại! <b>${top1Name}</b> xuất sắc dẫn đầu bảng xếp hạng sát thương (TOP 1)!`);
     }
   }
 
-  grantPlayerWbRewards(isPlayerLastHit, isTimeout);
+  grantPlayerWbRewards(isTimeout);
 
   if (WB.arena.bossInst) {
     WB.arena.bossInst.dead = true;
@@ -259,16 +256,16 @@ function handleBossDefeated(isTimeout = false) {
   }
 
   setTimeout(() => {
-    openWbResultModal(lastHitName, isPlayerLastHit, isTimeout);
+    openWbResultModal(top1Name, isTimeout);
   }, 400);
 
   updateWbButtonState();
 }
 
 /**
- * Grant Rewards & 1-day title/halo & real items
+ * Grant Rewards & 1-day title/halo & real items (strictly by damage ranking)
  */
-function grantPlayerWbRewards(isLastHit, isTimeout = false) {
+function grantPlayerWbRewards(isTimeout = false) {
   const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
   let knbGain = 0;
   let goldGain = 0;
@@ -276,7 +273,7 @@ function grantPlayerWbRewards(isLastHit, isTimeout = false) {
 
   const isTop1 = (me.rank === 1);
 
-  if (isTop1 || isLastHit) {
+  if (isTop1) {
     knbGain += 500;
     goldGain += 1000000;
 
@@ -410,7 +407,6 @@ function grantPlayerWbRewards(isLastHit, isTimeout = false) {
     rank: me.rank,
     dmg: me.dmg,
     share: me.share,
-    isLastHit: isLastHit,
     isTop1: isTop1,
     isTimeout: isTimeout,
     knb: knbGain,
@@ -422,14 +418,14 @@ function grantPlayerWbRewards(isLastHit, isTimeout = false) {
 /**
  * Result Dialog
  */
-function openWbResultModal(lastHitName, isPlayerLastHit, isTimeout = false) {
+function openWbResultModal(top1Name, isTimeout = false) {
   const r = WB.lastRewards || {};
   const medal = r.rank === 1 ? "👑" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank || 1}`;
   let body = `
     <div class="wbbox" style="padding:10px;color:#f3e2b3;font-size:14px;line-height:1.5">
       <h3 style="color:#ffd700;text-align:center;margin:4px 0 10px">🏆 Kết Quả Boss Thế Giới 🏆</h3>
       <p style="text-align:center;font-size:15px;margin-bottom:10px">
-        ${isTimeout ? "⏰ <b>Đã hết thời gian khiêu chiến 5 phút!</b> Quần hùng kết thúc đợt vây hãm Boss." : `Boss <b>Trung Hiếu</b> đã bị <b>${lastHitName}</b> kết liễu!`}
+        ${isTimeout ? `⏰ <b>Đã hết thời gian khiêu chiến 5 phút!</b> Quán quân sát thương: <b>${top1Name}</b>.` : `Boss <b>Trung Hiếu</b> đã bị đánh bại! TOP 1 Sát Thương: <b>${top1Name}</b>.`}
       </p>
   `;
 
@@ -722,7 +718,7 @@ function renderWbLeaderboardTable(topList) {
       ${topList.slice(0, 10).map(e => `
         <tr style="${e.isPlayer ? 'color:#ffd700;font-weight:bold;background:rgba(255,215,0,0.1)' : ''}">
           <td>${e.rank}</td>
-          <td>${e.name}${e.last ? " ⚔" : ""}${e.isPlayer ? " (Bạn)" : ""}</td>
+          <td>${e.name}${e.isPlayer ? " (Bạn)" : ""}</td>
           <td>${wbNum(e.dmg)}</td>
           <td>${((e.share || 0) * 100).toFixed(1)}%</td>
         </tr>
@@ -737,7 +733,7 @@ function renderWbRewardTable() {
     <table class="rwt">
       <tr><th>Hạng</th><th>Phần thưởng</th><th>Vòng sáng · danh hiệu</th></tr>
       <tr class="rwlast">
-        <td class="rwr0"><i class="rwe">👑</i>TOP 1 / Đòn cuối</td>
+        <td class="rwr0"><i class="rwe">👑</i>TOP 1</td>
         <td>
           <span class="rwc knb" title="500 Kim Nguyên Bảo"><img src="img/ep/knb.png"><b>×500</b></span>
           <span class="rwc" title="1.000.000 lượng"><i class="rwe">🪙</i><b>1.000.000</b></span>
