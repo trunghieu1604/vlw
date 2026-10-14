@@ -1045,6 +1045,14 @@ function heroDeath() {
     R.hpDot = R.hpDotT = 0;
     return;
   }
+  if (R.dg && R.dg.kind === "worldboss") {
+    if (R.P) {
+      R.life = R.P.life;
+      R.mana = R.P.mana;
+    }
+    R.slowT = R.stunT = R.hpDotT = R.hpDot = 0;
+    return;
+  }
   if (
     (R.enemies.some((t) => t.goldBoss && !t.dead) && (RW().gbT = GB_RETRY),
     (R.deadT = 3),

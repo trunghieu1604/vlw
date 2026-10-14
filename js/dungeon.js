@@ -368,6 +368,7 @@ function dgCleared() {
 function dgFail(t) {
   const n = R.dg;
   if (n) {
+    if (n.kind === "worldboss") return;
     if (n.kind === "wb") {
       wbFinish(!1);
       return;

@@ -549,7 +549,7 @@ function joinWorldBoss() {
     b.max = WB.boss.hpMax;
     b.r = 60;
     b.series = WB_BOSS_CONFIG.series;
-    b.dmg = 2200;
+    b.dmg = 200;
     b.atkCd = 1.2;
     b.cd = 1.5;
     b.spd = 50;
