@@ -876,7 +876,7 @@ document.addEventListener("pointerdown", (n) => {
   }
 });
 async function rankModal20() {
-  if (typeof netOn != "function" || !netOn()) return toast("Bản chơi trên máy không có bảng xếp hạng");
+  if (!netOn() && !(typeof CHAT !== "undefined" && CHAT.isFirebase)) return toast("Bản chơi trên máy không có bảng xếp hạng");
   const n = RANKS.map(([t, o]) => `<button data-rk="${t}" class="${t === NET.rank ? "on" : ""}">${o}</button>`).join(
     "",
   );
@@ -891,12 +891,14 @@ async function rankModal20() {
       );
     },
   );
-  try {
-    await netClient();
-  } catch (t) {
-    const o = $("#rkBody");
-    o && (o.innerHTML = `<p class="reqbad">${esc(t.message)}</p>`);
-    return;
+  if (!(typeof CHAT !== "undefined" && CHAT.isFirebase)) {
+    try {
+      await netClient();
+    } catch (t) {
+      const o = $("#rkBody");
+      o && (o.innerHTML = `<p class="reqbad">${esc(t.message)}</p>`);
+      return;
+    }
   }
   const a = $("#rkBody");
   if (!a) return;

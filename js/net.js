@@ -910,6 +910,76 @@ async function netAccBody(t) {
     }),
     t.querySelectorAll("[data-cl]").forEach((a) => (a.onclick = () => busy(a, () => netCloudLoad(+a.dataset.cl)))));
 }
+let lastRankSync = 0;
+function syncRankFirebase(force) {
+  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return;
+  if (!S || !S.fac || !hasRealName()) return;
+  if (!force && Date.now() - lastRankSync < 180000) return;
+  lastRankSync = Date.now();
+  try {
+    const db = firebase.database();
+    const cid = chatCid();
+    const n = (typeof RW == "function" && RW().stat) || (S.rw && S.rw.stat) || {};
+    const data = {
+      cid: cid,
+      name: S.name,
+      fac: S.fac,
+      sex: S.sex | 0,
+      lvl: S.lvl | 0,
+      reborn: (typeof rebGet == "function" ? rebGet() : n.reborn) | 0,
+      power: Math.round(R.power || 0),
+      tower: n.towerBest | 0,
+      bosses: n.bosses | 0,
+      gear: netGear(),
+      updated: Date.now(),
+    };
+    db.ref("ranking/players/" + cid).set(data);
+  } catch (e) {
+    console.warn("syncRankFirebase err:", e);
+  }
+}
+
+async function getRankFirebase(col, fac) {
+  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return [];
+  try {
+    const db = firebase.database();
+    const snap = await db.ref("ranking/players").once("value");
+    const val = snap.val();
+    if (!val) return [];
+    let list = Object.values(val);
+    if (fac) {
+      list = list.filter((p) => p.fac === fac || (FAC[p.fac] && FAC[p.fac].key === fac));
+    }
+    if (col === "lvl") {
+      list.sort((a, b) => (b.reborn || 0) - (a.reborn || 0) || (b.lvl || 0) - (a.lvl || 0) || (b.power || 0) - (a.power || 0));
+    } else if (col === "tower") {
+      list.sort((a, b) => (b.tower || 0) - (a.tower || 0) || (b.lvl || 0) - (a.lvl || 0));
+    } else if (col === "bosses") {
+      list.sort((a, b) => (b.bosses || 0) - (a.bosses || 0) || (b.lvl || 0) - (a.lvl || 0));
+    }
+    return list.slice(0, 50);
+  } catch (e) {
+    console.warn("getRankFirebase err:", e);
+    return [];
+  }
+}
+
+async function getProfileFirebase(name) {
+  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return null;
+  try {
+    const db = firebase.database();
+    const snap = await db.ref("ranking/players").orderByChild("name").equalTo(name).once("value");
+    const val = snap.val();
+    if (val) {
+      const k = Object.keys(val)[0];
+      return val[k];
+    }
+  } catch (e) {
+    console.warn("getProfileFirebase err:", e);
+  }
+  return null;
+}
+
 const RANKS = [
   ["lvl", "Cấp"],
   ["tower", "Tháp"],
@@ -917,44 +987,70 @@ const RANKS = [
 ];
 async function netRankBody(t) {
   RANKS.some((a) => a[0] === NET.rank) || (NET.rank = "lvl");
-  const n = NET.rank,
-    s =
-      (
-        await netCall((a) => a.get(`/api/rank?col=${encodeURIComponent(n)}&fac=${encodeURIComponent(NET.rfac || "")}`))
-      ) || [],
-    i = (a) => (n === "lvl" ? `${a.reborn ? `<small class="cp">CS${a.reborn}</small> ` : ""}${a.lvl}` : fmt(a[n] || 0));
-  ((t.innerHTML = `<div class="row"><select id="nrCol">${RANKS.map(([a, o]) => `<option value="${a}" ${a === n ? "selected" : ""}>${o}</option>`).join("")}</select>
+  const n = NET.rank;
+  let s = [];
+  if (typeof CHAT !== "undefined" && CHAT.isFirebase) {
+    s = await getRankFirebase(n, NET.rfac);
+  } else {
+    try {
+      s = (await netCall((a) => a.get(`/api/rank?col=${encodeURIComponent(n)}&fac=${encodeURIComponent(NET.rfac || "")}`))) || [];
+    } catch {}
+  }
+  const i = (a) => (n === "lvl" ? `${a.reborn ? `<small class="cp">CS${a.reborn}</small> ` : ""}${a.lvl}` : fmt(a[n] || 0));
+  t.innerHTML = `<div class="row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><select id="nrCol">${RANKS.map(([a, o]) => `<option value="${a}" ${a === n ? "selected" : ""}>${o}</option>`).join("")}</select>
       <select id="nrFac"><option value="">Mọi phái</option>${FACTIONS.filter((a) => !a.novice)
         .map((a) => `<option value="${a.key}" ${a.key === NET.rfac ? "selected" : ""}>${esc(a.n)}</option>`)
-        .join("")}</select></div>
+        .join("")}</select>
+      ${typeof CHAT !== "undefined" && CHAT.isFirebase ? '<button class="btn sm" id="bSyncRank" title="Đẩy thông tin nhân vật của bạn lên BXH">🔄 Cập nhật của tôi</button>' : ''}
+      </div>
     <table class="dktbl small"><tr><th>#</th><th>Nhân vật</th><th>Phái</th><th>${RANKS.find((a) => a[0] === n)[1]}</th></tr>
     ${s.map((a, o) => `<tr${S && a.name === S.name ? ' style="background:#2a2410"' : ""}><td>${o + 1}</td><td><a href="#" data-pn="${esc(a.name)}" style="color:${typeof campCol == "function" ? campCol(a.fac) : "#ffd76a"}">${esc(a.name)}</a></td><td>${esc(facName(a.fac))}</td><td>${i(a)}</td></tr>`).join("") || '<tr><td colspan="4" class="dim">Chưa có ai</td></tr>'}</table>
-    <p class="dim small">Bấm tên để xem trang bị. Nhân vật của bạn tự cập nhật khi đã đăng nhập.</p>`),
-    ($("#nrCol").onchange = (a) => {
-      ((NET.rank = a.target.value), netModal("rank"));
-    }),
-    ($("#nrFac").onchange = (a) => {
-      ((NET.rfac = a.target.value), netModal("rank"));
-    }),
-    t.querySelectorAll("[data-pn]").forEach(
-      (a) =>
-        (a.onclick = (o) => {
-          (o.preventDefault(), profileModal(a.dataset.pn, () => netModal("rank")));
-        }),
-    ));
+    <p class="dim small">Bấm tên để xem trang bị. Nhân vật tự cập nhật khi lên cấp/chuyển sinh.</p>`;
+
+  const bSync = $("#bSyncRank");
+  bSync && (bSync.onclick = () => {
+    syncRankFirebase(!0);
+    toast("Đã cập nhật thứ hạng của bạn lên Bảng Xếp Hạng!");
+    setTimeout(() => {
+      typeof rankModal20 === "function" ? rankModal20() : netModal("rank");
+    }, 400);
+  });
+
+  const cCol = $("#nrCol");
+  cCol && (cCol.onchange = (a) => {
+    NET.rank = a.target.value;
+    typeof rankModal20 === "function" ? rankModal20() : netModal("rank");
+  });
+  const cFac = $("#nrFac");
+  cFac && (cFac.onchange = (a) => {
+    NET.rfac = a.target.value;
+    typeof rankModal20 === "function" ? rankModal20() : netModal("rank");
+  });
+  t.querySelectorAll("[data-pn]").forEach(
+    (a) =>
+      (a.onclick = (o) => {
+        o.preventDefault();
+        profileModal(a.dataset.pn, () => typeof rankModal20 === "function" ? rankModal20() : netModal("rank"));
+      }),
+  );
 }
+
 async function profileModal(t, n) {
-  ((n = n || (() => closeModal())), modal(`<h3>${esc(t)}</h3><p class="dim small">Đang tải…</p>`));
-  let e;
-  try {
-    e = await netCall((c) => c.get("/api/profile?name=" + encodeURIComponent(t)));
-  } catch (c) {
-    return modal(`<h3>${esc(t)}</h3><p class="reqbad">${esc(c.message)}</p>`);
+  n = n || (() => closeModal());
+  modal(`<h3>${esc(t)}</h3><p class="dim small">Đang tải…</p>`);
+  let s = null;
+  if (typeof CHAT !== "undefined" && CHAT.isFirebase) {
+    s = await getProfileFirebase(t);
+  } else {
+    try {
+      s = await netCall((c) => c.get("/api/profile?name=" + encodeURIComponent(t)));
+    } catch (c) {
+      return modal(`<h3>${esc(t)}</h3><p class="reqbad">${esc(c.message)}</p>`);
+    }
   }
-  const s = e;
   if (!s)
     return modal(
-      `<h3>${esc(t)}</h3><p class="desc">Nhân vật này chưa liên kết tài khoản online nên chưa xem được trang bị.</p><div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
+      `<h3>${esc(t)}</h3><p class="desc">Chưa tìm thấy thông tin trang bị của nhân vật này.</p><div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
       () => {
         $("#pfB").onclick = n;
       },
@@ -967,19 +1063,14 @@ async function profileModal(t, n) {
     ).join("");
   modal(
     `<h3>${esc(s.name)} <small>${esc(a ? a.n : "")} · cấp ${s.lvl}${s.reborn ? ` · chuyển sinh ${s.reborn}` : ""}</small></h3>
-    <p class="small">Tháp tầng <b>${s.tower || 0}</b> · Trùm đã hạ <b>${fmt(s.bosses || 0)}</b> <small class="dim">· cập nhật ${new Date(s.updated).toLocaleString("vi-VN")}</small></p>
+    <p class="small">Tháp tầng <b>${s.tower || 0}</b> · Trùm đã hạ <b>${fmt(s.bosses || 0)}</b> <small class="dim">· cập nhật ${new Date(s.updated || Date.now()).toLocaleString("vi-VN")}</small></p>
     <div class="pfgrid">${o}</div>
-    <div class="btnrow">${S && S.fac && s.name !== S.name ? '<button class="btn" id="pfMail">📨 Gửi thư</button>' : ""}<button class="btn" id="pfB">Quay lại</button></div>`,
+    <div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
     () => {
-      (document
+      document
         .querySelectorAll("#mBody [data-pk]")
-        .forEach((r) => (r.onclick = () => netItemModal(i[r.dataset.pk], "", () => profileModal(t, n)))),
-        ($("#pfB").onclick = n));
-      const c = $("#pfMail");
-      c &&
-        (c.onclick = () => {
-          ((NET.mailTo = s.name), netModal("mail"));
-        });
+        .forEach((r) => (r.onclick = () => netItemModal(i[r.dataset.pk], "", () => profileModal(t, n))));
+      $("#pfB").onclick = n;
     },
   );
 }

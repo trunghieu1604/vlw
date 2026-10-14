@@ -912,8 +912,7 @@ body.e9gate #modal .mbox {
 /* Hide online-only features: Chợ, Hộp thư */
 #u20mkt,
 #u20mail,
-#netBtn,
-#u20rank {
+#netBtn {
   display: none !important;
 }
 

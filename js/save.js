@@ -93,6 +93,7 @@ function save() {
         } catch {}
       (localStorage.setItem(n, pack(S)), localStorage.setItem(SLOT_PTR, String(SLOT)));
     } catch {}
+    typeof syncRankFirebase == "function" && syncRankFirebase();
   }
 }
 function vioDedupe(n) {

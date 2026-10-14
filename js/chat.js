@@ -306,6 +306,7 @@ async function chatInit() {
       });
 
       chatInitFirebasePresence();
+      typeof syncRankFirebase == "function" && syncRankFirebase();
       chatRender();
       return;
     } catch (e) {

@@ -51,7 +51,7 @@ function u20Init() {
       '<div id="u20gold"><span><img src="img/ep/knb.png" alt=""><b id="u20knb">0</b></span><span>🪙 <b id="u20g">0</b></span></div>',
     ),
     t(
-      '<div id="u20log"><div id="u20ct"><button id="u20lt" title="Ẩn / hiện khung thông báo">📜</button><button id="u20chatBtn" title="Chat thế giới (Enter)">💬</button></div><div id="u20lines"></div></div>',
+      '<div id="u20log"><div id="u20ct"><button id="u20lt" title="Ẩn / hiện khung thông báo">📜</button><button id="u20chatBtn" title="Chat thế giới (Enter)">💬</button><button id="u20rankCtBtn" title="Bảng xếp hạng">🏆</button></div><div id="u20lines"></div></div>',
     ),
     t('<div id="u20boss"><div class="t"></div><div class="b"><i></i><span></span></div></div>'));
   (document
@@ -77,6 +77,7 @@ function u20Init() {
       ((S.u20logOff = !S.u20logOff), save(), u20LogVis());
     }),
     $("#u20chatBtn") && ($("#u20chatBtn").onclick = () => typeof chatToggle == "function" && chatToggle(!0)),
+    $("#u20rankCtBtn") && ($("#u20rankCtBtn").onclick = () => typeof rankModal20 == "function" ? rankModal20() : netModal("rank")),
     document.querySelectorAll("#u20ct button[data-lt]").forEach(
       (n) =>
         (n.onclick = () => {
