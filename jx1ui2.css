@@ -909,14 +909,11 @@ body.e9gate #modal .mbox {
   max-width: 520px;
 }
 
-/* Hide online-only features: Chat, Chợ, Hộp thư, Khoe chat */
+/* Hide online-only features: Chợ, Hộp thư */
 #u20mkt,
 #u20mail,
-#chatBtn,
-#chatBox,
 #netBtn,
-#u20rank,
-button[onclick*="chatShowItem"] {
+#u20rank {
   display: none !important;
 }
 

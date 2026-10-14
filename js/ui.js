@@ -221,7 +221,7 @@ function itemModal(n, t) {
     s = !t && typeof enhGain == "function" && !isUpgrade(n) && enhGain(n);
   modal(
     `${itemHTML(n)}${cmpLines(n, t)}${s ? `<div class="cp small">△ Cường hóa lên +${s.enh}: mạnh hơn đồ đang mặc ${(s.gain * 100).toFixed(1)}% · ước tính ${enhExpected(n, s.enh)} KNB</div>` : ""}${e ? `<div class="cmp"><small class="dim">Đang mặc:</small>${itemHTML(e)}</div>` : ""}
-    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}</div>`,
+    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}${owned(n) && typeof chatShowItem == "function" && !document.body.classList.contains("nochat") ? '<button class="btn" id="bChatShow">💬 Khoe</button>' : ""}</div>`,
     () => {
       const a = $("#bEq"),
         c = $("#bSell"),
@@ -256,6 +256,10 @@ function itemModal(n, t) {
             toast(n.lock ? "Đã khóa: không tự bán, không hợp Huyền Tinh" : "Đã mở khóa"),
             itemModal(n, t));
         }),
+        (() => {
+          const bChat = $("#bChatShow");
+          bChat && (bChat.onclick = () => chatShowItem(n));
+        })(),
         a && (a.onclick = () => equip(n)),
         c && (c.onclick = () => sell(n)),
         i && (i.onclick = () => unequip(t)),

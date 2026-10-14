@@ -354,8 +354,8 @@ body.u20 #chatBox {
   color: #e8d49a;
   border-bottom: 1px solid #554;
 }
-/* chat the gioi trong giao dien 2.0: an vi offline */
-#chatBox, #chatBtn {
+/* chat the gioi trong giao dien 2.0: khi dong thi an de khong de len u20log */
+body.u20 #chatBox:not(.open) {
   display: none !important;
 }
 body.u20 #u20log {
@@ -366,11 +366,15 @@ body.u20 #u20ct {
   flex-wrap: wrap;
 }
 body.u20 #chatBox.open {
-  left: 2px !important;
-  bottom: 24px !important;
+  left: 6px !important;
+  bottom: 10px !important;
   top: auto !important;
-  height: min(60vh, 420px);
-  width: min(34vw, 420px) !important;
+  height: min(60vh, 420px) !important;
+  width: min(92vw, 420px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 100 !important;
+  pointer-events: auto !important;
 }
 body.u20 #modal .mbox {
   max-width: min(680px, 60vw) !important;
@@ -2054,7 +2058,8 @@ body.u20:has(#chatBox.open) #u20log {
   display: none;
 }
 /* nut an / hien khung thong bao (canh nut chat) */
-#u20lt {
+#u20lt, #u20chatBtn {
+  position: relative !important;
   width: 34px !important;
   height: 30px !important;
   padding: 0 !important;
@@ -2064,9 +2069,26 @@ body.u20:has(#chatBox.open) #u20log {
   box-shadow: inset 0 0 0 1px #3f7a62;
   margin-left: 2px !important;
   margin-bottom: 3px;
+  cursor: pointer;
 }
-#u20lt.on {
+#u20lt.on, #u20chatBtn:hover {
   box-shadow: inset 0 0 0 1px #e0c060;
+}
+#u20chatBtn b {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  padding: 0 3px;
+  background: #c0392b;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 400;
+}
+#u20chatBtn b:empty {
+  display: none;
 }
 body.u20 #u20ct {
   align-items: flex-start;
@@ -2579,14 +2601,11 @@ body.u2m .prtabs button {
   max-width: 13em;
 }
 
-/* Hide online-only features: Chat, Chợ, Hộp thư, Khoe chat */
+/* Hide online-only features: Chợ, Hộp thư */
 #u20mkt,
 #u20mail,
-#chatBtn,
-#chatBox,
 #netBtn,
-#u20rank,
-button[onclick*="chatShowItem"] {
+#u20rank {
   display: none !important;
 }
 
