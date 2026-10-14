@@ -31,7 +31,7 @@ let admTab = "lv",
   admSetFac = "mine",
   admHorse = "";
 const ADM_PASS = "16104";
-let admUnlocked = true;
+let admUnlocked = false;
 
 // Logged in to our own server with an account flagged is_admin (sent by /api/auth/*).
 function admHostOk() {
@@ -796,10 +796,21 @@ function admGo(k) {
 // Same destination list as the Thần Hành Phù picker (thanhanh.js thListHTML), rows act via data-a="go:<key>".
 function admTabWorld() {
   const list = typeof thListHTML == "function" ? thListHTML(!0) : "";
-  return `<div class="btnrow"><button class="btn sm on" data-a="unlock">Mở mọi bãi luyện công</button><button class="btn sm" data-a="cd">Đặt lại Thổ Địa / Thần Hành</button></div>
+  return `
+  <div class="admh">📢 Thông Báo Toàn Server (Gửi vào Khung Chat)</div>
+  <div style="display:flex;gap:4px;margin-bottom:8px">
+    <input type="text" id="admBcastTxt" placeholder="Nhập thông báo Admin muốn gửi…" style="flex:1;background:#111;color:#fff;border:1px solid #555;padding:5px 8px;font-size:12px;border-radius:3px">
+    <button class="btn sm on" data-a="bcast">Gửi Loa</button>
+  </div>
+  <div class="admh">🏆 Bảng Xếp Hạng Online</div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm red" data-a="clearrank">🧹 Xóa Trắng Bảng Xếp Hạng</button>
+  </div>
+  <div class="admh">Bản Đồ & Luyện Công</div>
+  <div class="btnrow"><button class="btn sm on" data-a="unlock">Mở mọi bãi luyện công</button><button class="btn sm" data-a="cd">Đặt lại Thổ Địa / Thần Hành</button></div>
   <input id="admThQ" class="thq" type="search" placeholder="Tìm bản đồ…" autocomplete="off">
   <div class="shoplist admlist thlist">${list}</div>
-  <p class="dim small">Mọi nơi đến của Thần Hành Phù (JX1) + bãi luyện công. Dịch chuyển dùng đường đi của Thần Hành Phù (không tốn phù, không hồi, tự mở bãi). Không dùng được trong phó bản, Tháp, khi đi thuyền hoặc truy sát.</p>`;
+  <p class="dim small">Mọi nơi đến của Thần Hành Phù (JX1) + bãi luyện công. Dịch chuyển dùng đường đi của Thần Hành Phù (không tốn phù, không hồi, tự mở bãi).</p>`;
 }
 
 // ---------- Character selector (đồ đệ) ----------
@@ -821,6 +832,7 @@ function admChRow() {
 // ---------- Modal ----------
 function admModal() {
   if (!admOk()) return toast(ADM_DENY);
+  if (!admUnlocked) return admPromptPass(() => admModal());
   const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld }[admTab] || admTabLv,
     body = () => admInCh(admTab, body0),
     old = $("#mBody .admbody"),
@@ -951,6 +963,39 @@ function admAct(a) {
         return ((R.admOhk = !R.admOhk), `Nhất kích: <b>${R.admOhk ? "bật" : "tắt"}</b>`);
       case "unlock":
         return ((S.maxStage = STAGES), typeof syncMaxStage == "function" && syncMaxStage(), "Mở mọi bãi luyện công");
+      case "bcast": {
+        const inp = $("#admBcastTxt");
+        const txt = inp ? inp.value.trim() : "";
+        if (!txt) return (toast("Chưa nhập nội dung thông báo"), "");
+        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+          try {
+            firebase.database().ref("chat/msgs").push({
+              cid: "admin",
+              sys: true,
+              name: "Hệ Thống",
+              msg: "📢 [THÔNG BÁO]: " + txt,
+              ts: Date.now()
+            });
+            inp.value = "";
+            return "Đã phát thông báo toàn server!";
+          } catch (e) {
+            return "Lỗi gửi thông báo: " + e.message;
+          }
+        }
+        return toast("Chat Firebase chưa kết nối"), "";
+      }
+      case "clearrank": {
+        if (!confirm("CẢNH BÁO: Bạn có chắc chắn muốn XÓA TOÀN BỘ dữ liệu Bảng Xếp Hạng trên server không?")) return "";
+        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+          try {
+            firebase.database().ref("ranking/players").remove();
+            return "Đã xóa trắng Bảng Xếp Hạng thành công!";
+          } catch (e) {
+            return "Lỗi xóa BXH: " + e.message;
+          }
+        }
+        return toast("Firebase chưa kết nối"), "";
+      }
       case "go":
         return admGo(a.slice(3));
     }
@@ -998,12 +1043,12 @@ function admPromptPass(onSuccess) {
 function admUse() {
   if (!S || !S.fac) return;
   if (!admOk()) return toast(ADM_DENY);
-  admUnlocked = true;
+  if (!admUnlocked) return admPromptPass(() => admModal());
   admModal();
 }
 function admOpenDirect() {
   if (!S || !S.fac) return toast("Chưa tạo nhân vật");
-  admUnlocked = true;
+  if (!admUnlocked) return admPromptPass(() => admModal());
   admModal();
 }
 window.admOpenDirect = admOpenDirect;

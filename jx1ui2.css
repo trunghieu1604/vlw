@@ -255,8 +255,9 @@
   color: #7fe0ff;
 }
 #chatLines .cl.sys {
-  color: #a9a39a;
-  font-style: italic;
+  color: #ffd76a;
+  font-weight: bold;
+  text-shadow: 0 0 3px #d63031;
 }
 #chatBtn {
   pointer-events: auto;
