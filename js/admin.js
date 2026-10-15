@@ -134,9 +134,39 @@ function admTabLv() {
   <div class="admf"><label>Đặt cấp <input type="number" id="admLv" min="${S.lvl + 1}" max="${cap}" value="${Math.min(cap, Math.max(S.lvl + 1, 80))}"></label><button class="btn sm" data-a="lvset">Đặt</button></div>
   <div class="admh">Kinh nghiệm (theo cấp hiện tại)</div><div class="btnrow"><button class="btn sm" data-a="xp:0.1">+10%</button><button class="btn sm" data-a="xp:0.5">+50%</button><button class="btn sm" data-a="xp:1">+100%</button></div>
   <div class="admh">Điểm</div><div class="btnrow"><button class="btn sm" data-a="ap:10">+10 tiềm năng</button><button class="btn sm" data-a="ap:100">+100 tiềm năng</button><button class="btn sm" data-a="sp:5">+5 kỹ năng</button><button class="btn sm" data-a="sp:50">+50 kỹ năng</button><button class="btn sm on" data-a="spend">Tự cộng hết điểm</button></div>
+  <div class="admh">Chuyển Sinh (CS ${typeof rebGet == "function" ? rebGet() : (S && S.rw && S.rw.stat ? S.rw.stat.reborn : 0)})</div><div class="btnrow"><button class="btn sm" data-a="reb:1">+1 CS</button><button class="btn sm" data-a="reb:-1">-1 CS (Giảm CS)</button><button class="btn sm" data-a="reb:0">Về CS 0</button><button class="btn sm on" data-a="reb:5">CS 5 (Tối đa)</button></div>
   <div class="admh">Danh Hiệu Giang Hồ</div><div class="btnrow"><button class="btn sm on" data-a="titleall">🎖 Mở khóa mọi Danh Hiệu</button><button class="btn sm" data-a="titlemodal">Xem & Đeo Danh Hiệu</button></div>
   ${typeof isNovice == "function" && isNovice() && S.lvl >= NOVICE_LV ? `<div class="btnrow"><button class="btn sm on" data-a="join">Gia nhập môn phái</button></div>` : ""}
   <p class="dim small">Lên cấp đi theo đường lên cấp của game (cộng tiềm năng / kỹ năng mỗi cấp, tự cộng điểm nếu bật, tự đổi bãi, mốc quà cấp).</p>`;
+}
+function admReborn(x) {
+  const from = typeof rebGet == "function" ? rebGet() : ((S.rw && S.rw.stat && S.rw.stat.reborn) | 0);
+  let to = from;
+  if (x === "5" || x === 5) to = 5;
+  else if (x === "0" || x === 0) to = 0;
+  else to = Math.max(0, Math.min(10, from + (+x || 0)));
+  if (typeof rebSet == "function") rebSet(to);
+  else {
+    const rw = S.rw || (S.rw = {});
+    (rw.stat || (rw.stat = {})).reborn = to;
+  }
+  let off = 0;
+  if (to < from) {
+    const eqLv = typeof eqLevel == "function" ? eqLevel() : (S.lvl || 1);
+    for (const k of Object.keys(S.eq || {})) {
+      const it = S.eq[k];
+      if (!it || !(it.req || []).some(([n, e]) => n === 36 && e > eqLv)) continue;
+      if (S.inv.length >= INV_MAX) break;
+      S.inv.unshift(it);
+      delete S.eq[k];
+      off++;
+    }
+  }
+  R.dirty = !0;
+  typeof recalc == "function" && recalc();
+  save();
+  typeof refresh == "function" && refresh();
+  return `${to < from ? "Giảm" : "Chỉnh"} chuyển sinh ${from} → <b>CS ${to}</b>${off ? ` (tháo ${off} món quá cấp)` : ""}`;
 }
 function admTitleAll() {
   const t = typeof TT == "function" ? TT() : null;
@@ -838,6 +868,51 @@ function admChRow() {
 // ---------- Modal ----------
 let admPePlayersList = [];
 let admPeSelectedName = "";
+let admPeSet = "";
+let admPeHorse = "";
+
+function admPeSetOptions(targetFac) {
+  const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
+  const fid = targetFac != null ? targetFac : -1;
+  const targetFacName = (typeof FACTIONS !== "undefined" && FACTIONS.find((f) => f.id === fid))?.n || "";
+
+  // Prioritize full sets (skip partial p1/p2 variants to keep the list clean)
+  const fullSets = all.filter((s) => !s.id.includes("_p1_") && !s.id.includes("_p2_"));
+  const groups = [
+    {
+      label: `⭐ HK Môn Phái${targetFacName ? ` (${targetFacName})` : ""}`,
+      filter: (s) => s.cat === "hkmp" && s.fac === fid,
+    },
+    {
+      label: "👑 Hoàng Kim Chung (An Bang, Định Quốc...)",
+      filter: (s) => s.cat === "gold_gen",
+    },
+    {
+      label: "📜 Lộ Trình Cấp (Thanh Câu → Đằng Long)",
+      filter: (s) => s.cat === "gold_route",
+    },
+    {
+      label: "⚔️ HK Môn Phái Khác",
+      filter: (s) => s.cat === "hkmp" && s.fac !== fid,
+    },
+    {
+      label: "✨ Trang Bị Bạch Kim (Platina)",
+      filter: (s) => s.cat === "platina",
+    },
+  ];
+
+  let out = "";
+  for (const g of groups) {
+    const list = fullSets.filter(g.filter);
+    if (!list.length) continue;
+    out += `<optgroup label="${esc(g.label)}">`;
+    for (const s of list) {
+      out += `<option value="${s.id}"${String(s.id) === String(admPeSet) ? " selected" : ""}>${esc(s.n)}</option>`;
+    }
+    out += `</optgroup>`;
+  }
+  return out;
+}
 
 function sendPlayerEditCmd(targetName, cmd, successMsg) {
   if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) {
@@ -870,12 +945,24 @@ function admTabPlayers() {
   }
 
   const pOptions = (admPePlayersList.length
-    ? admPePlayersList.map(p => `<option value="${esc(p.name)}" ${p.name === admPeSelectedName ? "selected" : ""}>${esc(p.name)} (${esc(facName(p.fac))} · Lv${p.lvl || 1})</option>`).join("")
+    ? admPePlayersList.map(p => `<option value="${esc(p.name)}" ${p.name === admPeSelectedName ? "selected" : ""}>${esc(p.name)} (${esc(facName(p.fac))} · Lv${p.lvl || 1}${p.reborn ? ` · CS${p.reborn}` : ""})</option>`).join("")
     : `<option value="">(Đang tải danh sách người chơi...)</option>`
   );
 
   const selP = admPePlayersList.find(p => p.name === admPeSelectedName) || (admPePlayersList[0] || null);
   if (selP && !admPeSelectedName) admPeSelectedName = selP.name;
+
+  const hs = typeof admHorses === "function" ? admHorses() : [];
+  if (!admPeHorse || !hs.some(h => String(h.id) === String(admPeHorse))) {
+    admPeHorse = hs[0] ? String(hs[0].id) : "";
+  }
+  const allCatalog = typeof admAllCatalog === "function" ? admAllCatalog() : [];
+  if (selP && (!admPeSet || !allCatalog.some(s => String(s.id) === String(admPeSet)))) {
+    const defaultSet = allCatalog.find(s => s.cat === "hkmp" && s.fac === selP.fac && s.id.includes("full"))
+                    || allCatalog.find(s => s.cat === "hkmp" && s.fac === selP.fac)
+                    || allCatalog[0];
+    if (defaultSet) admPeSet = String(defaultSet.id);
+  }
 
   return `
   <div class="admh">👤 Quản Lý Người Chơi (Can Thiệp Tài Khoản Từ Xa)</div>
@@ -889,7 +976,8 @@ function admTabPlayers() {
     <div class="card stats" style="margin-bottom:8px;background:#1a1914;padding:6px">
       <span>Đang chọn</span><span class="gold"><b>${esc(selP.name)}</b></span>
       <span>Môn phái</span><span>${esc(facName(selP.fac))}</span>
-      <span>Cấp độ</span><span>${selP.lvl || 1}${selP.reborn ? ` (CS ${selP.reborn})` : ""}</span>
+      <span>Cấp độ</span><span>${selP.lvl || 1}</span>
+      <span>Chuyển sinh</span><span class="cp"><b>CS ${selP.reborn || 0}</b></span>
       <span>Lực chiến</span><span>${fmt(selP.power || 0)}</span>
     </div>
   ` : ''}
@@ -902,6 +990,42 @@ function admTabPlayers() {
   <div class="admf">
     <label>Cộng/Trừ EXP: <input type="number" id="admPeXpVal" placeholder="Ví dụ: 10000000" style="width:130px"></label>
     <button class="btn sm" data-a="pe_addxp">Gửi EXP</button>
+  </div>
+
+  <div class="admh">🔄 Chuyển Sinh (Tăng / Giảm Cấp CS)</div>
+  <div class="admf">
+    <label>Chuyển sinh: <input type="number" id="admPeRebornVal" min="0" max="10" value="${selP ? (selP.reborn || 0) : 0}" style="width:65px"></label>
+    <button class="btn sm on" data-a="pe_setreborn">Đặt CS</button>
+    <button class="btn sm" data-a="pe_decreborn" title="Giảm 1 cấp chuyển sinh">🔻 Giảm 1 CS</button>
+    <button class="btn sm" data-a="pe_resetreborn" title="Về chưa chuyển sinh (CS 0)">Về CS 0</button>
+  </div>
+
+  <div class="admh">🐎 Tặng Thú Cưỡi & Ngựa</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admPeHorse" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      ${admHorseOpts(hs, admPeHorse || (hs[0] ? hs[0].id : ""))}
+    </select>
+    <button class="btn sm on" data-a="pe_givehorse">🎁 Tặng Ngựa</button>
+    <button class="btn sm" data-a="pe_giveallhorses" title="Mở khóa và tặng đủ 48 loài ngựa vào Mã Trường">⚡ Đủ 48 Ngựa</button>
+  </div>
+
+  <div class="admh">🎁 Tặng Trang Bị & Vật Phẩm</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admPeSet" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      ${admPeSetOptions(selP ? selP.fac : -1)}
+    </select>
+    <button class="btn sm on" data-a="pe_giveset">Gửi Bộ Này</button>
+    <button class="btn sm" data-a="pe_givesetwear" title="Gửi và tự động mặc nếu đủ điều kiện">Gửi & Mặc</button>
+  </div>
+  <div class="btnrow" style="margin-bottom:6px">
+    <button class="btn sm on" data-a="pe_givehkmp" title="Tự động tặng trọn bộ Hoàng Kim Môn Phái 10 món phù hợp với phái của người chơi">⭐ Full HKMP Phái (10 món)</button>
+    <button class="btn sm" data-a="pe_givematpack" title="Tặng 99 Huyền Tinh 10, Thủy Tinh, Thần Bí KT, 30 Đá c6, 10.000 Phúc Duyên">💎 Gói Nguyên Liệu</button>
+    <button class="btn sm" data-a="pe_enhfull" title="Cường hóa +10 tối đa toàn bộ trang bị đang mặc trên người">⚡ Full Cường Hóa +10</button>
+  </div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm" data-a="pe_givepots" title="Bơm 500 bình máu + mana các loại">🧪 Bơm 500 Thuốc</button>
+    <button class="btn sm" data-a="pe_giveab" title="Tặng bộ An Bang hoàn chỉnh">Tặng An Bang</button>
+    <button class="btn sm" data-a="pe_givedq" title="Tặng bộ Định Quốc hoàn chỉnh">Tặng Định Quốc</button>
   </div>
 
   <div class="admh">🌀 Tẩy Tủy Từ Xa (Reset Điểm)</div>
@@ -954,8 +1078,11 @@ function admModal() {
       const v = (id) => $("#" + id);
       v("admPeTarget") && (v("admPeTarget").onchange = (e) => {
         admPeSelectedName = e.target.value;
+        admPeSet = "";
         admModal();
       });
+      v("admPeSet") && (v("admPeSet").onchange = () => (admPeSet = v("admPeSet").value));
+      v("admPeHorse") && (v("admPeHorse").onchange = () => (admPeHorse = v("admPeHorse").value));
       const eqSync = () => {
         const g = (id, d) => (v(id) ? +v(id).value : d);
         admEq = { d: g("admEqD", 0), k: g("admEqK", 0), lv: g("admEqL", 10), n: g("admEqN", 6), s: g("admEqS", -1), q: clamp(g("admEqQ", 1) | 0, 1, 20) };
@@ -976,7 +1103,7 @@ function admAct(a) {
   const [k, x, y] = a.split(":"),
     v = (id) => ($("#" + id) || {}).value;
   const tab = {
-    lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv",
+    lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv", reb: "lv",
     eqmake: "eq", eqfull: "eq", set: "eq", setwear: "eq", horse: "eq", horseall: "eq", enhfull: "eq", matpack: "eq",
     skmax: "skill", cd: "skill", full: "skill"
   }[k] || k;
@@ -1008,6 +1135,8 @@ function admAct(a) {
           ? `Tự cộng ${a - S.attrPts} tiềm năng, ${s - S.skPts} điểm kỹ năng`
           : (toast("Không còn điểm để cộng"), "");
       }
+      case "reb":
+        return admReborn(x);
       case "join": {
         const c = admCh; // the faction picker acts on the selected character
         return (setTimeout(() => withChar(c, () => (closeModal(!0), joinModal())), 0), "Mở bảng gia nhập môn phái");
@@ -1201,6 +1330,100 @@ function admAct(a) {
         if (!msg) return (toast("Chưa nhập nội dung tin nhắn"), "");
         inp.value = "";
         return sendPlayerEditCmd(pName, { op: "msg", v: msg, by: S.name || "Admin" }, `Đã gửi tin nhắn riêng cho [${pName}]`);
+      }
+      case "pe_setreborn": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const cs = +($("#admPeRebornVal") ? $("#admPeRebornVal").value : 0);
+        if (cs < 0 || cs > 10) return (toast("Số lần chuyển sinh không hợp lệ (0-10)"), "");
+        return sendPlayerEditCmd(pName, { op: "reborn", v: cs, by: S.name || "Admin" }, `Đã đặt Chuyển Sinh ${cs} cho [${pName}]`);
+      }
+      case "pe_decreborn": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "reborn", delta: -1, by: S.name || "Admin" }, `Đã gửi lệnh giảm 1 Chuyển Sinh cho [${pName}]`);
+      }
+      case "pe_resetreborn": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "reborn", v: 0, by: S.name || "Admin" }, `Đã đặt về CS 0 (chưa chuyển sinh) cho [${pName}]`);
+      }
+      case "pe_givehorse": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const hId = ($("#admPeHorse") ? $("#admPeHorse").value : admPeHorse) || admPeHorse;
+        const hs = typeof admHorses === "function" ? admHorses() : [];
+        const h = hs.find((x) => String(x.id) === String(hId)) || hs[0];
+        if (!h) return (toast("Chưa chọn ngựa"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "horse",
+          horseId: h.id,
+          isTm: !!h.isTm,
+          tmId: h.tmId,
+          k: h.k,
+          lvl: h.lvl,
+          n: h.n,
+          by: S.name || "Admin"
+        }, `Đã tặng thú cưỡi [${h.n}] cho [${pName}]`);
+      }
+      case "pe_giveallhorses": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "horse_all", by: S.name || "Admin" }, `Đã mở khóa 48 loài ngựa vào Mã Trường cho [${pName}]`);
+      }
+      case "pe_giveset":
+      case "pe_givesetwear": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const setId = ($("#admPeSet") ? $("#admPeSet").value : admPeSet) || admPeSet;
+        const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
+        const setItem = all.find((x) => String(x.id) === String(setId)) || all[0];
+        if (!setItem) return (toast("Chưa chọn bộ trang bị"), "");
+        const wear = k === "pe_givesetwear" ? 1 : 0;
+        return sendPlayerEditCmd(pName, {
+          op: "give_set",
+          setId: setItem.id,
+          setName: setItem.n,
+          wear: wear,
+          by: S.name || "Admin"
+        }, `Đã tặng bộ [${setItem.n}] cho [${pName}]`);
+      }
+      case "pe_givehkmp": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const selP = admPePlayersList.find((p) => p.name === pName);
+        const facId = selP ? selP.fac : -1;
+        return sendPlayerEditCmd(pName, {
+          op: "give_set",
+          special: "hkmp",
+          fac: facId,
+          by: S.name || "Admin"
+        }, `Đã tặng trọn bộ Hoàng Kim Môn Phái cho [${pName}]`);
+      }
+      case "pe_givematpack": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "matpack", by: S.name || "Admin" }, `Đã tặng Gói Nguyên Liệu Ép Đồ cho [${pName}]`);
+      }
+      case "pe_enhfull": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "enhfull", by: S.name || "Admin" }, `Đã cường hóa +10 toàn thân cho [${pName}]`);
+      }
+      case "pe_givepots": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "give_potions", by: S.name || "Admin" }, `Đã bơm 500 bình máu và mana cho [${pName}]`);
+      }
+      case "pe_giveab": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "give_set", special: "ab", by: S.name || "Admin" }, `Đã tặng bộ An Bang cho [${pName}]`);
+      }
+      case "pe_givedq": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "give_set", special: "dq", by: S.name || "Admin" }, `Đã tặng bộ Định Quốc cho [${pName}]`);
       }
       case "go":
         return admGo(a.slice(3));

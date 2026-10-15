@@ -141,6 +141,207 @@
         const it = rmUid(g.uid);
         return it ? `thu hồi <b>${esc(it.n || "")}</b>` : "";
       }
+      case "reborn": {
+        const from = typeof rebGet === "function" ? rebGet() : ((S.rw && S.rw.stat && S.rw.stat.reborn) | 0);
+        let to = from;
+        if (typeof g.v !== "undefined") {
+          to = Math.max(0, Math.min(10, Math.floor(+g.v) || 0));
+        } else if (typeof g.delta !== "undefined") {
+          to = Math.max(0, Math.min(10, from + (+g.delta || 0)));
+        }
+        if (typeof rebSet === "function") rebSet(to);
+        else {
+          const rw = S.rw || (S.rw = {});
+          (rw.stat || (rw.stat = {})).reborn = to;
+        }
+        let off = 0;
+        if (to < from) {
+          const eqLv = typeof eqLevel === "function" ? eqLevel() : (S.lvl || 1);
+          for (const k of Object.keys(S.eq || {})) {
+            const it = S.eq[k];
+            if (!it || !(it.req || []).some(([n, e]) => n === 36 && e > eqLv)) continue;
+            if (S.inv.length >= INV_MAX) break;
+            S.inv.unshift(it);
+            delete S.eq[k];
+            off++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}${to < from ? "giảm" : "chỉnh"} chuyển sinh ${from} → <b>CS ${to}</b>${off ? ` (tháo ${off} món quá cấp)` : ""}`;
+      }
+      case "horse": {
+        let h = null;
+        if (g.isTm || (g.horseId && String(g.horseId).startsWith("tm_"))) {
+          const tmId = g.tmId != null ? g.tmId : String(g.horseId).replace(/^tm_/, "");
+          if (typeof makeThanMa === "function") h = makeThanMa(+tmId || tmId);
+        } else if (g.k != null && g.lvl != null) {
+          if (typeof makeItem === "function") {
+            h = makeItem(10, g.k, g.lvl, 0);
+            if (h && typeof HORSE_RARE !== "undefined" && HORSE_RARE.includes(g.k)) {
+              h.r = 2;
+              h.rareH = 1;
+            }
+          }
+        }
+        if (!h && g.horseId) {
+          const hs = typeof admHorses === "function" ? admHorses() : [];
+          const found = hs.find((x) => String(x.id) === String(g.horseId));
+          if (found) {
+            if (found.isTm && typeof makeThanMa === "function") h = makeThanMa(found.tmId);
+            else if (typeof makeItem === "function") {
+              h = makeItem(10, found.k, found.lvl, 0);
+              if (h && typeof HORSE_RARE !== "undefined" && HORSE_RARE.includes(found.k)) {
+                h.r = 2;
+                h.rareH = 1;
+              }
+            }
+          }
+        }
+        if (h) {
+          S.inv = S.inv || [];
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(h);
+          } else {
+            const st = typeof stable === "function" ? stable() : (S.stable || (S.stable = []));
+            st.push(h);
+          }
+          if (typeof horseAttr === "function") horseAttr();
+          R.dirty = !0;
+          typeof invDirty !== "undefined" && (invDirty = !0);
+          return `${nm()}nhận được thú cưỡi <b>${esc(h.n)}</b>`;
+        }
+        return `${nm()}lỗi khi tạo thú cưỡi`;
+      }
+      case "horse_all": {
+        const all = typeof hcAll === "function" ? hcAll() : null;
+        if (!all) return `${nm()}lỗi dữ liệu Mã Trường`;
+        const owned = typeof hcOwned === "function" ? hcOwned() : new Map();
+        const st = typeof stable === "function" ? stable() : (S.stable || (S.stable = []));
+        let added = 0;
+        for (const [key, val] of all.entries()) {
+          if (owned.has(key)) continue;
+          const [name, tier] = val;
+          const itemDef = J.items && J.items[10] && J.items[10].list.find((r) => hcKey(r) === key);
+          if (!itemDef) continue;
+          const h = makeItem(10, itemDef.k, itemDef.lvl, 0);
+          if (h) {
+            typeof HORSE_RARE !== "undefined" && HORSE_RARE.includes(itemDef.k) && ((h.r = 2), (h.rareH = 1));
+            st.push(h);
+            owned.set(key, tier);
+            added++;
+          }
+        }
+        R.dirty = !0;
+        return `${nm()}nhận <b>${added} loài ngựa</b> vào Mã Trường (đầy đủ bộ sưu tập)`;
+      }
+      case "give_set": {
+        let setRows = null;
+        let setKind = "gold";
+        let setName = "";
+        const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
+        if (g.setId) {
+          const found = all.find((x) => String(x.id) === String(g.setId));
+          if (found) {
+            setRows = found.rows;
+            setKind = found.kind || "gold";
+            setName = found.n;
+          }
+        }
+        if (!setRows && g.special === "hkmp") {
+          const myFid = S.fac != null && typeof FAC !== "undefined" && FAC[S.fac] ? FAC[S.fac].id : -1;
+          const targetFac = g.fac != null && g.fac >= 0 ? g.fac : myFid;
+          const hkmp = all.find((x) => x.fac === targetFac && x.cat === "hkmp" && x.id.includes("full"))
+                    || all.find((x) => x.fac === targetFac && x.cat === "hkmp")
+                    || all.find((x) => x.cat === "hkmp");
+          if (hkmp) {
+            setRows = hkmp.rows;
+            setKind = hkmp.kind || "gold";
+            setName = hkmp.n;
+          }
+        } else if (!setRows && g.special === "ab") {
+          const ab = all.find((x) => x.n && x.n.includes("An Bang"));
+          if (ab) { setRows = ab.rows; setKind = ab.kind; setName = ab.n; }
+        } else if (!setRows && g.special === "dq") {
+          const dq = all.find((x) => x.n && x.n.includes("Định Quốc"));
+          if (dq) { setRows = dq.rows; setKind = dq.kind; setName = dq.n; }
+        }
+
+        if (!setRows || !setRows.length) return `${nm()}không tìm thấy bộ trang bị`;
+
+        S.inv = S.inv || [];
+        const its = setRows.map((r) => makeSetItem(setKind, r, 10));
+        let added = 0;
+        for (const it of its) {
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(it);
+            added++;
+          } else if (Array.isArray(S.stash)) {
+            S.stash.push(it);
+            added++;
+          }
+        }
+        if (g.wear) {
+          for (const it of its) {
+            if (typeof reqOk === "function" && reqOk(it) && typeof equip === "function") {
+              equip(it, !0);
+            }
+          }
+          typeof autoEquipAll === "function" && autoEquipAll();
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}nhận ${added}/${its.length} món bộ <b>${esc(setName || "Trang bị")}</b>`;
+      }
+      case "matpack": {
+        const addMat = typeof matAdd === "function" ? matAdd : (k, t, n) => {
+          const m = S.mats || (S.mats = {});
+          m[k] = m[k] || {};
+          m[k][t] = (m[k][t] || 0) + n;
+        };
+        addMat("ht", 10, 99);
+        addMat("misc", "wc", 99);
+        addMat("misc", "mys", 99);
+        if (typeof RW === "function") RW().fd = (RW().fd || 0) + 10000;
+        let oreCount = 0;
+        for (let place = 0; place < 6; place++) {
+          const defaultA = [126, 166, 115, 58, 43, 150][place];
+          const pool = typeof orePool === "function" ? orePool(place) : null;
+          const a = pool && pool.length ? pool[0] : defaultA;
+          const s = place % 2 === 1 ? (S.fac && typeof FAC !== "undefined" && FAC[S.fac] ? FAC[S.fac].series : 0) : -1;
+          const k = typeof oreKey === "function" ? oreKey(place, a, 6, s) : `${place}:${a}:6` + (s >= 0 && place % 2 ? `:${s}` : "");
+          addMat("ore", k, 5);
+          oreCount += 5;
+        }
+        R.dirty = !0;
+        return `${nm()}nhận <b>Gói Nguyên Liệu (99 HT10, 99 Thủy Tinh, Đá c6, +10.000 Phúc Duyên)</b>`;
+      }
+      case "enhfull": {
+        let count = 0;
+        const maxEnh = typeof ENH_MAX !== "undefined" ? ENH_MAX : 10;
+        for (const k in S.eq || {}) {
+          const it = S.eq[k];
+          if (it && (typeof isHorse !== "function" || !isHorse(it))) {
+            it.enh = maxEnh;
+            count++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}cường hóa <b>+${maxEnh} toàn thân</b> (${count} món trang bị)`;
+      }
+      case "give_potions": {
+        if (typeof potStock === "function") {
+          for (const kind of ["life", "mana"]) {
+            const arr = potStock(kind);
+            if (Array.isArray(arr)) {
+              for (let i = 0; i < arr.length; i++) arr[i] = (arr[i] || 0) + 500;
+            }
+          }
+        }
+        R.dirty = !0;
+        return `${nm()}nhận <b>+500 mọi loại bình dược phẩm (máu & nội lực)</b>`;
+      }
     }
     return "";
   }
