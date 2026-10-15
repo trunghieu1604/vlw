@@ -375,7 +375,7 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-const APP_V = 395;
+const APP_V = 396;
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
   fetch("ver.json?t=" + Date.now(), { cache: "no-store" })

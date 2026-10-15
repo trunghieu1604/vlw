@@ -123,7 +123,7 @@ function calc(t) {
     if (!l || !reqPass(l)) continue;
     const p = r === "horse" ? av(n, "fastwalkrun_p") : 0,
       m = enhMul(l);
-    for (const [v, M, I] of l.base)
+    for (const [v, M, I] of (l.base || []))
       addAttr(n, attrName(v), [horseAdj(l, (v === 28 || v === 29 ? M : (M + I) / 2) * m), 0, 0]);
     const k = hiddenActive(l, t),
       g = r === "horse" ? 1 : enhLineMul(l),

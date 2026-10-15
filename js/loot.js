@@ -191,7 +191,7 @@ function itemValue(n) {
 }
 function itemPower(n) {
   let e = n.lvl * 10;
-  for (const [t, r, o] of n.base) (t === 28 || t === 29 || t === 30) && (e += (r + o) / 2);
+  for (const [t, r, o] of (n.base || [])) (t === 28 || t === 29 || t === 30) && (e += (r + o) / 2);
   for (const t of n.mag.concat(n.ext || [])) {
     const r = attrName(t.a);
     (typeof ATTR_NOEFFECT < "u" && ATTR_NOEFFECT.has(r)) || (e += 15 + Math.min(200, Math.abs(t.p[0])) * 0.6);
@@ -271,7 +271,7 @@ function itemLines(n) {
   (n.s >= 0 && e.push(["b", "Ngũ hành thuộc tính: " + SERIES[n.s], SERIES_COL[n.s]]),
     r && r.d && e.push(["b in", r.d]));
   const a = (s) => (n.d === 10 && typeof horseAdj == "function" ? horseAdj(n, s) : s);
-  for (const [s, i, f] of n.base) {
+  for (const [s, i, f] of (n.base || [])) {
     const d = attrName(s);
     if (d === "item_purple" || s === 167 || d === "staminamax_v") continue;
     if (d === "durability_v") {
@@ -281,7 +281,7 @@ function itemLines(n) {
     const p = Math.round(s === 28 || s === 29 ? i * t : a(((i + f) / 2) * t));
     e.push(["b", attrText(d, [p, 0, p])]);
   }
-  for (const [s, i] of n.req)
+  for (const [s, i] of (n.req || []))
     !REQ_NAME[s] ||
       ((s === 37 || s === 38 || s === 39) && i < 0) ||
       (s !== 37 && s !== 38 && s !== 39 && !(i > 0)) ||

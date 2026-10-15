@@ -152,7 +152,7 @@ function findItem(n) {
 }
 function itemCell(n) {
   return n
-    ? `<button class="it r${n.r}${reqOk(n) ? "" : " bad"}" data-uid="${n.uid}"${reqOk(n) ? "" : ` title="${esc("Chưa mặc được: " + reqProblems(n).join("; "))}"`}>${n.ic ? `<img src="${esc(n.ic)}" alt="">` : ""}<i>${n.lvl}</i>${typeof isUpgrade == "function" && S.inv.includes(n) ? (isUpgrade(n) ? '<u class="up" title="Mạnh hơn đồ đang mặc">▲</u>' : isPotential(n) ? `<u class="up pot" title="Cường hóa lên +${enhGain(n).enh} thì mạnh hơn đồ đang mặc">△</u>` : "") : ""}${n.s >= 0 ? `<b class="s5" style="background:${SERIES_COL[n.s]}"></b>` : ""}${betterThanEquipped(n) && S.inv.includes(n) ? "<em>▲</em>" : ""}${n.lock ? '<u class="lk">🔒</u>' : typeof dtNeed == "function" && S.inv.includes(n) && dtNeed(n) ? '<u class="lk" title="Giữ để trả Dã Tẩu">📜</u>' : ""}${n.enh ? `<u class="en">+${n.enh}</u>` : ""}</button>`
+    ? `<button class="it r${n.r}${reqOk(n) ? "" : " bad"}" data-uid="${n.uid}"${reqOk(n) ? "" : ` title="${esc("Chưa mặc được: " + reqProblems(n).join("; "))}"`}>${n.ic ? `<img src="${esc(n.ic)}" alt="">` : ""}<i>${n.lvl}</i>${typeof isUpgrade == "function" && S.inv.includes(n) ? (isUpgrade(n) ? '<u class="up" title="Mạnh hơn đồ đang mặc">▲</u>' : isPotential(n) ? `<u class="up pot" title="Cường hóa lên +${enhGain(n).enh} thì mạnh hơn đồ đang mặc">△</u>` : "") : ""}${n.s >= 0 ? `<b class="s5" style="background:${SERIES_COL[n.s]}"></b>` : ""}${S.inv.includes(n) && betterThanEquipped(n) ? "<em>▲</em>" : ""}${n.lock ? '<u class="lk">🔒</u>' : typeof dtNeed == "function" && S.inv.includes(n) && dtNeed(n) ? '<u class="lk" title="Giữ để trả Dã Tẩu">📜</u>' : ""}${n.enh ? `<u class="en">+${n.enh}</u>` : ""}</button>`
     : "";
 }
 function itemHTML(n) {

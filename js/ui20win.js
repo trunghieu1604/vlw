@@ -929,6 +929,6 @@ async function rankModal20() {
     );
   a.insertAdjacentHTML(
     "afterbegin",
-    `<p class="small">Hạng của bạn: <span class="gold" style="font-weight:700">${i > 0 ? "#" + i : "ngoài top 50"}</span>${NET.user ? "" : ' <span class="dim">(đăng nhập ở Hệ thống › Tài khoản để có tên trên bảng)</span>'}</p>`,
+    `<p class="small">Hạng của bạn: <span class="gold" style="font-weight:700">${i > 0 ? "#" + i : "ngoài top 50"}</span></p>`,
   );
 }

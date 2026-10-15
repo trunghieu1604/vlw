@@ -968,11 +968,26 @@ async function getProfileFirebase(name) {
   if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return null;
   try {
     const db = firebase.database();
-    const snap = await db.ref("ranking/players").orderByChild("name").equalTo(name).once("value");
+    const snap = await db.ref("ranking/players").once("value");
     const val = snap.val();
     if (val) {
-      const k = Object.keys(val)[0];
-      return val[k];
+      const target = (name || "").trim().toLowerCase();
+      const p = Object.values(val).find(
+        (x) => x && (x.name === name || (x.name && x.name.trim().toLowerCase() === target))
+      );
+      if (p) {
+        if (p.gear) {
+          for (const it of Object.values(p.gear)) {
+            if (it && typeof it === "object") {
+              if (!Array.isArray(it.base)) it.base = [];
+              if (!Array.isArray(it.req)) it.req = [];
+              if (!Array.isArray(it.mag)) it.mag = [];
+              if (!Array.isArray(it.ext)) it.ext = [];
+            }
+          }
+        }
+        return p;
+      }
     }
   } catch (e) {
     console.warn("getProfileFirebase err:", e);
@@ -1055,24 +1070,44 @@ async function profileModal(t, n) {
         $("#pfB").onclick = n;
       },
     );
-  const i = s.gear || {},
-    a = FAC[s.fac],
-    o = SLOTS.map(
-      ([c, r]) =>
-        `<div class="pfs"><small class="dim">${r}</small>${i[c] ? netCell(i[c]).replace("data-uid=", `data-pk="${c}" data-x=`) : '<div class="it"></div>'}</div>`,
-    ).join("");
-  modal(
-    `<h3>${esc(s.name)} <small>${esc(a ? a.n : "")} · cấp ${s.lvl}${s.reborn ? ` · chuyển sinh ${s.reborn}` : ""}</small></h3>
-    <p class="small">Tháp tầng <b>${s.tower || 0}</b> · Trùm đã hạ <b>${fmt(s.bosses || 0)}</b> <small class="dim">· cập nhật ${new Date(s.updated || Date.now()).toLocaleString("vi-VN")}</small></p>
-    <div class="pfgrid">${o}</div>
-    <div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
-    () => {
-      document
-        .querySelectorAll("#mBody [data-pk]")
-        .forEach((r) => (r.onclick = () => netItemModal(i[r.dataset.pk], "", () => profileModal(t, n))));
-      $("#pfB").onclick = n;
-    },
-  );
+  if (s && s.gear) {
+    for (const it of Object.values(s.gear)) {
+      if (it && typeof it === "object") {
+        if (!Array.isArray(it.base)) it.base = [];
+        if (!Array.isArray(it.req)) it.req = [];
+        if (!Array.isArray(it.mag)) it.mag = [];
+        if (!Array.isArray(it.ext)) it.ext = [];
+      }
+    }
+  }
+  try {
+    const i = s.gear || {},
+      a = FAC[s.fac],
+      o = SLOTS.map(
+        ([c, r]) =>
+          `<div class="pfs"><small class="dim">${r}</small>${i[c] ? netCell(i[c]).replace("data-uid=", `data-pk="${c}" data-x=`) : '<div class="it"></div>'}</div>`,
+      ).join("");
+    modal(
+      `<h3>${esc(s.name)} <small>${esc(a ? a.n : "")} · cấp ${s.lvl}${s.reborn ? ` · chuyển sinh ${s.reborn}` : ""}</small></h3>
+      <p class="small">Tháp tầng <b>${s.tower || 0}</b> · Trùm đã hạ <b>${fmt(s.bosses || 0)}</b> <small class="dim">· cập nhật ${new Date(s.updated || Date.now()).toLocaleString("vi-VN")}</small></p>
+      <div class="pfgrid">${o}</div>
+      <div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
+      () => {
+        document
+          .querySelectorAll("#mBody [data-pk]")
+          .forEach((r) => (r.onclick = () => netItemModal(i[r.dataset.pk], "", () => profileModal(t, n))));
+        $("#pfB").onclick = n;
+      },
+    );
+  } catch (err) {
+    console.error("profileModal render error:", err);
+    modal(
+      `<h3>${esc(t)}</h3><p class="reqbad">Lỗi hiển thị trang bị: ${esc(err.message || err)}</p><div class="btnrow"><button class="btn" id="pfB">Quay lại</button></div>`,
+      () => {
+        $("#pfB").onclick = n;
+      },
+    );
+  }
 }
 async function netMailBody(t) {
   const e = (await netCall((c) => c.get("/api/mail"))) || [];
