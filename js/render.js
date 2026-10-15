@@ -42,231 +42,366 @@ function fxLine(i, t, n) {
 }
 const JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} },
   FX_SCALE = 1.4,
-  FX_MAX = 60,
-  dir16 = (i, t) => ((Math.round(Math.atan2(-i, t) / (Math.PI / 8)) % 16) + 16) % 16;
-// native (k:1) cast sheets are JX1 PreCastSpr: drawn at the caster's feet, 38 scene-z higher on a horse
-// (KNpcRes special spr)
-function castFx(i) {
-  const t = i && i.id && JFX.f && JFX.f[i.id],
-    n = t && t.pre && JFX.c && JFX.c[t.pre];
-  !n ||
-    R.quiet ||
-    R.fx.length > FX_MAX ||
-    R.fx.push({
-      k: "boom",
-      s: n,
-      x: H.x,
-      y: n.k ? H.y - (R.mounted ? Math.round((38 * 887) / 1024) : 0) : H.y - 6,
-      t: 0,
-      life: animDur(n),
-      dir: 0,
-    });
+  MAX_FX = 90,
+  MAX_DEPTH = 3,
+  FRAME_DELTA = 1 / 18,
+  UA = 2,
+  GA = 0.3,
+  dir16 = (dx, dy) => ((Math.round(Math.atan2(-dx, dy) / (Math.PI / 8)) % 16) + 16) % 16,
+  animDur = (s) => (s && s.n && s.ms ? Math.min(1.2, (s.n * s.ms) / 1000) : 0.6),
+  PRELOADED_SKILLS = new Set();
+
+function preloadSkillFx(id, depth = 0) {
+  const f = JFX.f && JFX.f[id];
+  if (!f || depth > MAX_DEPTH + 1 || (depth === 0 && PRELOADED_SKILLS.has(id))) return;
+  depth === 0 && PRELOADED_SKILLS.add(id);
+  if (f.pre && JFX.c && JFX.c[f.pre]) img(JFX.c[f.pre].f);
+  const m = f.c && JFX.m && JFX.m[f.c];
+  if (m) {
+    if (m.fly && m.fly.f) img(m.fly.f);
+    if (m.flyb && m.flyb.f) img(m.flyb.f);
+    if (m.hit && m.hit.f) img(m.hit.f);
+    if (m.hitb && m.hitb.f) img(m.hitb.f);
+    if (m.van && m.van.f) img(m.van.f);
+    if (m.vanb && m.vanb.f) img(m.vanb.f);
+  }
+  for (const key of ["sk", "es", "ef", "ec", "ev"]) {
+    f[key] && preloadSkillFx(f[key], depth + 1);
+  }
 }
-function skillFx(i, t, n) {
-  const o = (n.id && JFX.f && JFX.f[n.id]) || {},
-    e = n.id && JFX.m[o.c || JFX.s[n.id]];
-  if ((castFx(n), o.sub && !R.quiet && String(o.sub.c) !== String(o.c) && subFx(i, t, o.sub), !e || R.quiet)) {
-    fxLine(i, t, n);
-    return;
+
+function preloadHeroSkills() {
+  if (typeof S !== "undefined" && S && S.fac) {
+    for (const id of [S.main, ...(S.slots || [])]) id && preloadSkillFx(id);
   }
-  if (R.fx.length > FX_MAX) return;
-  const l = i.x,
-    r = i.y - 20,
-    s = t.x,
-    f = t.y - 14,
-    a = s - l,
-    h = f - r,
-    u = Math.hypot(a, h) || 1,
-    x = o.form === void 0 ? 1 : o.form,
-    m = clamp(n.nMis > 1 ? Math.max(o.num || 1, Math.min(n.nMis, 8)) : o.num || 1, 1, 8),
-    M = Math.atan2(h, a),
-    d = (c, y, g, w = 0) => R.fx.push({ k: "boom", s: c, x: y, y: g, t: -w, life: animDur(c), dir: dir16(a, h) }),
-    p = (c, y, g = 0) =>
-      R.fx.push({
-        k: "mis",
-        s: e.fly,
-        hit: e.hit,
-        x1: l,
-        y1: r,
-        x2: c,
-        y2: y,
-        t: -g,
-        life: Math.min(0.6, Math.hypot(c - l, y - r) / e.spd),
-        dir: dir16(c - l, y - r),
-      }),
-    b = e.hit || e.fly,
-    A = e.fly && e.fly.d === 1 && e.fly.ay > 150,
-    k = (c, y, g = 0) => {
-      const w = (e.fly.n * e.fly.ms) / 1e3,
-        T = Math.min(0.8, w);
-      (R.fx.push({ k: "boom", s: e.fly, x: c, y: y + 14, t: -g, life: T, sp: w / T, dir: 0 }),
-        e.hit && d(e.hit, c, y, g + T * 0.8));
-    };
-  if (A && (x === 6 || x >= 8)) {
-    for (let c = 0; c < m; c++) k(s + (m > 1 ? rnd(-40, 40) : 0), f + (m > 1 ? rnd(-26, 26) : 0), c * 0.12);
-    return;
-  }
-  if ((n.melee && !o.meleeFly) || x >= 8) {
-    d(b, s, f);
-    return;
-  }
-  if (x === 7) {
-    e.fly && e.fly.d === 1 && e.hit ? (d(e.fly, l, r + 8), d(e.hit, s, f, 0.12)) : d(b, l, r + 8);
-    return;
-  }
-  if (x === 6) {
-    for (let c = 0; c < m; c++) d(b, s + (m > 1 ? rnd(-36, 36) : 0), f + (m > 1 ? rnd(-24, 24) : 0), c * 0.07);
-    return;
-  }
-  if (!e.fly) {
-    d(b, s, f);
-    return;
-  }
-  if (x === 3) {
-    for (let c = 0; c < m; c++) {
-      const y = M + (c / m) * Math.PI * 2;
-      p(l + Math.cos(y) * 130, r + Math.sin(y) * 130);
-    }
-    return;
-  }
-  if (x === 2) {
-    for (let c = 0; c < m; c++) {
-      const y = M + (c - (m - 1) / 2) * 0.26;
-      p(l + Math.cos(y) * u, r + Math.sin(y) * u);
-    }
-    return;
-  }
-  if (x === 1) {
-    for (let c = 0; c < m; c++) p(s, f, c * 0.09);
-    return;
-  }
-  if (x === 0) {
-    const c = -h / u,
-      y = a / u;
-    for (let g = 0; g < m; g++) {
-      const w = (g - (m - 1) / 2) * 34;
-      p(s + c * w, f + y * w);
-    }
-    return;
-  }
-  for (let c = 0; c < m; c++) p(s + rnd(-60, 60), f + rnd(-40, 40), c * 0.05);
 }
-function subFx(i, t, n) {
-  const o = JFX.m[n.c];
-  if (!o || R.fx.length > FX_MAX) return;
-  const e = clamp(n.n || 1, 1, 8),
-    l = t.x,
-    r = t.y - 14,
-    s = o.hit || o.fly,
-    f = 0.18,
-    a = (h, u, x, m, M) =>
-      o.fly
-        ? R.fx.push({
-            k: "mis",
-            s: o.fly,
-            hit: o.hit,
-            x1: h,
-            y1: u,
-            x2: x,
-            y2: m,
-            t: -M,
-            life: Math.min(0.55, Math.hypot(x - h, m - u) / (o.spd || 360)),
-            dir: dir16(x - h, m - u),
-          })
-        : R.fx.push({ k: "boom", s, x, y: m, t: -M, life: animDur(s), dir: 0 });
-  if (n.form === 3) {
-    const h = Math.random() * Math.PI;
-    for (let u = 0; u < e; u++) {
-      const x = h + (u / e) * Math.PI * 2;
-      a(l, r, l + Math.cos(x) * 110, r + Math.sin(x) * 70, f);
-    }
-    return;
-  }
-  if (n.form === 1) {
-    for (let h = 0; h < e; h++) a(i.x, i.y - 20, l + rnd(-20, 20), r + rnd(-14, 14), f + h * 0.06);
-    return;
-  }
-  for (let h = 0; h < e; h++)
-    R.fx.push({ k: "boom", s, x: l + rnd(-40, 40), y: r + rnd(-26, 26), t: -(f + h * 0.08), life: animDur(s), dir: 0 });
+
+function castFx(sk) {
+  const f = sk && sk.id && JFX.f && JFX.f[sk.id],
+    pre = f && f.pre && JFX.c && JFX.c[f.pre];
+  if (!pre || R.quiet || R.fx.length > MAX_FX) return;
+  R.fx.push({
+    k: "boom",
+    s: pre,
+    x: H.x,
+    y: pre.k ? H.y - (R.mounted ? Math.round((38 * 887) / 1024) : 0) : H.y - 6,
+    t: 0,
+    life: animDur(pre),
+    dir: 0,
+  });
 }
+
+function spawnBoom(m, type, x, y, dir, delay = 0) {
+  if (!m) return false;
+  const o = m[type],
+    c = m[type + "b"];
+  if (!o && !c) return false;
+  const main = o || c;
+  R.fx.push({
+    k: "boom",
+    s: main,
+    sb: o && c ? c : null,
+    x: x,
+    y: y,
+    t: -delay,
+    life: Math.max(animDur(main), c ? animDur(c) : 0),
+    dir: dir || 0,
+  });
+  return true;
+}
+
+const XA = 84;
+let Ta = 1.2;
+const QA = new Set([354]);
+
+function spawnSkillChain(skId, startPos, targetPos, depth, delay, targetActor) {
+  const f = JFX.f && JFX.f[skId];
+  if (!f || depth > MAX_DEPTH || R.fx.length > MAX_FX) return;
+  if (f.es) spawnSkillChain(f.es, startPos, targetPos, depth + 1, delay, targetActor);
+  if (f.sk) {
+    const numSub = Math.min(f.num || 1, 3);
+    for (let n = 0; n < numSub; n++) {
+      spawnSkillChain(f.sk, startPos, targetPos, depth + 1, delay + 0.12 * n, targetActor);
+    }
+  }
+  const m = f.c && JFX.m && JFX.m[f.c];
+  if (!m) return;
+  const dx = targetPos.x - startPos.x,
+    dy = targetPos.y - startPos.y,
+    dist = Math.hypot(dx, dy) || 1,
+    ang = Math.atan2(dy, dx),
+    num = clamp(f.num || 1, 1, 16),
+    reach = Math.min(280, Math.max(90, (m.spd || 300) * Math.min(m.life || 0.6, 1))),
+    fireMis = (x1, y1, x2, y2, off, isTgt) => spawnMis(f, m, x1, y1, x2, y2, delay + off, depth, isTgt ? targetActor : null),
+    fireBoom = (x, y, off, isTgt) => spawnMis(f, m, x, y, x, y, delay + off, depth, isTgt ? targetActor : null),
+    form = f.form ?? 1;
+
+  if (form >= 8 || form === 6) {
+    for (let n = 0; n < Math.min(num, 6); n++) {
+      fireBoom(
+        targetPos.x + (n ? rnd(-40, 40) : 0),
+        targetPos.y + (n ? rnd(-26, 26) : 0),
+        0.08 * n,
+        !n
+      );
+    }
+  } else if (form === 7) {
+    fireBoom(startPos.x, startPos.y + 14, 0, false);
+  } else if (form === 3 && m.mk === 5 && targetActor) {
+    for (let n = 0; n < num; n++) {
+      const a = ang + ((n + 0.5) / num) * Math.PI * 2;
+      fireMis(
+        startPos.x + Math.cos(a) * XA,
+        startPos.y + Math.sin(a) * XA * 0.7,
+        targetPos.x,
+        targetPos.y,
+        0.05 * n,
+        true
+      );
+    }
+  } else if (form === 3) {
+    for (let n = 0; n < num; n++) {
+      const a = ang + (n / num) * Math.PI * 2;
+      fireMis(
+        startPos.x,
+        startPos.y,
+        startPos.x + Math.cos(a) * reach,
+        startPos.y + Math.sin(a) * reach * 0.75,
+        0,
+        false
+      );
+    }
+  } else if (form === 2) {
+    for (let n = 0; n < num; n++) {
+      const off = n - (num - 1) / 2,
+        a = ang + 0.2 * off;
+      fireMis(
+        startPos.x,
+        startPos.y,
+        startPos.x + Math.cos(a) * dist,
+        startPos.y + Math.sin(a) * dist,
+        0,
+        Math.abs(off) < 0.6
+      );
+    }
+  } else if (form === 0) {
+    const nx = -dy / dist,
+      ny = dx / dist;
+    for (let s = 0; s < num; s++) {
+      const off = 30 * (s - (num - 1) / 2);
+      fireMis(
+        startPos.x + nx * off,
+        startPos.y + ny * off,
+        targetPos.x + nx * off,
+        targetPos.y + ny * off,
+        0,
+        Math.abs(off) < 16
+      );
+    }
+  } else if (form === 4 || form === 5) {
+    for (let n = 0; n < Math.min(num, 8); n++) {
+      fireMis(
+        startPos.x,
+        startPos.y,
+        targetPos.x + rnd(-60, 60),
+        targetPos.y + rnd(-40, 40),
+        0.05 * n,
+        !n
+      );
+    }
+  } else {
+    for (let n = 0; n < Math.min(num, 6); n++) {
+      fireMis(startPos.x, startPos.y, targetPos.x, targetPos.y, 0.09 * n, true);
+    }
+  }
+}
+
+function spawnMis(f, m, x1, y1, x2, y2, delay, depth, tgt) {
+  if (R.fx.length > MAX_FX) return;
+  const still = x1 === x2 && y1 === y2;
+  if (still && !m.fly && !m.flyb) {
+    spawnBoom(m, "hit", x1, y1, 0, delay) || spawnBoom(m, "van", x1, y1, 0, delay);
+    if (f.ec) spawnSkillChain(f.ec, { x: x1, y: y1 }, { x: x1, y: y1 }, depth + 1, delay + 0.05, tgt);
+    if (f.ev) triggerEventVanish(f.ev, { x: x1, y: y1 }, depth, tgt, delay + 0.05);
+    return;
+  }
+  const d = Math.hypot(x2 - x1, y2 - y1),
+    dur = still
+      ? clamp(m.life || 0.6, 0.3, f.ef ? 2.4 : Ta)
+      : clamp(d / Math.max(60, m.spd || 300), 0.12, Math.min(0.9, Math.max(0.2, m.life || 0.9)));
+  R.fx.push({
+    k: "mis",
+    f: f,
+    m: m,
+    x1: x1,
+    y1: y1,
+    x2: x2,
+    y2: y2,
+    x: x1,
+    y: y1,
+    t: -delay,
+    life: dur,
+    still: still,
+    hit: !!tgt || still,
+    tgt: tgt,
+    depth: depth,
+    dir: dir16(x2 - x1, y2 - y1),
+    ft: 0,
+    fn: 0,
+  });
+}
+
+function triggerEventVanish(evId, pos, depth, tgt, delay = 0) {
+  const f = JFX.f && JFX.f[evId];
+  if (!f || (S && S.lowFx)) return;
+  if (!QA.has(evId) && R.fx.some((fx) => fx.k === "mis" && fx.f === f && fx.t < GA)) return;
+  Ta = UA;
+  try {
+    spawnSkillChain(evId, pos, pos, depth + 1, delay, tgt);
+  } finally {
+    Ta = 1.2;
+  }
+}
+
+function stepFx(fx, dt) {
+  fx.t += dt;
+  if (fx.t < 0) return true;
+  if (fx.k !== "mis") return fx.t < fx.life;
+  
+  const m = fx.m,
+    f = fx.f;
+  if (fx.tgt && m.mk === 5 && !fx.tgt.dead) {
+    fx.x2 = fx.tgt.x;
+    fx.y2 = fx.tgt.y - 14;
+  }
+  const s = clamp(fx.t / fx.life, 0, 1);
+  let curX = fx.x1 + (fx.x2 - fx.x1) * s,
+    curY = fx.y1 + (fx.y2 - fx.y1) * s;
+  
+  if (m.mk === 7 && !fx.still) {
+    curY -= Math.sin(Math.PI * s) * Math.min(90, 0.35 * Math.hypot(fx.x2 - fx.x1, fx.y2 - fx.y1));
+  }
+  if (m.mk === 4 && !fx.still) {
+    const dist = Math.hypot(fx.x2 - fx.x1, fx.y2 - fx.y1) || 1,
+      wave = 14 * Math.sin(s * Math.PI * 4);
+    curX += (-(fx.y2 - fx.y1) / dist) * wave;
+    curY += ((fx.x2 - fx.x1) / dist) * wave;
+  }
+  
+  if (!fx.still && Math.abs(curX - fx.x) + Math.abs(curY - fx.y) > 0.5) {
+    fx.dir = dir16(curX - fx.x, curY - fx.y);
+  }
+  fx.x = curX;
+  fx.y = curY;
+  
+  if (f.ef && fx.fn < 6 && (fx.ft += dt) >= Math.min((f.eft || 1) * FRAME_DELTA, fx.life / 3)) {
+    fx.ft = 0;
+    fx.fn++;
+    spawnSkillChain(f.ef, { x: curX, y: curY }, { x: fx.x2, y: fx.y2 }, fx.depth + 1, 0, fx.tgt);
+  }
+  
+  if (fx.t < fx.life) return true;
+  
+  const endPos = { x: fx.x, y: fx.y };
+  if (fx.hit) {
+    spawnBoom(m, "hit", endPos.x, endPos.y, fx.dir) || spawnBoom(m, "van", endPos.x, endPos.y, fx.dir);
+    if (f.ec) spawnSkillChain(f.ec, endPos, endPos, fx.depth + 1, 0, fx.tgt);
+    if (fx.still && f.ev) triggerEventVanish(f.ev, endPos, fx.depth, fx.tgt);
+  } else {
+    spawnBoom(m, "van", endPos.x, endPos.y, fx.dir);
+    if (f.ev) spawnSkillChain(f.ev, endPos, { x: endPos.x + (fx.x2 - fx.x1), y: endPos.y + (fx.y2 - fx.y1) }, fx.depth + 1, 0, fx.tgt);
+  }
+  return false;
+}
+
+function drawFxSpriteSheet(sheet, dir, t, x, y, loop) {
+  if (!sheet || !sheet.f) return false;
+  const image = img(sheet.f);
+  if (!image || !image.complete || !image.naturalWidth) return false;
+  const ms = Math.max(1, sheet.ms || 56);
+  const n = Math.max(1, sheet.n || 1);
+  const d = Math.max(1, sheet.d || 1);
+  const fIdx = Math.floor((1000 * Math.max(0, t)) / ms);
+  const col = loop ? (fIdx % n) : Math.min(n - 1, fIdx);
+  const row = d > 1 ? (((Math.round((dir * d) / 16) % d) + d) % d) : 0;
+  CX.drawImage(
+    image,
+    col * sheet.w,
+    row * sheet.h,
+    sheet.w,
+    sheet.h,
+    x - sheet.ax * FX_SCALE,
+    y - sheet.ay * FX_SCALE,
+    sheet.w * FX_SCALE,
+    sheet.h * FX_SCALE
+  );
+  return true;
+}
+
+function drawFx(fx) {
+  if (fx.t < 0) return false;
+  if (fx.k === "mis") {
+    const m = fx.m;
+    let drawn = false;
+    if (m.flyb) drawn = drawFxSpriteSheet(m.flyb, fx.dir, fx.t, fx.x, fx.y, true);
+    if (m.fly) drawn = drawFxSpriteSheet(m.fly, fx.dir, fx.t, fx.x, fx.y, true) || drawn;
+    return drawn;
+  }
+  if (fx.sb && fx.t < (fx.sb.n * fx.sb.ms) / 1000 + 0.05) {
+    drawFxSpriteSheet(fx.sb, fx.dir, fx.t, fx.x, fx.y, false);
+  }
+  if (fx.s && fx.t < (fx.s.n * fx.s.ms) / 1000 + 0.05) {
+    drawFxSpriteSheet(fx.s, fx.dir, fx.t, fx.x, fx.y, false);
+  }
+  return true;
+}
+
+function skillFx(launcher, target, skill) {
+  if (!skill) return;
+  if (skill.id) preloadSkillFx(skill.id);
+  castFx(skill);
+  if (R.quiet) return;
+  if (skill.id && JFX.f && JFX.f[skill.id]) {
+    spawnSkillChain(
+      skill.id,
+      { x: launcher.x, y: launcher.y - 20 },
+      { x: target.x, y: target.y - 14 },
+      0,
+      0,
+      target
+    );
+  } else {
+    fxLine(launcher, target, skill);
+  }
+}
+
+function jmSupFx(id, tgt, pre) {
+  if (R.quiet || (typeof S != "undefined" && S && S.lowFx)) return;
+  pre && castFx({ id });
+  const f = JFX.f && JFX.f[id],
+    m = f && f.c && JFX.m && JFX.m[f.c];
+  const s = m && (m.hit || m.van || m.fly);
+  if (tgt && s && R.fx.length < MAX_FX) {
+    R.fx.push({ k: "boom", s, x: tgt.x, y: tgt.y - 14, t: 0, life: animDur(s), dir: 0 });
+  }
+}
+
 function ev2Fx(i, t, n, o, e) {
   if (R.quiet) return;
   const l = (t.id && JFX.f && JFX.f[t.id]) || {},
-    r = t.id && (JFX.m[(e && e.fx) || l.ev2c] || JFX.m[l.c || JFX.s[t.id]]),
-    s = r && (r.fly && r.fly.d === 1 && !o ? r.fly : r.hit && r.hit.ax >= 0 ? r.hit : r.fly || r.hit);
-  if (r && r.nat && s && !o && !(e && e.self)) {
-    // JX1 collide-event missile (e.g. 375 -> 387 -> 193): its picture where it was triggered, at the
-    // missile height, then its collision picture on the npc
-    if (R.fx.length > FX_MAX) return;
-    const z = Math.round((r.z || 0) * (887 / 1024)),
-      d = s === r.fly ? animDur(s) : 0;
-    (R.fx.push({ k: "boom", s, x: i.x, y: i.y - z, t: -0.15, life: animDur(s), dir: 0 }),
-      d &&
-        r.hit &&
-        R.fx.push({ k: "boom", s: r.hit, x: i.x, y: i.y, t: -(0.15 + d * 0.5), life: animDur(r.hit), dir: 0 }));
-    return;
+    r = t.id && (JFX.m[(e && e.fx) || l.ev2c] || JFX.m[l.c || (JFX.s && JFX.s[t.id])]),
+    s = r && (r.hit || r.van || r.fly);
+  if (s) {
+    R.fx.push({
+      k: "boom",
+      s: s,
+      x: i.x,
+      y: i.y - 14,
+      t: -0.1,
+      life: animDur(s),
+      dir: 0,
+    });
   }
-  if (!(!s || R.fx.length > FX_MAX)) {
-    if (o && r.fly) {
-      R.fx.push({
-        k: "mis",
-        s: r.fly,
-        hit: r.hit,
-        x1: o.x,
-        y1: o.y - 20,
-        x2: i.x,
-        y2: i.y - 14,
-        t: -0.15,
-        life: 0.35,
-        dir: dir16(i.x - o.x, i.y - o.y),
-      });
-      return;
-    }
-    if (e && e.self) {
-      R.fx.push({ k: "boom", s, x: i.x, y: i.y, t: -0.1, life: animDur(s), dir: 0 });
-      return;
-    }
-    for (let f = 0; f < 2; f++)
-      R.fx.push({
-        k: "boom",
-        s,
-        x: i.x + rnd(-18, 18),
-        y: i.y - 14 + rnd(-12, 12),
-        t: -(0.18 + f * 0.12),
-        life: animDur(s),
-        dir: 0,
-      });
-  }
-}
-// native JX1 sheets (k:1, fxjx.js) play their whole animation; the old site sheets stop at 1.2 s
-const animDur = (i) => Math.min(i.k ? 3 : 1.2, (i.n * i.ms) / 1e3);
-function drawFxSprite(i, t, n, o, e, l) {
-  const r = img(i.f);
-  if (!r || !r.complete || !r.naturalWidth) return !1;
-  const s = l ? Math.floor((n * 1e3) / i.ms) % i.n : Math.min(i.n - 1, Math.floor((n * 1e3) / i.ms)),
-    f = i.d > 1 ? Math.round((t * i.d) / 16) % i.d : 0,
-    k = i.k || FX_SCALE;
-  return (CX.drawImage(r, s * i.w, f * i.h, i.w, i.h, o - i.ax * k, e - i.ay * k, i.w * k, i.h * k), !0);
-}
-function stepFx(i, t) {
-  return (
-    (i.t += t),
-    i.t < 0
-      ? !0
-      : i.k === "mis" && i.t >= i.life
-        ? i.hit
-          ? (Object.assign(i, { k: "boom", s: i.hit, x: i.x2, y: i.y2, t: 0, life: animDur(i.hit) }), !0)
-          : !1
-        : i.t < i.life
-  );
-}
-function drawFx(i) {
-  if (i.t < 0) return !1;
-  if (i.k === "mis") {
-    const t = clamp(i.t / i.life, 0, 1);
-    return drawFxSprite(i.s, i.dir, i.t, i.x1 + (i.x2 - i.x1) * t, i.y1 + (i.y2 - i.y1) * t, !0);
-  }
-  return drawFxSprite(i.s, i.dir, i.t * (i.sp || 1), i.x, i.y, !1);
 }
 const UI_SCALE_MOBILE = 0.8,
   isMobileUI = () =>
@@ -919,20 +1054,18 @@ function draw(i) {
       SERIES_COL[e.series],
     ),
       e.poison > 0 && ((t.fillStyle = "#8fe34a"), t.fillRect(e.x - 22, f + 5, (44 * e.poison) / 3, 2)));
+    typeof jxmDrawAbove == "function" && jxmDrawAbove(t);
   }
-  if (
-    (jxmDrawAbove(t),
-    (R.fx = R.fx.filter((e) => {
-      if (e.k === "jm") {
-        const r = jmStep(e, i);
-        return (r && jmDraw(e), r);
-      }
-      if (e.k !== "mis" && e.k !== "boom") return !0;
-      const l = stepFx(e, i);
-      return (l && drawFx(e), l);
-    })),
-    R.fxQ && R.fxQ.length)
-  ) {
+  // FX step+draw — chạy 1 lần/frame, NGOÀI entity loop
+  const fxList = R.fx;
+  R.fx = [];
+  const kept = fxList.filter((e) => {
+    if (e.k !== "mis" && e.k !== "boom") return true;
+    const l = stepFx(e, i);
+    return (l && drawFx(e), l);
+  });
+  R.fx = kept.concat(R.fx);
+  if (R.fxQ && R.fxQ.length) {
     for (const e of R.fxQ) R.fx.push(e);
     R.fxQ.length = 0;
   }
@@ -949,7 +1082,7 @@ function draw(i) {
           t.arc(e.x, e.y - (e.r ? 0 : 10), 8 + (1 - l) * (e.r || 30), 0, 7),
           t.stroke()));
   }
-  ((t.globalAlpha = 1), (R.fx = R.fx.filter((e) => e.life > 0)), (t.textAlign = "center"), flushLabels());
+  ((t.globalAlpha = 1), (R.fx = R.fx.filter((e) => (e.k === "mis" || e.k === "boom" || e.k === "jm" ? true : e.life > 0))), (t.textAlign = "center"), flushLabels());
   let curFn = "";
   for (const e of R.txt) {
     e.life -= i;

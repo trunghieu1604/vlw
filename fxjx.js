@@ -90,10 +90,14 @@
       "375": "snd/sk_375.mp3",
     },
   };
+  F.m = F.m || {};
+  F.c = F.c || {};
+  F.s = F.s || {};
+  F.g = F.g || {};
+  F.f = F.f || {};
   for (const k in D.m) F.m[k] = D.m[k];
   for (const k in D.c) F.c[k] = D.c[k];
   for (const k in D.s) F.s[k] = D.s[k];
-  F.g = F.g || {};
   for (const k in D.g) F.g[k] = D.g[k];
   for (const k in D.f) {
     const o = Object.assign({}, F.f[k] || {}, D.f[k]);

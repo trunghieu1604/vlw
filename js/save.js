@@ -22,6 +22,7 @@ function newSave() {
     attr: { str: 0, dex: 0, vit: 0, eng: 0 },
     skPts: 1,
     sk: {},
+    lx: {},
     main: 0,
     eq: {},
     inv: [],
@@ -109,18 +110,13 @@ function vioDedupe(n) {
   );
 }
 function migrate(n) {
+  typeof init120Skills == "function" && init120Skills();
   const e = Object.assign(newSave(), n);
   ((e.attr = Object.assign({ str: 0, dex: 0, vit: 0, eng: 0 }, n.attr || {})),
     e.mig73 || ((e.mig73 = 1), (e.autoForge = !0)),
     e.fac && !FAC[e.fac] && (e.fac = null));
-  for (const t in e.sk)
-    SK[t] ||
-      (((t >= 708 && t <= 717) || (t >= 1055 && t <= 1109)) && (e.skPts = (e.skPts || 0) + (e.sk[t] | 0)),
-      delete e.sk[t]);
-  {
-    const t = (n.mats || {}).misc || {},
-      o = (t.bk120 | 0) + (t.bk150 | 0);
-    o && ((t.bk90 = (t.bk90 | 0) + o), delete t.bk120, delete t.bk150);
+  for (const t in e.sk) {
+    if (!SK[t] && !((t >= 708 && t <= 717) || (t >= 1055 && t <= 1114))) delete e.sk[t];
   }
   if (!e.sk9Free) {
     e.sk9Free = 1;
@@ -157,6 +153,7 @@ function migrate(n) {
       misc: Object.assign({}, (n.mats || {}).misc),
     }),
     (e.rw = n.rw && typeof n.rw == "object" ? n.rw : {}),
+    (e.lx = n.lx && typeof n.lx == "object" ? n.lx : (e.lx || {})),
     (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, e.rw && e.rw.stat && e.rw.stat.reborn >= 5 ? 9999 : 200)),
     (e.xp = Math.max(0, +e.xp || 0)),
     (e.gold = Number.isFinite(+e.gold) ? Math.max(0, +e.gold) : 0),

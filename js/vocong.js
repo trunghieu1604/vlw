@@ -1,5 +1,9 @@
 "use strict";
-const BOOK_N = { bk90: "Võ Lâm Mật Tịch 90" };
+const BOOK_N = {
+  bk90: "Võ Lâm Mật Tịch 90",
+  bk120: "Bí Kíp 120",
+  bk150: "Bí Kíp 150",
+};
 (function () {
   for (const t of Object.values(SK)) t && t.learn === "90" && ((t.req = 80), (t.book = "bk90"), (t.tier = 90));
 })();

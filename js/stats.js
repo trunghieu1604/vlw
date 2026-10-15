@@ -153,6 +153,23 @@ function calc(t) {
       k && passiveApplies(l, m, k, h) && addAttr(n, m, k);
     }
   }
+  if (S.sk && S.sk[708] && typeof sk120Scale == "function") {
+    const lv = _(708);
+    addAttr(n, "allres_p", [sk120Scale(lv, 3, 20), 0, 0]);
+    addAttr(n, "allresmax_p", [sk120Scale(lv, 1, 5), 0, 0]);
+    addAttr(n, "lifereplenish_p", [sk120Scale(lv, 20, 100), 0, 0]);
+  }
+  if (S.sk && S.sk[709] && typeof sk120Scale == "function") {
+    const lv = _(709);
+    addAttr(n, "meleedamagereturn_p", [sk120Scale(lv, 5, 40), 0, 0]);
+    addAttr(n, "rangedamagereturn_p", [sk120Scale(lv, 5, 40), 0, 0]);
+  }
+  if (S.sk && S.sk[712] && typeof sk120Scale == "function") {
+    const bonusLv = Math.round(sk120Scale(_(712), 1, 5));
+    for (const auraId of [86, 89, 92, 93, 282, 332]) {
+      c[auraId] = (c[auraId] || 0) + bonusLv;
+    }
+  }
   (titleAttr(n),
     horseAttr(n),
     typeof partyAuraAttr == "function" && partyAuraAttr(n, h),
@@ -527,23 +544,28 @@ function skillTargets(t, n, e) {
   let i;
   switch (t.form) {
     case 0:
-      i = s > 1 ? 3 : 2;
+      i = Math.max(3, s);
       break;
     case 1:
-      i = 2;
+      i = Math.max(3, s);
       break;
     case 2:
-      i = Math.min(3, 1 + Math.ceil(s / 3));
+      i = Math.max(4, s);
       break;
     case 3:
     case 4:
     case 5:
     case 6:
+      i = Math.max(5, s * 2);
+      break;
     case 7:
-      i = 3;
+      i = Math.max(6, s * 2);
+      break;
+    case 12:
+      i = Math.max(4, (t.childN || 1) * 2);
       break;
     default:
-      i = 1;
+      i = (t.radius && t.radius > 100) || s > 1 ? Math.max(2, s) : 1;
   }
   return i;
 }
@@ -663,6 +685,7 @@ const SK_TRIM = {
   SK_USE_AR = new Set([
     2, 11, 17, 29, 30, 31, 32, 34, 35, 37, 38, 41, 139, 142, 147, 216, 218, 219, 220, 221, 222, 223, 224, 225, 267, 271,
     272, 323, 324, 325, 327, 368, 404, 405, 406, 407, 408,
+    1055, 1056, 1058, 1059, 1060, 1061, 1063, 1069, 1071, 1074, 1076, 1078, 1081,
   ]);
 function activeInfo(t, n, e) {
   const i = skVal(n, "physicsenhance_p", e),
@@ -741,6 +764,10 @@ function activeInfo(t, n, e) {
       dps: 0,
       useAR: SK_USE_AR.has(+n.id),
       phys: !!n.phys,
+      form: n.form,
+      child: n.child,
+      childN: n.childN || 1,
+      hurt: n.hurt,
     };
   return (
     (r.dps =
@@ -1116,6 +1143,7 @@ function autoSpendAttrs() {
 const sk9Free = (t) => !!t && t.tier === 90 && !(typeof isBr90 == "function" && isBr90(t.id)),
   skReqOk = (t) => !!t && (S.lvl >= t.req || (t.tier === 90 && rebornN() > 0));
 function canLearn(t) {
+  if (t && t.exp) return false;
   return (
     (S.skPts > 0 || (sk9Free(t) && !S.sk[t.id])) &&
     skReqOk(t) &&

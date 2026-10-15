@@ -344,7 +344,8 @@ function spawnWave() {
 function hitPercent(t, n, e = 0) {
   const o = (n * (100 - Math.min(e, 100))) / 100;
   let i = t + o === 0 ? 50 : (t * 100) / (t + o);
-  return (i > MAX_HIT + 4 && (i = MAX_HIT), Math.max(MIN_HIT, i));
+  if (i > MAX_HIT) i = MAX_HIT;
+  return Math.max(MIN_HIT, i);
 }
 function applyPart(t, n, e, o, i, s, r) {
   let a = (i && i[n] != null) ? i[n] : 0;
@@ -368,6 +369,10 @@ function heroHit(t, n) {
   const f = n.cls === "boss" || n.cls === "elite";
   if (f && Math.random() * 100 < (n.cls === "boss" ? 6 : 3) - (R.P.antiBlock || 0))
     return (addText(n.x, n.y - (n.r || 30) - 8, "Hóa giải", "#ccc", 11), 0);
+  // 120 Đường Môn - Mê Ảnh Tung buff sát thương
+  if (R.s120 && R.s120.buff && R.s120.buff[710] && R.s120.buff[710].until > performance.now()) {
+    t.parts = t.parts || {};
+  }
   const nRes = n.res || { phys: 25, fire: 25, cold: 25, light: 25, poison: 25 };
   const u = n.resBrkT > 0 ? 10 : 0,
     c = R.P.anti,
@@ -444,12 +449,28 @@ function enemyHit(t) {
     addText(H.x, H.y - 30, "Bất tử", "#ffd24a", 11);
     return;
   }
+  // 120 Thúy Yên - Ngự Tuyết Ẩn (quái đánh trượt)
+  if (R.s120 && R.s120.stealth && R.s120.stealth > performance.now()) {
+    addText(H.x, H.y - 30, "Ẩn thân", "#7fd0ff", 11);
+    return;
+  }
+  // 120 Võ Đang - Xuất Ứ Bất Nhiễm (miễn mọi sát thương)
+  if (R.s120 && R.s120.immune && R.s120.immune > performance.now()) {
+    addText(H.x, H.y - 30, "Bất nhiễm", "#ffe08a", 11);
+    return;
+  }
+  // 120 Đường Môn - Mê Ảnh Tung (lóe ảnh né hẳn đòn)
+  if (S.sk && S.sk[710] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[710], 5, 25)) {
+    addText(H.x, H.y - 30, "Mê Ảnh", "#bfe8ff", 11);
+    return;
+  }
   const n = typeof curseMod == "function" ? curseMod(t) : null;
   if (Math.random() * 100 >= hitPercent(t.ar * (n ? Math.max(0.1, 1 + n.ar / 100) : 1), R.P.def)) {
     addText(H.x, H.y - 30, "Né", "#9cf", 11);
     return;
   }
-  if (R.P.block && Math.random() * 100 < R.P.block) {
+  const totalBlock = (R.P.block || 0) + (R.P.antiBlock || 0);
+  if (totalBlock > 0 && Math.random() * 100 < totalBlock) {
     addText(H.x, H.y - 30, "Hóa giải", "#9cf", 11);
     return;
   }
@@ -481,6 +502,14 @@ function enemyHit(t) {
     (R.P.sorb && (o *= 1 - R.P.sorb / 100),
     R.P.dmg2mana && (R.mana = Math.min(R.P.mana, R.mana + (o * R.P.dmg2mana) / 100)),
     n && n.ret && !t.ranged && (t.hp -= ((o * n.ret) / 100) * cheatK()),
+    R.P.retDmg && (t.hp -= ((o * R.P.retDmg) / 100) * cheatK()),
+    // 120 Côn Lôn - Lưỡng Nghi Chân Khí (khiên hút sát thương)
+    R.s120 && R.s120.shield > 0 && R.s120.shieldUntil > performance.now() && ((() => {
+      const abs = Math.min(R.s120.shield, o);
+      R.s120.shield -= abs;
+      o -= abs;
+      if (abs > 0) addText(H.x, H.y - 30, "Khiên đỡ -" + fmt(abs), "#6be3ff", 11);
+    })()),
     R.P.manaShield > 0 && R.mana > 0)
   ) {
     const i = Math.min(R.mana, (o * R.P.manaShield) / 100);
@@ -615,8 +644,8 @@ function pickAttack(t, n) {
 }
 const GEO_PAST = 160;
 function geoTargets(t, n, e) {
-  const o = (l) => ({ x: l.x / JX_K, y: (l.y * 2) / JX_K }),
-    i = (l) => (l.r || 12) / JX_K,
+  const o = (l) => ({ x: l.x, y: l.y }),
+    i = (l) => l.r || 16,
     s = o(H),
     r = o(n),
     a = t.geo,
@@ -625,10 +654,10 @@ function geoTargets(t, n, e) {
     c = Math.hypot(f, u) || 1,
     m = f / c,
     y = u / c,
-    M = e.filter((l) => l !== n && !l.dead).map((l) => ({ e: l, p: o(l), r: i(l) })),
-    T = (l, d, h) => obsSee(l * JX_K, (d * JX_K) / 2, h.e.x, h.e.y),
-    g = (l, d, h) => M.filter((p) => Math.hypot(p.p.x - l, p.p.y - d) <= h + p.r && T(l, d, p)),
-    k = (l, d, h) => l.sort((p, P) => Math.hypot(p.p.x - d, p.p.y - h) - Math.hypot(P.p.x - d, P.p.y - h)),
+    M = e.filter((l) => l !== n && !l.dead && l.hp > 0).map((l) => ({ e: l, p: o(l), r: i(l) })),
+    T = (lx, ly, h) => obsSee(lx, ly, h.e.x, h.e.y),
+    g = (lx, ly, h) => M.filter((p) => Math.hypot(p.p.x - lx, p.p.y - ly) <= h + p.r && T(lx, ly, p)),
+    k = (list, dx, dy) => list.sort((p, P) => Math.hypot(p.p.x - dx, p.p.y - dy) - Math.hypot(P.p.x - dx, P.p.y - dy)),
     b = (l) => (l.p.x - s.x) * m + (l.p.y - s.y) * y,
     E = (l) => Math.abs((l.p.x - s.x) * y - (l.p.y - s.y) * m);
   let x = [];
@@ -637,13 +666,13 @@ function geoTargets(t, n, e) {
     case "line":
     case "wall": {
       const l = Math.min(Math.max(a.len, c), _),
-        d = (a.k === "wall" ? a.w : 26) + a.area,
+        d = (a.k === "wall" ? a.w : 36) + (a.area || 0),
         h = M.filter((p) => {
           const P = b(p);
-          return P >= 0 && P <= l && E(p) <= d + p.r && T(s.x, s.y, p);
+          return P >= -20 && P <= l + 30 && E(p) <= d + p.r && T(s.x, s.y, p);
         });
-      ((x = a.pierce ? h : a.k === "wall" ? k(h, s.x, s.y).slice(0, a.n - 1) : []),
-        !a.pierce && a.area && (x = x.concat(g(r.x, r.y, a.area))));
+      x = a.pierce ? h : k(h, s.x, s.y).slice(0, Math.max(1, (a.n || 5) - 1));
+      if (!a.pierce && a.area) x = x.concat(g(r.x, r.y, a.area));
       break;
     }
     case "fan":
@@ -651,22 +680,22 @@ function geoTargets(t, n, e) {
       const l = Math.min(Math.max(a.len, a.k === "ring" ? 0 : c), _),
         d = M.filter((h) => {
           const p = Math.hypot(h.p.x - s.x, h.p.y - s.y);
-          if (p > l + h.r) return !1;
+          if (p > l + h.r + 20) return !1;
           if (a.k === "fan") {
             const P = b(h) / (p || 1);
-            if (Math.acos(clamp(P, -1, 1)) > a.half) return !1;
+            if (Math.acos(clamp(P, -1, 1)) > (a.half || 0.8)) return !1;
           }
           return T(s.x, s.y, h);
         });
-      ((x = a.pierce ? d : k(d, s.x, s.y).slice(0, a.n - 1)),
-        !a.pierce && a.area && (x = x.concat(g(r.x, r.y, a.area))));
+      x = a.pierce ? d : k(d, s.x, s.y).slice(0, Math.max(1, (a.n || 5) - 1));
+      if (!a.pierce && a.area) x = x.concat(g(r.x, r.y, a.area));
       break;
     }
     case "self":
-      x = g(s.x, s.y, a.r);
+      x = g(s.x, s.y, a.r || 150);
       break;
     case "spot": {
-      a.r ? (x = g(r.x, r.y, a.r + a.scat)) : a.n > 1 && (x = k(g(r.x, r.y, a.scat), r.x, r.y).slice(0, a.n - 1));
+      a.r ? (x = g(r.x, r.y, a.r + (a.scat || 0))) : a.n > 1 && (x = k(g(r.x, r.y, a.scat || 120), r.x, r.y).slice(0, a.n - 1));
       break;
     }
     default:
@@ -683,8 +712,8 @@ function stage2(t, n, e, o) {
       i.col && o
         ? o.filter((u) => !u.dead && u.hp > 0).slice(0, ev2Max(t, i))
         : e
-            .filter((u) => !u.dead && jxdE(s, u) < r && obsSee(s.x, s.y, u.x, u.y))
-            .sort((u, c) => jxdE(s, u) - jxdE(s, c))
+            .filter((u) => !u.dead && u.hp > 0 && Math.hypot(u.x - s.x, u.y - s.y) - (u.r || 15) <= r && obsSee(s.x, s.y, u.x, u.y))
+            .sort((u, c) => Math.hypot(u.x - s.x, u.y - s.y) - Math.hypot(c.x - s.x, c.y - s.y))
             .slice(0, ev2Max(t, i));
   let f = !1;
   (i.self && typeof ev2Fx == "function" && (i.noFx || ev2Fx(H, t, i.n, null, i), (f = !0)),
@@ -790,7 +819,7 @@ function heroAttack(pool) {
   let o = pickAttack(t, e.cls === "boss" || e.cls === "elite" || !!e.goldBoss);
   if (!o) return 0.25;
   o.id === DASH_ID && (o = t.basic);
-  const i = jxdE(H, e) - e.r / JX_K;
+  const i = Math.hypot(e.x - H.x, e.y - H.y) - (e.r || 15);
   {
     const c = dashTry(t, e, i);
     if (c) return c;
@@ -801,24 +830,56 @@ function heroAttack(pool) {
     if (c === !0) return 0.25;
     c === null && (o = t.basic);
   }
-  const s = S.closeAtk && !manual() ? Math.min(o.rad, 70) : o.rad;
+  const s = (S.closeAtk && !manual() ? Math.min(o.rad, 75) : (o.rad || 80)) + 12;
   if (i > s || !obsSee(H.x, H.y, e.x, e.y)) return ((R.moveTo = manual() ? null : e), 0.05);
   ((R.moveTo = null),
     (R.tgtHitT = R.clock || 0),
     (R.tgtD = 0),
     skPay(o),
     o.cd && ((R.skCd = R.skCd || {})[o.id] = (R.clock || 0) + o.cd));
-  const r = o.around ? H : e,
-    a = o.around ? o.rad + 40 : 110,
-    f = o.geo
-      ? geoTargets(o, e, n)
-      : n
-          .filter((c) => c !== e && jxdE(r, c) < (o.targets > 1 ? a : 0) && obsSee(r.x, r.y, c.x, c.y))
-          .slice(0, o.targets - 1);
+  const r = o.around ? H : e;
+  const isAoe = o.around || o.form === 6 || o.form === 7 || o.form === 12 || (o.rad && o.rad >= 120) || (o.targets > 1) || (o.nMis > 1);
+  const maxTargets = isAoe ? Math.max(o.targets || 1, o.around ? 8 : (o.form === 6 || o.form === 12 ? 6 : 4)) : (o.targets || 1);
+  const aoeRadius = o.around
+    ? Math.max(180, (o.rad || 120) + 40)
+    : Math.max(140, Math.min(260, (o.rad ? o.rad * 0.65 : 140)));
+  const f = o.geo
+    ? geoTargets(o, e, n)
+    : (maxTargets > 1
+        ? n
+            .filter((c) => {
+              if (c === e || c.dead || c.hp <= 0) return false;
+              const dist = Math.hypot(c.x - r.x, c.y - r.y) - (c.r || 15);
+              return dist <= aoeRadius && obsSee(r.x, r.y, c.x, c.y);
+            })
+            .sort((a, b) => Math.hypot(a.x - r.x, a.y - r.y) - Math.hypot(b.x - r.x, b.y - r.y))
+            .slice(0, maxTargets - 1)
+        : []);
   f.unshift(e);
   const u = typeof JFX < "u" && JFX.f[o.id] && JFX.f[o.id].meleeFly;
   const singleFx = u || o.nMis > 1 || o.geo || o.around;
-  for (const c of f) (recHit(heroHit(o, c), o), (!singleFx || c === e) && skillFx(H, c, o));
+  for (const c of f) {
+    const dmg = heroHit(o, c);
+    recHit(dmg, o);
+    (!singleFx || c === e) && skillFx(H, c, o);
+    // 120 Ngũ Độc - Hấp Tinh Yểm (yểm độc theo sát thương)
+    if (S.sk && S.sk[711] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[711], 1, 15)) {
+      const pDmg = dmg * (sk120Scale(S.sk[711], 30, 85) / 100);
+      c.poisonDmg = ((c.poison > 0 ? c.poisonDmg * c.poison : 0) + pDmg) / 3;
+      c.poison = 3;
+      addText(c.x, c.y - (c.r || 30) - 20, "Hấp Tinh Yểm", "#7cff7c", 11);
+    }
+    // 120 Cái Bang - Hỗn Thiên Khí Công (giảm kháng quái)
+    if (S.sk && S.sk[714] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[714], 1, 6) && !c.cb120) {
+      const pRed = sk120Scale(S.sk[714], 2, 10);
+      const fRed = sk120Scale(S.sk[714], 3, 15);
+      c.cb120 = { t: sk120Scale(S.sk[714], 3, 9), p: pRed, f: fRed };
+      c.res = c.res || { phys: 25, fire: 25, cold: 25, light: 25, poison: 25 };
+      c.res.phys = (c.res.phys || 0) - pRed;
+      c.res.fire = (c.res.fire || 0) - fRed;
+      addText(c.x, c.y - (c.r || 30) - 20, "Hỗn Thiên Khí Công", "#ffb86b", 11);
+    }
+  }
   return (
     o.ev && stage2(o, e, n, f),
     (H.face = e.x >= H.x ? 1 : -1),
@@ -902,6 +963,7 @@ function tick(t) {
     R.tpCd > 0 && (R.tpCd -= t),
     R.potCd && ((R.potCd.life = Math.max(0, R.potCd.life - t)), (R.potCd.mana = Math.max(0, R.potCd.mana - t))),
     goldBossTick(t),
+    typeof skill120Tick == "function" && skill120Tick(t),
     typeof partyTick == "function" && partyTick(t),
     ghTick(t),
     typeof skillSysTick == "function" && skillSysTick(t),
@@ -1005,7 +1067,100 @@ function onKill(t) {
     horseOnKill(t),
     ghOnKill(t),
     sk9OnKill(t),
+    typeof expSkillOnKill == "function" && expSkillOnKill(t),
     typeof partyOnKill == "function" && partyOnKill(t));
+}
+function expSkillOnKill(t) {
+  if (typeof skTrainMap != "function" || !S || !S.fac) return;
+  const tm = skTrainMap();
+  const clsMul = t.cls === "boss" ? 10 : t.cls === "elite" ? 3 : 1;
+  const lvMul = t.L >= 200 ? 1.5 : t.L < 150 ? 0.5 : 1;
+  const goldHourMul = (typeof isGoldHour == "function" && isGoldHour()) ? 2 : 1;
+  const xpBase = Math.round(1 * clsMul * lvMul * goldHourMul);
+
+  // 1. Kỹ năng 120 của môn phái nhận exp mỗi khi hạ bất kỳ quái nào
+  const sk120Id = typeof sk120IdOf == "function" ? sk120IdOf(S.fac) : 0;
+  if (sk120Id && tm[sk120Id] && typeof addSkillExp == "function") {
+    addSkillExp(sk120Id, xpBase);
+  }
+
+  // 2. Kỹ năng 150 đang đặt làm chiêu tấn công chính nhận exp khi đánh quái
+  let castId = H.castSk || (R.P && R.P.main ? R.P.main.id : 0);
+  if (typeof SK15_PART !== "undefined" && SK15_PART[castId]) castId = SK15_PART[castId];
+  if (castId && castId !== sk120Id && tm[castId] && SK[castId] && SK[castId].exp && typeof addSkillExp == "function") {
+    addSkillExp(castId, xpBase);
+  } else if (R.P && R.P.main && R.P.main.id && tm[R.P.main.id] && SK[R.P.main.id] && SK[R.P.main.id].exp && typeof addSkillExp == "function") {
+    addSkillExp(R.P.main.id, xpBase);
+  }
+}
+function skill120Tick(t) {
+  if (!S || !S.fac || !S.sk || R.town || R.deadT > 0 || !R.P) return;
+  const now = performance.now();
+  const s120 = R.s120 || (R.s120 = { cd: {}, buff: {} });
+
+  if (S.sk[710] && typeof sk120Scale == "function" && (s120.cd[710] || 0) <= now) {
+    const lv = S.sk[710];
+    const interval = sk120Scale(lv, 30, 15) * 1000;
+    const dur = 6000;
+    const dmgBonus = sk120Scale(lv, 20, 60);
+    s120.cd[710] = now + interval;
+    s120.buff[710] = { until: now + dur, dmgBonus };
+    addText(H.x, H.y - 50, "👥 Mê Ảnh Tung", "#bfe8ff", 12);
+  }
+
+  const hpRatio = R.life / (R.P.life || 1);
+
+  if (S.sk[713] && typeof sk120Scale == "function" && hpRatio < 0.5 && (s120.cd[713] || 0) <= now) {
+    const lv = S.sk[713];
+    const dur = sk120Scale(lv, 5, 30) * 1000;
+    const cd = sk120Scale(lv, 60, 40) * 1000;
+    s120.cd[713] = now + cd;
+    s120.stealth = now + dur;
+    addText(H.x, H.y - 50, "❄ Ngự Tuyết Ẩn", "#7fd0ff", 12);
+  }
+
+  if (S.sk[715] && typeof sk120Scale == "function" && (s120.cd[715] || 0) <= now) {
+    const lv = S.sk[715];
+    const nearEnemies = R.enemies.filter(e => !e.dead && Math.hypot(e.x - H.x, e.y - H.y) < 140);
+    if (nearEnemies.length >= 3 || hpRatio < 0.4) {
+      const dur = sk120Scale(lv, 1, 4);
+      const cd = sk120Scale(lv, 45, 20) * 1000;
+      s120.cd[715] = now + cd;
+      for (const e of R.enemies) {
+        if (!e.dead && Math.hypot(e.x - H.x, e.y - H.y) < 220) {
+          e.stun = Math.max(e.stun || 0, dur);
+        }
+      }
+      addText(H.x, H.y - 50, "Ma Âm Phệ Phách", "#ff6b6b", 12);
+    }
+  }
+
+  if (S.sk[716] && typeof sk120Scale == "function" && hpRatio < 0.35 && (s120.cd[716] || 0) <= now) {
+    const lv = S.sk[716];
+    const dur = sk120Scale(lv, 1, 3) * 1000;
+    const cd = sk120Scale(lv, 35, 15) * 1000;
+    s120.cd[716] = now + cd;
+    s120.immune = now + dur;
+    addText(H.x, H.y - 50, "☯ Xuất Ứ Bất Nhiễm", "#ffe08a", 12);
+  }
+
+  if (S.sk[717] && typeof sk120Scale == "function" && hpRatio < 0.3 && (s120.cd[717] || 0) <= now) {
+    const lv = S.sk[717];
+    const shieldVal = (R.P.life || 1000) * (sk120Scale(lv, 10, 40) / 100);
+    const dur = sk120Scale(lv, 5, 10) * 1000;
+    const cd = 20 * 1000;
+    s120.cd[717] = now + cd;
+    s120.shield = shieldVal;
+    s120.shieldUntil = now + dur;
+    s120.speedBonus = sk120Scale(lv, 5, 35);
+    addText(H.x, H.y - 50, "🛡 Lưỡng Nghi Chân Khí", "#6be3ff", 12);
+  }
+
+  if (S.sk[708] && typeof sk120Scale == "function") {
+    const lv = S.sk[708];
+    const regenRate = sk120Scale(lv, 0.2, 1) / 100;
+    R.life = Math.min(R.P.life, R.life + R.P.life * regenRate * t);
+  }
 }
 const XP_EVENT = 5;
 function gainXp(t) {

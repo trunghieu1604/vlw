@@ -284,64 +284,7 @@ function jmCast(t, a, n, s, l, u, i) {
     }
   }
 }
-function skillFx(t, a, n) {
-  let s = (n.id && JFX.f && JFX.f[n.id]) || {},
-    l = JFX.g && JFX.g[n.id];
-  const u = SK[n.id],
-    i = u && u.child,
-    f = i && JFX.g && JFX.g[i];
-  let d = !1;
-  l &&
-    l[0] === 12 &&
-    f &&
-    JFX.f[i] &&
-    JFX.f[i].c &&
-    ((s = Object.assign({}, JFX.f[i], { pre: s.pre })), (l = f), (d = !0));
-  const x = s.c || JFX.s[n.id],
-    y = n.id && JFX.m[x];
-  if ((castFx(n), !y || R.quiet)) {
-    fxLine(t, a, n);
-    return;
-  }
-  const isDisc = typeof PCTX !== "undefined" && PCTX > 0,
-    maxJ = isDisc ? (S.lowFx ? 3 : 6) : (S.lowFx ? 4 : 16),
-    M = l ? l[0] : s.form === void 0 ? 1 : s.form,
-    J = clamp(!d && n.nMis > 1 ? Math.min(n.nMis, maxJ) : (l && l[6]) || s.num || 1, 1, maxJ),
-    g = SK[n.id],
-    z = n.L || 1,
-    o = (e) => (g && g.attr && g.attr[e] ? (skVal(g, e, z) || [0])[0] : 0);
-  JM_OV = window.NO_JMOV
-    ? null
-    : M === 8 || JM_FLY[n.id]
-      ? { life: o("missle_lifetime_v"), spd: o("missle_speed_v"), sh: JM_SHADOW[n.id] || 0 }
-      : { sh: JM_SHADOW[n.id] || 0 };
-  const m = JM_FLY[n.id],
-    F = JM_OV && JM_OV.life;
-  try {
-    jmCast(x, M, S.lowFx ? Math.min(J, 3) : J, l, t, a, a);
-    // JX1 StartEvent: a second skill cast by the launcher at the same moment (e.g. 172 -> 399)
-    const st = s.start;
-    st && JFX.m[st.c] && jmCast(st.c, st.g[0], S.lowFx ? Math.min(st.g[6], 3) : st.g[6], st.g, t, a, a);
-  } finally {
-    JM_OV = null;
-  }
-  if (m && F >= m.t) {
-    const e = { x: a.x, y: a.y + 6 };
-    for (let r = m.t; r <= F; r += m.t)
-      setTimeout(
-        () => {
-          R.quiet || jmCast(m.mid, m.form, m.n, null, e, a, null);
-        },
-        (r / 18) * 1e3,
-      );
-  }
-  s.sub &&
-    String(s.sub.c) !== String(x) &&
-    setTimeout(() => {
-      R.quiet ||
-        jmCast(s.sub.c, s.sub.form === 3 ? 3 : 4, clamp(s.sub.n || 1, 1, 8), null, { x: a.x, y: a.y + 6 }, a, null);
-    }, 250);
-}
+// skillFx is handled by the modern HoaiNiem FX engine in render.js
 
 // Buff / curse cast (js/skillsys.js) for skills whose missile comes from the JX1 tables: the cast
 // picture (PreCastSpr) on the caster and the missile's collision picture on the target.

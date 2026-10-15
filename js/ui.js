@@ -462,6 +462,10 @@ function unspendAttr(n) {
 }
 const SK_HIDE = /^(skill_attackradius|missle_|skill_cost_v|skill_eventskilllevel|addskilldamage|skill_)/;
 function skillEffectLines(n, t) {
+  if (typeof SK_120 !== "undefined" && SK_120[n.id] && typeof SK_120[n.id].desc === "function") {
+    const lines = SK_120[n.id].desc(t);
+    if (lines && lines.length) return lines;
+  }
   const e = [];
   for (const a in n.attr) {
     if (SK_HIDE.test(a) || !J.attrDesc[a]) continue;
@@ -587,11 +591,45 @@ function skillModal(n) {
     const o = activeInfo(R.P, t, i + 0);
     m = `<div class="card stats"><span>Sát thương mỗi đòn</span><span>${fmt(o.tot)}</span><span>DPS ước tính</span><span>${fmt(o.dps)}</span><span>${o.costLife ? "Sinh lực" : "Nội lực"} tiêu hao</span><span>${Math.round(o.cost)}</span><span>Hút sinh lực / nội lực</span><span>${o.wpn ? "Có (trang bị)" : "Không (trang bị)"}${o.skLeech || o.skMLeech ? ` · chiêu: ${o.skLeech ? `+${o.skLeech}% sinh lực` : ""}${o.skLeech && o.skMLeech ? ", " : ""}${o.skMLeech ? `+${o.skMLeech}% nội lực` : ""}` : ""}</span><span>Tầm đánh</span><span>${Math.round(o.rad)}</span></div>`;
   }
+  let expBox = "";
+  if (t.exp) {
+    if (e > 0) {
+      const tm = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+      const rec = tm[n] || (tm[n] = { lv: e, xp: 0 });
+      const need = typeof skExpNeeded == "function" ? skExpNeeded(t, rec.lv) : 1000;
+      if (e < t.max) {
+        const pct = Math.min(100, Math.floor(((rec.xp || 0) / need) * 100));
+        expBox = `<div class="sl" style="background:rgba(0,0,0,0.35);padding:8px;border-radius:6px;border:1px solid #444;margin:8px 0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <b style="color:#8fe34a">Tiến độ luyện chiêu (cấp ${e}/${t.max})</b>
+            <span style="font-size:11px;color:#ffd24a">${rec.xp || 0} / ${need} exp (${pct}%)</span>
+          </div>
+          <div style="background:#111;border:1px solid #555;border-radius:4px;height:12px;overflow:hidden;position:relative">
+            <div style="background:linear-gradient(90deg,#2563eb,#10b981);height:100%;width:${pct}%;transition:width .3s"></div>
+          </div>
+          <small class="dim" style="display:block;margin-top:6px;line-height:1.4">
+            ${t.req === 120 
+              ? "⚡ <b>Điều kiện thăng cấp:</b> Diệt quái bất kỳ ngoài bản đồ để tự động tích lũy exp (quái cấp cao/trùm nhận nhiều exp hơn)." 
+              : "⚡ <b>Điều kiện thăng cấp:</b> Đặt làm chiêu chính (★) và dùng tiêu diệt quái ngoài bản đồ để nhận exp thăng cấp."}
+          </small>
+        </div>`;
+      } else {
+        expBox = `<div class="sl" style="padding:6px 0"><b style="color:#10b981">✨ Đã luyện đại thành tối đa (cấp ${t.max})</b></div>`;
+      }
+    } else {
+      expBox = `<div class="sl" style="background:rgba(0,0,0,0.25);padding:8px;border-radius:6px;border:1px solid #444;margin:8px 0">
+        <small class="dim" style="display:block;line-height:1.4">
+          📖 <b>Cách học:</b> Mua <b>${t.req === 120 ? "Bí Kíp 120" : "Bí Kíp 150"}</b> tại Kỳ Trân Các, sau đó bấm <b>Lĩnh ngộ</b> tại đây hoặc trong Kỳ Trân Các.<br>
+          ⚡ <b>Cách thăng cấp:</b> ${t.req === 120 ? "Hạ quái bất kỳ ngoài bản đồ để tự động nhận exp luyện chiêu." : "Đặt làm chiêu chính và dùng tiêu diệt quái để nhận exp luyện chiêu."}
+        </small>
+      </div>`;
+    }
+  }
   modal(
     `<h3>${esc(t.n)} <small>${e}/${t.max}${s ? ` <span class="cp">+${s} từ trang bị → cấp ${a}</span>` : ""}</small></h3>
     <p class="desc">${esc(t.d || "Không có mô tả.")}</p>
-    <div class="idet">${c ? '<span class="tag attack">Tấn công</span>' : skStateTag(t)}${skEqt(t) !== null ? `<small class="${skWOk(t) ? "dim" : "reqbad"}">Vũ khí: ${EQT_VI[skEqt(t)]}</small> · ` : ""}<small class="dim">${t.tier === 90 && rebornN() > 0 ? "Đã chuyển sinh: không cần cấp" : `Yêu cầu cấp ${t.req}${S.lvl < t.req ? ` (bạn cấp ${S.lvl})` : ""}`} · ${t.tier === 90 ? (typeof SK9_BRANCH < "u" && SK9_BRANCH[t.id] ? "Võ công 90: cộng 1 điểm để học · " + sk9Text(t.id) : "Võ công 90") : `cộng tối đa cấp ${skCap(t)} ở cấp nhân vật hiện tại`}</small></div>${t.tier === 90 && e ? (sk9BarHTML(n, "d") || `<p class="desc" style="color:#7fd0b0">${sk9Text(n)}</p>`) : ""}
-    ${m}${
+    <div class="idet">${c ? '<span class="tag attack">Tấn công</span>' : skStateTag(t)}${skEqt(t) !== null ? `<small class="${skWOk(t) ? "dim" : "reqbad"}">Vũ khí: ${EQT_VI[skEqt(t)]}</small> · ` : ""}<small class="dim">${t.tier === 90 && rebornN() > 0 ? "Đã chuyển sinh: không cần cấp" : `Yêu cầu cấp ${t.req}${S.lvl < t.req ? ` (bạn cấp ${S.lvl})` : ""}`} · ${t.tier === 90 ? (typeof SK9_BRANCH < "u" && SK9_BRANCH[t.id] ? "Võ công 90: cộng 1 điểm để học · " + sk9Text(t.id) : "Võ công 90") : t.exp ? "Kỹ năng luyện bằng kinh nghiệm diệt quái" : `cộng tối đa cấp ${skCap(t)} ở cấp nhân vật hiện tại`}</small></div>${t.tier === 90 && e ? (sk9BarHTML(n, "d") || `<p class="desc" style="color:#7fd0b0">${sk9Text(n)}</p>`) : ""}
+    ${m}${expBox}${
       c
         ? (() => {
             const o = skillSupport(n);
@@ -603,26 +641,76 @@ function skillModal(n) {
     }
     <div class="sl"><b>${a ? "Cấp hiện tại " + a : "Nếu học (cấp 1)"}</b>${u(i)}</div>
     ${d && a ? `<div class="sl"><b>Cấp kế tiếp ${d}</b>${u(d)}</div>` : ""}
-    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button><button class="btn red" id="skMinus" ${a ? "" : "disabled"}>− Rút điểm</button></div>`,
+    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}${!e && t.exp && (t.req === 120 || t.learn === "120") ? `<button class="btn on" id="skLearn120" ${matHave("misc", "bk120") > 0 && (S.lvl >= 120 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 120)</button>` : !e && t.exp && (t.req >= 150 || t.learn === "150") ? `<button class="btn on" id="skLearn150" ${matHave("misc", "bk150") > 0 && (S.lvl >= 150 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 150)</button>` : !t.exp ? `<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button>` : ""}<button class="btn red" id="skMinus" ${!t.exp && a ? "" : "disabled"}>− Rút điểm</button></div>`,
     () => {
       bindSkState($("#mBody"));
       const o = $("#skMain");
-      (o &&
+      o &&
         (o.onclick = () => {
-          ((S.main = t.id),
-            (S.mainLock = !0),
-            (R.dirty = !0),
-            recalc(),
-            renderSkill(),
-            toast("Chiêu chính: " + t.n),
-            skillModal(n));
-        }),
-        ($("#skPlus").onclick = () => {
-          canLearn(t) && (skLearn(n), uiSfx("learn"), (R.dirty = !0), recalc(), renderSkill(), save(), skillModal(n));
-        }),
-        ($("#skMinus").onclick = () => {
+          S.main = t.id;
+          S.mainLock = true;
+          R.dirty = true;
+          recalc();
+          renderSkill();
+          toast("Chiêu chính: " + t.n);
+          skillModal(n);
+        });
+      const p = $("#skPlus");
+      p &&
+        (p.onclick = () => {
+          canLearn(t) && (skLearn(n), uiSfx("learn"), (R.dirty = true), recalc(), renderSkill(), save(), skillModal(n));
+        });
+      const minus = $("#skMinus");
+      minus &&
+        (minus.onclick = () => {
           unlearnSkill(n) && skillModal(n);
-        }));
+        });
+      const l120 = $("#skLearn120");
+      l120 &&
+        (l120.onclick = () => {
+          if (matHave("misc", "bk120") < 1) {
+            toast("Chưa có Bí Kíp 120 (mua tại Kỳ Trân Các)");
+            return;
+          }
+          if (S.lvl < 120 && !(typeof rebornN == "function" && rebornN())) {
+            toast("Tuyệt kỹ 120 cần cấp 120");
+            return;
+          }
+          matAdd("misc", "bk120", -1);
+          S.sk[n] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[n] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          uiSfx("levelup");
+          refresh();
+          toast(`Đã lĩnh ngộ ${t.n}!`);
+          log(`📕 Dùng Bí Kíp 120: lĩnh ngộ tuyệt kỹ 120 <b style="color:#ffd24a">${esc(t.n)}</b>!`);
+          skillModal(n);
+        });
+      const l150 = $("#skLearn150");
+      l150 &&
+        (l150.onclick = () => {
+          if (matHave("misc", "bk150") < 1) {
+            toast("Chưa có Bí Kíp 150 (mua tại Kỳ Trân Các)");
+            return;
+          }
+          if (S.lvl < 150 && !(typeof rebornN == "function" && rebornN())) {
+            toast("Võ công 150 cần cấp 150");
+            return;
+          }
+          matAdd("misc", "bk150", -1);
+          S.sk[n] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[n] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          uiSfx("levelup");
+          refresh();
+          toast(`Đã lĩnh ngộ ${t.n}!`);
+          log(`📕 Dùng Bí Kíp 150: lĩnh ngộ võ công 150 <b style="color:#ffd24a">${esc(t.n)}</b>!`);
+          skillModal(n);
+        });
     },
   );
 }
@@ -651,11 +739,16 @@ function renderSkill() {
       const c = SK[a],
         i = S.sk[a] || 0,
         d = isAttack(c),
-        u = i ? skillBonusLv(a) : 0,
-        m = d && i ? activeInfo(R.P, c, i + u) : null;
+        u = i ? skillBonusLv(a) : 0;
+      const isExp = !!(c && c.exp);
+      const expRec = isExp ? (typeof skTrainRec == "function" ? skTrainRec(a) : (S.lx && S.lx[a])) : null;
+      const expNeed = isExp && i < c.max && typeof skExpNeeded == "function" ? skExpNeeded(c, i) : 0;
+      const expBarHtml = isExp && i
+        ? `<div class="sk-exp-tag" style="font-size:11px;color:#8fe34a;margin-top:2px">${i >= c.max ? "Đại thành" : `Luyện: ${fmt(expRec ? expRec.xp : 0)} / ${fmt(expNeed)}`}</div>`
+        : "";
       return `<div class="skl${skReqOk(c) ? "" : " lock"}${R.P.main.id === +a ? " main" : ""}" data-id="${a}">
-      <img class="sic" src="${esc(c.ic || "")}" alt=""><div class="info"><b>${esc(c.n)}</b>${c.book && !bookOk(c) ? ' <small class="reqbad">cần Mật Tịch</small>' : ""}${c.tier === 90 && i && i < c.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${a}">📕</button>` : ""}${c.tier === 90 ? sk9BarHTML(a, "r") : ""}</div>
-      <span class="lvl">${u ? `<b class="skb" title="Cấp hiệu lực = ${i} + ${u} từ trang bị">${i + u}</b><small>/${c.max} (${i}+${u})</small>` : `${i}/${c.max}`}</span><span class="pm"><button class="plus" data-id="${a}" title="Cộng 1 điểm" ${canLearn(c) ? "" : "disabled"}>+</button><button class="minus" data-id="${a}" title="Rút lại 1 điểm" ${i > 0 ? "" : "disabled"}>−</button><button class="skinfo" data-id="${a}" title="Thông tin kỹ năng">i</button></span>
+      <img class="sic" src="${esc(c.ic || "")}" alt=""><div class="info"><b>${esc(c.n)}</b>${c.book && !bookOk(c) ? ' <small class="reqbad">cần Mật Tịch</small>' : ""}${c.tier === 90 && i && i < c.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${a}">📕</button>` : ""}${c.tier === 90 ? sk9BarHTML(a, "r") : ""}${expBarHtml}</div>
+      <span class="lvl">${u ? `<b class="skb" title="Cấp hiệu lực = ${i} + ${u} từ trang bị">${i + u}</b><small>/${c.max} (${i}+${u})</small>` : `${i}/${c.max}`}</span><span class="pm">${isExp ? `<button class="skinfo" data-id="${a}" title="Thông tin kỹ năng">i</button>` : `<button class="plus" data-id="${a}" title="Cộng 1 điểm" ${canLearn(c) ? "" : "disabled"}>+</button><button class="minus" data-id="${a}" title="Rút lại 1 điểm" ${i > 0 ? "" : "disabled"}>−</button><button class="skinfo" data-id="${a}" title="Thông tin kỹ năng">i</button>`}</span>
       </div>`;
     })
     .join("");

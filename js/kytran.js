@@ -111,6 +111,22 @@ const KNB_GOLD = 1e6,
       d: "Đưa 1 võ công 90 đã học lên cấp 20 ngay, không cần luyện (dùng ở thẻ Võ công)",
       use: () => (matAdd("misc", "dtbk", 1), "Nhận 1 Đại Thành Bí Kíp"),
     },
+    {
+      k: "bk120",
+      n: "Bí Kíp 120",
+      ic: "img/ep/dtbk.png",
+      knb: 3000,
+      d: "Dùng để lĩnh ngộ tuyệt kỹ 120 của môn phái (cần cấp 120)",
+      use: () => (matAdd("misc", "bk120", 1), "Nhận 1 Bí Kíp 120 (bấm Lĩnh ngộ để học chiêu)"),
+    },
+    {
+      k: "bk150",
+      n: "Bí Kíp 150",
+      ic: "img/ep/dtbk.png",
+      knb: 5000,
+      d: "Dùng để lĩnh ngộ 1 võ công 150 của môn phái (cần cấp 150)",
+      use: () => (matAdd("misc", "bk150", 1), "Nhận 1 Bí Kíp 150 (bấm Lĩnh ngộ để chọn chiêu)"),
+    },
   ];
 function useDaiThanh(i) {
   const n = SK[i];
@@ -193,11 +209,15 @@ function ktcModal() {
                     ? matHave("misc", "dgt")
                     : n.k === "rngua"
                       ? matHave("misc", "rngua")
-                      : n.k === "knb"
-                        ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
-                        : null;
+                      : n.k === "bk120"
+                        ? matHave("misc", "bk120")
+                        : n.k === "bk150"
+                          ? matHave("misc", "bk150")
+                          : n.k === "knb"
+                            ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
+                            : null;
       return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-        <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+        <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
     }).join("")}</div>
     <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>`,
     () => {
@@ -216,6 +236,10 @@ function ktcModal() {
           }
           (closeModal(!0), showTab("skill"), toast("Bấm + ở võ công 90 để lĩnh ngộ (không tốn điểm)"));
         });
+      const b120 = $("#ktcBk120");
+      b120 && (b120.onclick = ktcBk120Modal);
+      const b150 = $("#ktcBk150");
+      b150 && (b150.onclick = ktcBk150Modal);
       const c = $("#ktcDgt");
       c && (c.onclick = doiGioiTinhModal);
       const a = $("#ktcDtbk");
@@ -243,6 +267,122 @@ function ktcModal() {
           (dtUseLdt(!1), ktcModal());
         });
     },
+  );
+}
+
+function ktcBk120Modal() {
+  if (!S.fac || (typeof isNovice == "function" && isNovice())) {
+    toast("Chưa gia nhập môn phái");
+    return;
+  }
+  if (S.lvl < 120 && !(typeof rebornN == "function" && rebornN())) {
+    toast("Tuyệt kỹ 120 cần cấp 120");
+    return;
+  }
+  const have = matHave("misc", "bk120");
+  if (have < 1) {
+    toast("Chưa có Bí Kíp 120");
+    return;
+  }
+  const id = typeof sk120IdOf == "function" ? sk120IdOf(S.fac) : 0;
+  if (!id || !SK[id]) {
+    toast("Phái này chưa có tuyệt kỹ 120");
+    return;
+  }
+  const sk = SK[id];
+  const learned = S.sk[id] > 0;
+  modal(
+    `<h3>Lĩnh ngộ tuyệt kỹ 120 <small>${have} Bí Kíp 120</small></h3>
+    <p class="desc">Dùng 1 Bí Kíp 120 để lĩnh ngộ tuyệt kỹ 120 bổn phái (cần cấp 120, học cấp 1 sau đó luyện theo điểm kinh nghiệm).</p>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;padding:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <img src="${esc(sk.ic || "")}" alt="" style="width:36px;height:36px;border-radius:4px;image-rendering:pixelated">
+        <div><b>${esc(sk.n)}</b><br><small class="dim">${esc(sk.d || "")}</small></div>
+      </div>
+      <div>
+        ${learned ? '<span class="tag">Đã học</span>' : `<button class="btn sm on" id="bLearn120">Lĩnh ngộ</button>`}
+      </div>
+    </div>`,
+    () => {
+      const btn = $("#bLearn120");
+      if (btn) {
+        btn.onclick = () => {
+          if (S.sk[id] || matHave("misc", "bk120") < 1) return;
+          matAdd("misc", "bk120", -1);
+          S.sk[id] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[id] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          closeModal(true);
+          toast(`Đã lĩnh ngộ ${sk.n}!`);
+          log(`📕 Dùng Bí Kíp 120: lĩnh ngộ tuyệt kỹ 120 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
+          uiSfx("levelup");
+          refresh();
+        };
+      }
+    }
+  );
+}
+
+function ktcBk150Modal() {
+  if (!S.fac || (typeof isNovice == "function" && isNovice())) {
+    toast("Chưa gia nhập môn phái");
+    return;
+  }
+  if (S.lvl < 150 && !(typeof rebornN == "function" && rebornN())) {
+    toast("Võ công 150 cần cấp 150");
+    return;
+  }
+  const have = matHave("misc", "bk150");
+  if (have < 1) {
+    toast("Chưa có Bí Kíp 150");
+    return;
+  }
+  const list = typeof sk150List == "function" ? sk150List(S.fac) : [];
+  if (!list.length) {
+    toast("Môn phái chưa có võ công 150");
+    return;
+  }
+  const rows = list.map(id => {
+    const sk = SK[id];
+    if (!sk) return "";
+    const learned = S.sk[id] > 0;
+    return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;padding:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <img src="${esc(sk.ic || "")}" alt="" style="width:36px;height:36px;border-radius:4px;image-rendering:pixelated">
+        <div><b>${esc(sk.n)}</b><br><small class="dim">${esc(sk.d || "")}</small></div>
+      </div>
+      <div>
+        ${learned ? '<span class="tag">Đã học</span>' : `<button class="btn sm on" data-learn150="${id}">Lĩnh ngộ</button>`}
+      </div>
+    </div>`;
+  }).join("");
+
+  modal(
+    `<h3>Lĩnh ngộ võ công 150 <small>${have} Bí Kíp 150</small></h3>
+    <p class="desc">Dùng 1 Bí Kíp 150 để lĩnh ngộ tuyệt kỹ 150 bổn phái (cần cấp 150, sau đó luyện theo điểm kinh nghiệm).</p>
+    <div class="list">${rows}</div>`,
+    () => {
+      document.querySelectorAll("#mBody [data-learn150]").forEach(btn => {
+        btn.onclick = () => {
+          const id = +btn.dataset.learn150;
+          const sk = SK[id];
+          if (!sk || S.sk[id] || matHave("misc", "bk150") < 1) return;
+          matAdd("misc", "bk150", -1);
+          S.sk[id] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[id] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          closeModal(true);
+          toast(`Đã lĩnh ngộ ${sk.n}!`);
+          log(`📕 Dùng Bí Kíp 150: lĩnh ngộ võ công 150 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
+          uiSfx("levelup");
+          refresh();
+        };
+      });
+    }
   );
 }
 function doiPhaiModal() {

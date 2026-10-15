@@ -232,7 +232,7 @@ function renderSkill20() {
         f = canLearn(l),
         mn = R.P.main.id === +e,
         mk = r && isAttack(l) && (mn || R.P.actives.some((x) => x.id === +e));
-      return `<div class="u2k ${[skReqOk(l) ? "" : "lock", mn ? "main" : "", r ? "on" : ""].join(" ")}" data-id="${e}" title="${esc(l.n)}"><img src="${esc(l.ic || "")}" alt=""><i>${r ? r + b : ""}</i>${l.tier === 90 ? sk9BarHTML(e, "c") : ""}${mk ? `<button class="u2mk${mn ? " on" : ""}${mn && S.mainLock ? " lk" : ""}" data-mk="${e}" title="${mn ? (S.mainLock ? "Chiêu chính (đã khóa) · bấm để bỏ khóa" : "Chiêu chính (tự chọn) · bấm để khóa") : "Đặt làm chiêu chính"}">★</button>` : ""}${f ? `<button class="plus" data-id="${e}" title="Cộng 1 điểm">+</button>` : ""}${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? `<button class="u2dt" data-dt="${e}" title="Dùng Đại Thành Bí Kíp">📕</button>` : ""}</div>`;
+      return `<div class="u2k ${[skReqOk(l) ? "" : "lock", mn ? "main" : "", r ? "on" : ""].join(" ")}" data-id="${e}" title="${esc(l.n)}"><img src="${esc(l.ic || "")}" alt=""><i>${r ? r + b : ""}</i>${l.tier === 90 ? sk9BarHTML(e, "c") : ""}${l.exp && r ? `<small class="sk-exp-tag" style="font-size:9px;color:#8fe34a;display:block;text-align:center;position:absolute;bottom:0;width:100%">${r}/${l.max}</small>` : ""}${mk ? `<button class="u2mk${mn ? " on" : ""}${mn && S.mainLock ? " lk" : ""}" data-mk="${e}" title="${mn ? (S.mainLock ? "Chiêu chính (đã khóa) · bấm để bỏ khóa" : "Chiêu chính (tự chọn) · bấm để khóa") : "Đặt làm chiêu chính"}">★</button>` : ""}${f ? `<button class="plus" data-id="${e}" title="Cộng 1 điểm">+</button>` : ""}${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? `<button class="u2dt" data-dt="${e}" title="Dùng Đại Thành Bí Kíp">📕</button>` : ""}</div>`;
     },
     o = R.P && R.P.basic,
     d = S.mainLock && S.main === "basic",
@@ -248,7 +248,7 @@ function renderSkill20() {
     ${u2MainBar()}
     ${typeof sk9MainHTML == "function" ? sk9MainHTML() : ""}
     <div class="u2kg">${u}${m}</div>
-    <div class="u2foot"><span class="dim small">Mật Tịch 90 ×${matHave("misc", "bk90")} · Đại Thành ×${matHave("misc", "dtbk")}${S.mainLock ? ' · <a id="bAutoMain">bỏ khóa chiêu chính</a>' : ""}</span><span class="sp"></span><button class="btn sm" id="bSugSk">Gợi ý</button><button class="btn sm" id="bTT">Tẩy Tủy</button><span class="u2pts">Điểm kỹ năng còn: <b>${S.skPts}</b></span></div>
+    <div class="u2foot"><span class="dim small">Mật Tịch 90 ×${matHave("misc", "bk90")} · Bí Kíp 120 ×${matHave("misc", "bk120")} · Bí Kíp 150 ×${matHave("misc", "bk150")} · Đại Thành ×${matHave("misc", "dtbk")}${S.mainLock ? ' · <a id="bAutoMain">bỏ khóa chiêu chính</a>' : ""}</span><span class="sp"></span><button class="btn sm" id="bSugSk">Gợi ý</button><button class="btn sm" id="bTT">Tẩy Tủy</button><span class="u2pts">Điểm kỹ năng còn: <b>${S.skPts}</b></span></div>
     <p class="dim small u2tip">Bấm biểu tượng: xem chi tiết, chọn chiêu chính, rút điểm. Bấm <b class="plusd">+</b> để cộng điểm.</p>`),
     document.querySelectorAll("#t-skill .plus").forEach(
       (e) =>
@@ -524,7 +524,7 @@ function u20TrkDraw() {
 }
 const KTC_CAT = [
   ["Tiện ích", ["knb", "tt", "qht", "ldt"]],
-  ["Quý hiếm", ["rht", "rda", "mt90", "dtbk"]],
+  ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Thú cưỡi", ["rngua"]],
 ];
@@ -533,17 +533,17 @@ function ktcModal20() {
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
-        : ["dtbk", "ldp", "ldt", "dgt", "rngua"].includes(t)
+        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "bk120", "bk150"].includes(t)
           ? matHave("misc", t)
           : null,
-    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua" },
+    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua" },
     c = !1,
     s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
       const o = ktcOk(t),
         d = n(t.k);
       return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(t.n)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
-      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
+      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
     };
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
@@ -577,6 +577,8 @@ function ktcModal20() {
           }
           (closeModal(!0), u2Open("skill"), toast("Bấm + ở võ công 90 để lĩnh ngộ (không tốn điểm)"));
         }),
+        t("ktcBk120", ktcBk120Modal),
+        t("ktcBk150", ktcBk150Modal),
         t("ktcLdt", () => {
           if (S.lvl < DT_LV) {
             toast(`Dã Tẩu mở từ cấp ${DT_LV}`);
