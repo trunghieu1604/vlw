@@ -272,7 +272,7 @@ const UI_SCALE_MOBILE = 0.8,
   isMobileUI = () =>
     !(typeof isDesktopLandscape == "function" && isDesktopLandscape()) &&
     !!(window.matchMedia && (window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 700)),
-  uiScale = () => (document.body.classList.contains("mob") ? UI_SCALE_MOBILE : 1);
+  uiScale = () => (!document.body.classList.contains("u20") && document.body.classList.contains("mob") ? UI_SCALE_MOBILE : 1);
 function resizeArena() {
   const i = $("#battle"),
     t = { width: i.offsetWidth, height: i.offsetHeight };

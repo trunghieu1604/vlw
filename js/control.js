@@ -332,8 +332,9 @@ function updatePadCd() {
 function bindControls() {
   const t = (e) => {
     const n = CV.getBoundingClientRect(),
-      i = uiScale();
-    return [(e.clientX - n.left) / i, (e.clientY - n.top) / i];
+      sx = (AR.w || n.width) / (n.width || 1),
+      sy = (AR.h || n.height) / (n.height || 1);
+    return [(e.clientX - n.left) * sx, (e.clientY - n.top) * sy];
   };
   (CV.addEventListener("pointerdown", (e) => {
     if (INPUT.active) return;
@@ -357,13 +358,15 @@ function bindControls() {
     }
     const [n, i] = t(e),
       s = joyAnchor(),
-      r = !joyFixed() || Math.hypot(n - s.x, i - s.y) <= JOY_R * 1.7;
+      isLeftHalf = n < (AR.w ? AR.w * 0.48 : 340),
+      isNearAnchor = Math.hypot(n - s.x, i - s.y) <= JOY_R * 2.2,
+      r = !joyFixed() || isLeftHalf || isNearAnchor;
     (Object.assign(INPUT, {
       active: !0,
       id: e.pointerId,
       fromJoy: r,
-      ox: r && joyFixed() ? s.x : n,
-      oy: r && joyFixed() ? s.y : i,
+      ox: r && joyFixed() && isNearAnchor ? s.x : n,
+      oy: r && joyFixed() && isNearAnchor ? s.y : i,
       x: n,
       y: i,
       moved: !1,
@@ -378,10 +381,13 @@ function bindControls() {
         INPUT.target = { x: s, y: r };
         return;
       }
-      (joyFixed() && !INPUT.fromJoy) ||
-        (!INPUT.moved &&
-          Math.hypot(n - INPUT.ox, i - INPUT.oy) > TAP_MOVE &&
-          ((INPUT.moved = !0), (INPUT.target = null), manual() || setCtrl("manual")));
+      if (!INPUT.fromJoy) return;
+      if (
+        !INPUT.moved &&
+        Math.hypot(n - INPUT.ox, i - INPUT.oy) > TAP_MOVE
+      ) {
+        ((INPUT.moved = !0), (INPUT.target = null), manual() || setCtrl("manual"));
+      }
     }));
   const o = (e) => {
     if (e.pointerId !== INPUT.id) return;
@@ -393,10 +399,9 @@ function bindControls() {
       ((R.pickTarget = R.pickTarget === r ? null : r), R.pickTarget && toast(`Đi nhặt: ${r.it.n}`));
       return;
     }
-    if (manual()) {
-      const [l, f] = inWorld(n + CAM.x, i + CAM.y);
-      INPUT.target = { x: l, y: f };
-    }
+    manual() || setCtrl("manual");
+    const [l, f] = inWorld(n + CAM.x, i + CAM.y);
+    INPUT.target = { x: l, y: f };
   };
   (CV.addEventListener("pointerup", o),
     CV.addEventListener("pointercancel", (e) => {
@@ -486,8 +491,8 @@ function drawJoystick(t) {
     a = joyAnchor(),
     e = INPUT.active && (o ? INPUT.fromJoy : !0);
   if (!o && !(e && INPUT.moved)) return;
-  const n = o ? a.x : INPUT.ox,
-    i = o ? a.y : INPUT.oy;
+  const n = e && INPUT.fromJoy ? INPUT.ox : a.x,
+    i = e && INPUT.fromJoy ? INPUT.oy : a.y;
   ((t.globalAlpha = e ? 0.35 : 0.12), (t.fillStyle = "#000"), t.beginPath(), t.arc(n, i, JOY_R, 0, 7), t.fill());
   const s = img("ui/ring.png");
   if (s && s.complete && s.naturalWidth) {

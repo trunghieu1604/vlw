@@ -93,19 +93,22 @@ const npcAnim = (n) => {
 };
 // Sprite rect (screen px) for hit tests.
 function npcRect(n) {
-  if (n.heroLook) return [n.x - 36, n.y - 120, 72, 130];
+  if (n.heroLook) return [n.x - 40, n.y - 125, 80, 140];
   const a = npcAnim(n);
-  if (!a) return [n.x - 16, n.y - 60, 32, 64];
-  const w = Math.max(28, a.w * 0.7),
-    h = Math.max(30, Math.min(a.h, a.ay + 6));
-  return [n.x - w / 2, n.y - a.ay - 2, w, h + 6];
+  if (!a) return [n.x - 25, n.y - 65, 50, 72];
+  const w = Math.max(46, (a.w || 32) * 0.8),
+    h = Math.max(50, Math.min(a.h || 50, (a.ay || 40) + 14));
+  const ay = a.ay || 40;
+  return [n.x - w / 2, n.y - ay - 4, w, h + 8];
 }
-function npcAt(x, y) {
+function npcAt(x, y, pad = 14) {
   let best = null;
   for (const n of NPCV.list) {
     if (n.c) continue;
     const [rx, ry, w, h] = npcRect(n);
-    x >= rx && x <= rx + w && y >= ry && y <= ry + h && (!best || n.y > best.y) && (best = n);
+    if (x >= rx - pad && x <= rx + w + pad && y >= ry - pad && y <= ry + h + pad) {
+      if (!best || n.y > best.y) best = n;
+    }
   }
   return best;
 }
@@ -197,16 +200,21 @@ function npcShadows(c) {
   }
 }
 // ---- input
+let lastNpcClick = 0;
 function npcWorldPt(e) {
   const r = CV.getBoundingClientRect(),
-    s = typeof uiScale == "function" ? uiScale() : 1;
-  return [(e.clientX - r.left) / s + CAM.x, (e.clientY - r.top) / s + CAM.y];
+    sx = (AR.w || r.width) / (r.width || 1),
+    sy = (AR.h || r.height) / (r.height || 1);
+  return [(e.clientX - r.left) * sx + CAM.x, (e.clientY - r.top) * sy + CAM.y];
 }
 function npcPointerDown(e) {
   if (!NPCV.list.length || e.target !== CV || (e.button != null && e.button > 0)) return;
+  const now = Date.now();
+  if (now - lastNpcClick < 250) return;
   const [x, y] = npcWorldPt(e),
     n = npcAt(x, y);
   if (!n) return;
+  lastNpcClick = now;
   e.stopPropagation();
   e.preventDefault();
   npcGoTo(n);
@@ -305,7 +313,8 @@ function npcClose() {
 function npcShow(n, text, ops) {
   const el = npcBox();
   if (!el) return;
-  NPCV.open = { n };
+  const now = Date.now();
+  NPCV.open = { n, t: now };
   const nCol = n.nameCol || "#f3d88a",
     tCol = n.titleCol || "#a89a74";
   el.innerHTML =
@@ -318,7 +327,11 @@ function npcShow(n, text, ops) {
       .join("");
   el.hidden = !1;
   el.querySelectorAll(".op").forEach((b) => {
-    b.onclick = () => {
+    b.onclick = (e) => {
+      if (Date.now() - (NPCV.open?.t || 0) < 350) {
+        e && e.preventDefault();
+        return;
+      }
       const o = ops[+b.dataset.i];
       o && !o.dis && (o.keep || npcClose(), o.f && o.f());
     };

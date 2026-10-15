@@ -265,9 +265,10 @@ body.u20 #panel::before {
   bottom: 50px;
   width: min(42vw, 470px);
   z-index: 7;
-  pointer-events: auto;
+  pointer-events: none;
 }
 #u20lines {
+  pointer-events: none;
   max-height: 170px;
   overflow: hidden;
   padding: 4px 8px;
@@ -2609,4 +2610,11 @@ body.u2m .prtabs button {
 #netBtn {
   display: none !important;
 }
+
+body.u20 #npcDlg {
+  bottom: 12px !important;
+  max-height: calc(100vh - 24px) !important;
+  z-index: 100 !important;
+}
+
 

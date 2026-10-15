@@ -659,8 +659,9 @@ function presAt(x, y) {
 }
 function presPt(e) {
   const r = CV.getBoundingClientRect(),
-    s = typeof uiScale == "function" ? uiScale() : 1;
-  return [(e.clientX - r.left) / s + CAM.x, (e.clientY - r.top) / s + CAM.y];
+    sx = (AR.w || r.width) / (r.width || 1),
+    sy = (AR.h || r.height) / (r.height || 1);
+  return [(e.clientX - r.left) * sx + CAM.x, (e.clientY - r.top) * sy + CAM.y];
 }
 function presPointerDown(e) {
   if (!PRES.drawn.length || e.target !== CV || (e.button != null && e.button > 0)) return;
