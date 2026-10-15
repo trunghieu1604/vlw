@@ -161,6 +161,15 @@ for (const n of FACTIONS) {
   n.wcode = Array.isArray(s) && [0, 1, 2, 3, 4, 5, 7, 9].includes(s[2]) ? s[2] : -1;
 }
 SK[384] && (SK[384].eqt = -2);
+const SK150_EQT = {
+  1056: 2, 1057: 1, 1058: 1, 1059: 3, 1060: 4, 1061: 0,
+  1062: -2, 1063: 1, 1065: -2, 1066: -2, 1067: 1, 1069: 100,
+  1070: 101, 1071: 102, 1073: -2, 1074: 2, 1075: 3, 1076: -2,
+  1078: -2, 1079: 0, 1080: 1, 1081: -2, 1114: -2
+};
+for (const [k, v] of Object.entries(SK150_EQT)) {
+  if (SK[k]) SK[k].eqt = v;
+}
 const EQT_VI = {
     "-1": "Tay không",
     0: "Kiếm",
@@ -175,8 +184,8 @@ const EQT_VI = {
   },
   itEqt = (n) => (n ? (n.d === 1 ? 100 + n.k : n.k === 6 ? -1 : n.k) : -1),
   curEqt = () => itEqt(S.eq && S.eq.weapon),
-  skEqt = (n) => (n && n.eqt != null && n.eqt !== -2 && n.attr && n.attr.physicsenhance_p ? n.eqt : null),
-  skWOk = (n, t = curEqt()) => skEqt(n) === null || skEqt(n) === t;
+  skEqt = (n) => (n && n.eqt != null && n.eqt !== -2 && n.eqt !== -1 && n.attr && n.attr.physicsenhance_p ? n.eqt : null),
+  skWOk = (n, t = curEqt()) => skEqt(n) === null || skEqt(n) === -1 || skEqt(n) === t;
 function wantEqt() {
   const n = S.mainLock && S.main && S.main !== "basic" ? S.main : typeof R < "u" && R.P && R.P.wantId;
   return skEqt(SK[n]);
