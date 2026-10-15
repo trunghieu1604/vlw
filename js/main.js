@@ -375,17 +375,32 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-const APP_V = 398;
+let APP_V = 401;
+function getAppV() {
+  if (APP_V) return APP_V;
+  try {
+    const s = document.querySelector('script[src*="main.js"]');
+    if (s && s.src.includes("?v=")) {
+      APP_V = +s.src.split("?v=")[1].replace(/[^0-9]/g, "");
+    }
+  } catch {}
+  return APP_V || 401;
+}
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
   fetch("ver.json?t=" + Date.now(), { cache: "no-store" })
     .then((n) => (n.ok ? n.json() : null))
     .then((n) => {
-      if (!(!n || !(+n.v > APP_V))) {
+      if (!n || !n.v) return;
+      const cur = getAppV();
+      const lastSeen = sessionStorage.getItem("jxidle_seen_ver");
+      if (lastSeen && +lastSeen >= +n.v) return;
+      if (+n.v > cur) {
+        sessionStorage.setItem("jxidle_seen_ver", String(n.v));
+        APP_V = +n.v;
         try {
           save();
         } catch {}
-        // js/deploy.js: keeps the place (S.resume) and refuses to loop when ver.json runs ahead of APP_V
         (typeof toast == "function" && toast("Có bản cập nhật mới — đang tải lại…"),
           setTimeout(() => (typeof deployReload == "function" ? deployReload("ver") : location.reload()), 3e3));
       }
