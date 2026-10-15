@@ -47,7 +47,9 @@ const WB = {
   next: 0,
   top: [],
   bots: [],
+  realPlayers: [],
   playerDmg: 0,
+  defeatedHandled: false,
   bannerTimer: null,
   arena: {
     on: false,
@@ -131,16 +133,153 @@ function spawnWorldBoss(force = false) {
   updateWbButtonState();
 }
 
+let wbPendingDmg = 0;
+let wbLastSyncT = 0;
+let wbSyncTimer = null;
+let wbFbInitialized = false;
+
+function wbFirebaseOn() {
+  return typeof firebase !== "undefined" && window.CHAT_CFG && !!CHAT_CFG.firebaseUrl;
+}
+
+function wbSyncHitFirebase() {
+  if (!wbFirebaseOn() || !wbPendingDmg) return;
+  const d = wbPendingDmg;
+  wbPendingDmg = 0;
+  wbLastSyncT = Date.now();
+  try {
+    const db = firebase.database();
+    const cid = typeof chatCid === "function" ? chatCid() : "anon";
+    db.ref("worldboss/damage/" + cid).set({
+      cid: cid,
+      name: S.name || "Hiệp Sĩ",
+      fac: S.fac || "",
+      lvl: S.lvl || 1,
+      dmg: WB.playerDmg,
+      updated: Date.now()
+    });
+    db.ref("worldboss/state/hp").transaction((curr) => {
+      if (curr == null) return WB_BOSS_CONFIG.hpMax - d;
+      const next = curr - d;
+      return next <= 0 ? 0 : next;
+    }, (err, committed, snap) => {
+      if (committed && snap && snap.val() === 0) {
+        db.ref("worldboss/state").update({
+          st: "dead",
+          hp: 0,
+          killer: S.name || "Hiệp Sĩ",
+          endedAt: Date.now()
+        });
+        try {
+          db.ref("chat/msgs").push({
+            cid: "system",
+            sys: true,
+            name: "Hệ Thống",
+            msg: `🏆 Hào kiệt [${S.name || "Hiệp Sĩ"}] đã tung đòn kết liễu Boss Thế Giới Trung Hiếu!`,
+            ts: Date.now()
+          });
+        } catch {}
+      }
+    });
+  } catch (e) {
+    console.warn("wbSyncHitFirebase err:", e);
+  }
+}
+
+function wbInitFirebase() {
+  if (!wbFirebaseOn() || wbFbInitialized) return;
+  try {
+    wbFbInitialized = true;
+    const db = firebase.database();
+    db.ref("worldboss/state").on("value", (snap) => {
+      const val = snap.val();
+      if (!val) return;
+      if (val.st) {
+        const prevSt = WB.st;
+        WB.st = val.st;
+        if (val.st === "up" && prevSt !== "up" && !WB.arena.on) {
+          showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã xuất hiện tại <b>Phong Lăng Độ</b>!`);
+        }
+      }
+      if (typeof val.hp === "number") {
+        if (!WB.boss) {
+          WB.boss = {
+            name: WB_BOSS_CONFIG.name,
+            title: WB_BOSS_CONFIG.title,
+            mapName: WB_BOSS_CONFIG.mapName,
+            mapImg: WB_BOSS_CONFIG.mapImg,
+            lvl: WB_BOSS_CONFIG.lvl,
+            hp: val.hp,
+            hpMax: val.hpMax || WB_BOSS_CONFIG.hpMax,
+            series: WB_BOSS_CONFIG.series,
+            heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+          };
+        } else {
+          WB.boss.hp = val.hp;
+          if (val.hpMax) WB.boss.hpMax = val.hpMax;
+        }
+        if (WB.arena.bossInst) {
+          WB.arena.bossInst.hp = val.hp;
+        }
+      }
+      if (val.st === "dead" && WB.arena.on && !WB.defeatedHandled) {
+        WB.defeatedHandled = true;
+        handleBossDefeated(false, val.killer);
+      }
+      if (val.st === "up") {
+        WB.defeatedHandled = false;
+      }
+      updateWbButtonState();
+      renderWbDpsMeter();
+    });
+
+    db.ref("worldboss/damage").on("value", (snap) => {
+      const val = snap.val();
+      WB.realPlayers = val ? Object.values(val) : [];
+      updateWbLeaderboard();
+      renderWbDpsMeter();
+    });
+  } catch (e) {
+    console.warn("wbInitFirebase err:", e);
+  }
+}
+window.wbInitFirebase = wbInitFirebase;
+
 /**
- * Updates Leaderboard sorted strictly by damage
+ * Updates Leaderboard sorted strictly by damage (merging real players & bots)
  */
 function updateWbLeaderboard() {
   if (!WB.boss) return;
   const total = WB.boss.hpMax;
-  const list = [
-    { name: (S && S.name) || "Hiệp Sĩ", dmg: WB.playerDmg, isPlayer: true }
-  ];
-  WB.bots.forEach(b => list.push({ name: b.name, dmg: b.dmg, isPlayer: false }));
+  const list = [];
+  const myCid = typeof chatCid === "function" ? chatCid() : "";
+  let hasMe = false;
+
+  if (WB.realPlayers && WB.realPlayers.length) {
+    for (const rp of WB.realPlayers) {
+      const isMe = rp.cid === myCid || (S && rp.name === S.name);
+      if (isMe) hasMe = true;
+      list.push({
+        name: rp.name || "Hiệp Sĩ",
+        dmg: isMe ? Math.max(rp.dmg || 0, WB.playerDmg) : (rp.dmg || 0),
+        isPlayer: isMe
+      });
+    }
+  }
+  if (!hasMe) {
+    list.push({ name: (S && S.name) || "Hiệp Sĩ", dmg: WB.playerDmg, isPlayer: true });
+  }
+
+  // If fewer than 5 fighters, fill with remaining bots so list always looks full
+  if (list.length < 5 && WB.bots && WB.bots.length) {
+    for (const b of WB.bots) {
+      if (list.length >= 5) break;
+      if (!list.some(x => x.name === b.name)) {
+        list.push({ name: b.name, dmg: b.dmg, isPlayer: false });
+      }
+    }
+  }
+
   list.sort((a, b) => b.dmg - a.dmg);
 
   WB.top = list.map((item, idx) => ({
@@ -611,12 +750,25 @@ function exitWorldBoss(notify = true) {
 function onHeroHitWb(dmg) {
   if (!WB.arena.on || WB.st !== "up" || !WB.boss) return;
   WB.playerDmg += dmg;
+  wbPendingDmg += dmg;
   WB.boss.hp = Math.max(0, WB.boss.hp - dmg);
   if (WB.arena.bossInst) {
     WB.arena.bossInst.hp = WB.boss.hp;
   }
   updateWbLeaderboard();
   renderWbDpsMeter();
+
+  if (wbFirebaseOn()) {
+    const now = Date.now();
+    if (now - wbLastSyncT > 300) {
+      wbSyncHitFirebase();
+    } else if (!wbSyncTimer) {
+      wbSyncTimer = setTimeout(() => {
+        wbSyncTimer = null;
+        wbSyncHitFirebase();
+      }, 350);
+    }
+  }
 
   if (WB.boss.hp <= 0 && WB.st !== "dead") {
     handleBossDefeated();
@@ -1247,6 +1399,9 @@ function initWorldBoss() {
   WB.next = sched.next;
   updateWbButtonState();
   setInterval(wbTick, 1000);
+  if (typeof wbInitFirebase === "function") {
+    wbInitFirebase();
+  }
 }
 
 // Global Exports

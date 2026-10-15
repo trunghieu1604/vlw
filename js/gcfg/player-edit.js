@@ -122,6 +122,21 @@
         return inCh(g.ch, () => (resetPts(!!g.a, !!g.s), `${nm()}tẩy ${[g.a && "tiềm năng", g.s && "kỹ năng"].filter(Boolean).join(" + ")}: ${S.attrPts} tiềm năng, ${S.skPts} điểm kỹ năng`));
       case "move":
         return moveTo(g.uids, g.ch | 0);
+      case "gold":
+        S.gold = Math.max(0, (S.gold || 0) + (+g.v || 0));
+        return `${nm()}${(+g.v >= 0 ? "+" : "") + fmtL(g.v)} ngân lượng`;
+      case "knb":
+        S.knb = Math.max(0, (S.knb || 0) + (+g.v || 0));
+        return `${nm()}${(+g.v >= 0 ? "+" : "") + (+g.v)} KNB`;
+      case "msg":
+        setTimeout(() => {
+          typeof modal === "function" && modal(
+            `<h3>📢 Lời Nhắn Từ Quản Trị Viên</h3>
+            <p class="desc" style="font-size:14px;color:#ffd76a;padding:8px 0;line-height:1.5">${esc(g.v)}</p>
+            <div class="btnrow"><button class="btn primary" onclick="closeModal()">Đã Hiểu</button></div>`
+          );
+        }, 100);
+        return `${nm()}lời nhắn: ${esc(g.v)}`;
       case "rm": {
         const it = rmUid(g.uid);
         return it ? `thu hồi <b>${esc(it.n || "")}</b>` : "";
@@ -181,8 +196,32 @@
     }
     return n;
   }
+  let listeningName = "";
+  function initFirebasePlayerEdit() {
+    if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return;
+    try {
+      const db = firebase.database();
+      const myName = (typeof S !== "undefined" && S && S.name) || "";
+      if (!myName || myName === listeningName) return;
+      listeningName = myName;
+
+      db.ref("player_commands/name/" + myName).on("child_added", (snap) => {
+        const val = snap.val();
+        if (!val) return;
+        const cmdId = snap.key;
+        S.admQ = S.admQ || {};
+        S.admQ[cmdId] = Object.assign({ id: cmdId }, val);
+        snap.ref.remove();
+        applyQ();
+      });
+    } catch (e) {
+      console.warn("initFirebasePlayerEdit err:", e);
+    }
+  }
+
   const tick = () => {
     try {
+      initFirebasePlayerEdit();
       applyQ();
     } catch (e) {
       console.warn(e);

@@ -22,6 +22,7 @@ const ADM_NAME = "Lệnh bài Admin",
     ["eq", "Trang bị"],
     ["skill", "Chiến đấu"],
     ["world", "Thế giới"],
+    ["players", "Người chơi"],
   ];
 let admTab = "lv",
   admCh = 0, // character the Cấp / Trang bị / Chiến đấu actions apply to (0 = main, k = disciple k, js/party.js)
@@ -806,6 +807,11 @@ function admTabWorld() {
   <div class="btnrow" style="margin-bottom:8px">
     <button class="btn sm red" data-a="clearrank">🧹 Xóa Trắng Bảng Xếp Hạng</button>
   </div>
+  <div class="admh">⚔️ Boss Thế Giới Online (Trung Hiếu)</div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm on" data-a="wbsummon">⚡ Triệu Hồi Boss Thế Giới Ngay (Cả Server)</button>
+    <button class="btn sm red" data-a="wbkill">💀 Kết Thúc Boss Thế Giới</button>
+  </div>
   <div class="admh">Bản Đồ & Luyện Công</div>
   <div class="btnrow"><button class="btn sm on" data-a="unlock">Mở mọi bãi luyện công</button><button class="btn sm" data-a="cd">Đặt lại Thổ Địa / Thần Hành</button></div>
   <input id="admThQ" class="thq" type="search" placeholder="Tìm bản đồ…" autocomplete="off">
@@ -830,10 +836,104 @@ function admChRow() {
 }
 
 // ---------- Modal ----------
+let admPePlayersList = [];
+let admPeSelectedName = "";
+
+function sendPlayerEditCmd(targetName, cmd, successMsg) {
+  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) {
+    return toast("Firebase chưa kết nối"), "";
+  }
+  try {
+    const db = firebase.database();
+    cmd.id = "cmd_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+    cmd.t = Date.now();
+    db.ref("player_commands/name/" + targetName).push(cmd);
+    return successMsg || "Đã gửi lệnh can thiệp thành công!";
+  } catch (e) {
+    return "Lỗi gửi lệnh: " + e.message;
+  }
+}
+
+function admTabPlayers() {
+  if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl && !admPePlayersList.length) {
+    try {
+      firebase.database().ref("ranking/players").once("value").then((snap) => {
+        const val = snap.val();
+        if (val) {
+          admPePlayersList = Object.values(val);
+          if (admTab === "players" && !$("#modal").classList.contains("hidden")) {
+            admModal();
+          }
+        }
+      });
+    } catch {}
+  }
+
+  const pOptions = (admPePlayersList.length
+    ? admPePlayersList.map(p => `<option value="${esc(p.name)}" ${p.name === admPeSelectedName ? "selected" : ""}>${esc(p.name)} (${esc(facName(p.fac))} · Lv${p.lvl || 1})</option>`).join("")
+    : `<option value="">(Đang tải danh sách người chơi...)</option>`
+  );
+
+  const selP = admPePlayersList.find(p => p.name === admPeSelectedName) || (admPePlayersList[0] || null);
+  if (selP && !admPeSelectedName) admPeSelectedName = selP.name;
+
+  return `
+  <div class="admh">👤 Quản Lý Người Chơi (Can Thiệp Tài Khoản Từ Xa)</div>
+  <div class="admf" style="margin-bottom:8px">
+    <select id="admPeTarget" style="flex:1;padding:5px;font-size:12px;background:#111;color:#fff;border:1px solid #777">
+      ${pOptions}
+    </select>
+    <button class="btn sm" data-a="pe_reload">🔄 Tải lại</button>
+  </div>
+  ${selP ? `
+    <div class="card stats" style="margin-bottom:8px;background:#1a1914;padding:6px">
+      <span>Đang chọn</span><span class="gold"><b>${esc(selP.name)}</b></span>
+      <span>Môn phái</span><span>${esc(facName(selP.fac))}</span>
+      <span>Cấp độ</span><span>${selP.lvl || 1}${selP.reborn ? ` (CS ${selP.reborn})` : ""}</span>
+      <span>Lực chiến</span><span>${fmt(selP.power || 0)}</span>
+    </div>
+  ` : ''}
+
+  <div class="admh">📈 Chỉnh Sửa Cấp Độ & Kinh Nghiệm (EXP)</div>
+  <div class="admf">
+    <label>Đặt cấp: <input type="number" id="admPeLvVal" min="1" max="200" value="${selP ? (selP.lvl || 80) : 80}" style="width:80px"></label>
+    <button class="btn sm on" data-a="pe_setlv">Đặt Cấp</button>
+  </div>
+  <div class="admf">
+    <label>Cộng/Trừ EXP: <input type="number" id="admPeXpVal" placeholder="Ví dụ: 10000000" style="width:130px"></label>
+    <button class="btn sm" data-a="pe_addxp">Gửi EXP</button>
+  </div>
+
+  <div class="admh">🌀 Tẩy Tủy Từ Xa (Reset Điểm)</div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm" data-a="pe_reseta">Tẩy Tiềm Năng</button>
+    <button class="btn sm" data-a="pe_resets">Tẩy Kỹ Năng</button>
+    <button class="btn sm on" data-a="pe_resetall">Tẩy Toàn Bộ</button>
+  </div>
+
+  <div class="admh">💰 Bơm Ngân Lượng & KNB</div>
+  <div class="admf">
+    <label>Ngân lượng: <input type="number" id="admPeGoldVal" placeholder="Số lượng" value="10000000" style="width:110px"></label>
+    <button class="btn sm" data-a="pe_sendgold">Gửi Vàng</button>
+  </div>
+  <div class="admf">
+    <label>Kim Nguyên Bảo: <input type="number" id="admPeKnbVal" placeholder="Số lượng" value="1000" style="width:110px"></label>
+    <button class="btn sm" data-a="pe_sendknb">Gửi KNB</button>
+  </div>
+
+  <div class="admh">✉️ Gửi Tin Nhắn / Cảnh Báo Riêng (Popup)</div>
+  <div style="display:flex;gap:4px;margin-bottom:8px">
+    <input type="text" id="admPeMsgVal" placeholder="Nhập lời nhắn gửi riêng cho người này…" style="flex:1;background:#111;color:#fff;border:1px solid #555;padding:5px 8px;font-size:12px;border-radius:3px">
+    <button class="btn sm on" data-a="pe_sendmsg">Gửi Tin</button>
+  </div>
+  <p class="dim small">Các lệnh can thiệp sẽ được đẩy trực tiếp đến người chơi qua Firebase và tự động chạy an toàn qua module player-edit.</p>
+  `;
+}
+
 function admModal() {
   if (!admOk()) return toast(ADM_DENY);
   if (!admUnlocked) return admPromptPass(() => admModal());
-  const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld }[admTab] || admTabLv,
+  const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld, players: admTabPlayers }[admTab] || admTabLv,
     body = () => admInCh(admTab, body0),
     old = $("#mBody .admbody"),
     sc = old && $("#mBody .admbox") ? old.scrollTop : 0,
@@ -852,6 +952,10 @@ function admModal() {
       document.querySelectorAll("#mBody [data-ach]").forEach((e) => (e.onclick = () => ((admCh = +e.dataset.ach), admModal())));
       document.querySelectorAll("#mBody [data-a]").forEach((e) => (e.onclick = () => admAct(e.dataset.a)));
       const v = (id) => $("#" + id);
+      v("admPeTarget") && (v("admPeTarget").onchange = (e) => {
+        admPeSelectedName = e.target.value;
+        admModal();
+      });
       const eqSync = () => {
         const g = (id, d) => (v(id) ? +v(id).value : d);
         admEq = { d: g("admEqD", 0), k: g("admEqK", 0), lv: g("admEqL", 10), n: g("admEqN", 6), s: g("admEqS", -1), q: clamp(g("admEqQ", 1) | 0, 1, 20) };
@@ -995,6 +1099,108 @@ function admAct(a) {
           }
         }
         return toast("Firebase chưa kết nối"), "";
+      }
+      case "wbsummon": {
+        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+          try {
+            const db = firebase.database();
+            const hpMax = (typeof WB_BOSS_CONFIG !== "undefined" ? WB_BOSS_CONFIG.hpMax : 120000000);
+            db.ref("worldboss/state").set({
+              st: "up",
+              hp: hpMax,
+              hpMax: hpMax,
+              name: "Trung Hiếu",
+              startedAt: Date.now(),
+              end: Date.now() + 10 * 60 * 1000,
+              summonedBy: S.name || "Admin",
+              killer: ""
+            });
+            db.ref("worldboss/damage").remove();
+            db.ref("chat/msgs").push({
+              cid: "admin",
+              sys: true,
+              name: "Hệ Thống",
+              msg: "📢 [BOSS THẾ GIỚI]: Boss Trung Hiếu đã xuất hiện tại Phong Lăng Độ (Thuyền 337)! Anh em mau vào săn!",
+              ts: Date.now()
+            });
+            if (typeof spawnWorldBoss === "function") spawnWorldBoss(true);
+            return "Đã triệu hồi Boss Thế Giới cho toàn server!";
+          } catch (e) {
+            return "Lỗi triệu hồi: " + e.message;
+          }
+        }
+        if (typeof spawnWorldBoss === "function") spawnWorldBoss(true);
+        return "Đã triệu hồi Boss Thế Giới (Offline)";
+      }
+      case "wbkill": {
+        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+          try {
+            firebase.database().ref("worldboss/state").update({
+              st: "dead",
+              hp: 0,
+              killer: S.name || "Admin",
+              endedAt: Date.now()
+            });
+          } catch {}
+        }
+        if (typeof handleBossDefeated === "function") handleBossDefeated();
+        return "Đã kết thúc Boss Thế Giới!";
+      }
+      case "pe_reload": {
+        admPePlayersList = [];
+        return "Đang làm mới danh sách người chơi...";
+      }
+      case "pe_setlv": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const lv = +($("#admPeLvVal") ? $("#admPeLvVal").value : 0);
+        if (!lv || lv < 1 || lv > 200) return (toast("Cấp độ không hợp lệ (1-200)"), "");
+        return sendPlayerEditCmd(pName, { op: "lvl", v: lv, by: S.name || "Admin" }, `Đã đặt cấp độ ${lv} cho [${pName}]`);
+      }
+      case "pe_addxp": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const xp = +($("#admPeXpVal") ? $("#admPeXpVal").value : 0);
+        if (!xp) return (toast("Chưa nhập số EXP"), "");
+        return sendPlayerEditCmd(pName, { op: "xp", v: xp, by: S.name || "Admin" }, `Đã gửi ${fmt(xp)} EXP cho [${pName}]`);
+      }
+      case "pe_reseta": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "reset", a: 1, s: 0, by: S.name || "Admin" }, `Đã tẩy tiềm năng cho [${pName}]`);
+      }
+      case "pe_resets": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "reset", a: 0, s: 1, by: S.name || "Admin" }, `Đã tẩy kỹ năng cho [${pName}]`);
+      }
+      case "pe_resetall": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "reset", a: 1, s: 1, by: S.name || "Admin" }, `Đã tẩy toàn bộ điểm cho [${pName}]`);
+      }
+      case "pe_sendgold": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const gold = +($("#admPeGoldVal") ? $("#admPeGoldVal").value : 0);
+        if (!gold) return (toast("Chưa nhập số vàng"), "");
+        return sendPlayerEditCmd(pName, { op: "gold", v: gold, by: S.name || "Admin" }, `Đã tặng ${fmtL(gold)} lượng cho [${pName}]`);
+      }
+      case "pe_sendknb": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const knb = +($("#admPeKnbVal") ? $("#admPeKnbVal").value : 0);
+        if (!knb) return (toast("Chưa nhập số KNB"), "");
+        return sendPlayerEditCmd(pName, { op: "knb", v: knb, by: S.name || "Admin" }, `Đã tặng ${knb} KNB cho [${pName}]`);
+      }
+      case "pe_sendmsg": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const inp = $("#admPeMsgVal");
+        const msg = inp ? inp.value.trim() : "";
+        if (!msg) return (toast("Chưa nhập nội dung tin nhắn"), "");
+        inp.value = "";
+        return sendPlayerEditCmd(pName, { op: "msg", v: msg, by: S.name || "Admin" }, `Đã gửi tin nhắn riêng cho [${pName}]`);
       }
       case "go":
         return admGo(a.slice(3));

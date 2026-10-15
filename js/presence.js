@@ -36,21 +36,25 @@ const PRES_HZ = 8, // position updates per second (only when changed)
   PRES_DCOL = "#c9dcff"; // remote disciples' name colour
 
 // ---------------------------------------------------------------- where are we
+const presFirebaseOn = () =>
+  typeof firebase !== "undefined" && window.CHAT_CFG && !!CHAT_CFG.firebaseUrl;
+
 const presOn = () =>
-  typeof netOn == "function" &&
-  netOn() &&
-  typeof NET == "object" &&
-  !!NET.user &&
-  typeof API == "object" &&
-  !!API.token;
-// The shared map currently shown (town mode on its full map, no dungeon / tower / boat), or "".
+  presFirebaseOn() ||
+  (typeof netOn == "function" &&
+    netOn() &&
+    typeof NET == "object" &&
+    !!NET.user &&
+    typeof API == "object" &&
+    !!API.token);
+
+// The shared map currently shown: town, stage, or World Boss arena
 function presMapId() {
-  if (typeof S != "object" || !S || !S.fac || !R.town || R.dg || R.tower) return "";
-  if (typeof JXM != "object" || !JXM.cur || !OBS.g || !OBS.g.jm || typeof W != "object" || !W.town) return "";
-  const id = String(JXM.cur.id);
-  if (id !== String(W.town.id)) return "";
-  const d = typeof thDest == "function" && thDest(id);
-  return (d && d.safe) || id === "37" ? id : "";
+  if (typeof S != "object" || !S || !S.fac) return "";
+  if (typeof WB != "undefined" && WB.arena && WB.arena.on) return "wb_337";
+  if (R.town && typeof W == "object" && W.town) return "town_" + (W.town.id || "37");
+  if (S && S.stage) return "stage_" + Math.min(S.stage || 1, 30);
+  return "";
 }
 
 // ---------------------------------------------------------------- own snapshot
@@ -95,6 +99,122 @@ function presQ() {
   const q = [];
   if (typeof partyN == "function" && !partyAway()) for (let k = 1; k <= partyN(); k++) q.push(presP(pAct(k).h));
   return q;
+}
+
+// ---------------------------------------------------------------- Firebase presence
+let fbPresMapRef = null;
+let fbPresMyRef = null;
+let fbPresLastP = "";
+let fbPresLastS = "";
+let fbPresLastMoveT = 0;
+
+function presJoinFirebase(mapId) {
+  presLeaveFirebase();
+  PRES.room = mapId;
+  PRES.me = typeof chatCid === "function" ? chatCid() : "cid_" + (S.name || "anon");
+  PRES.st = "ok";
+  PRES.list.clear();
+
+  try {
+    const db = firebase.database();
+    fbPresMapRef = db.ref("presence/maps/" + mapId);
+    fbPresMyRef = fbPresMapRef.child(PRES.me);
+
+    const snap = presSnap();
+    const p = presP(H);
+    const q = presQ();
+
+    fbPresMyRef.onDisconnect().remove();
+    fbPresMyRef.set({
+      id: PRES.me,
+      s: snap,
+      p: p,
+      q: q,
+      t: Date.now()
+    });
+
+    fbPresMapRef.on("child_added", (childSnap) => {
+      const k = childSnap.key;
+      if (k === PRES.me) return;
+      const val = childSnap.val();
+      if (val && val.s && val.p) {
+        presAdd({ id: k, s: val.s, p: val.p, q: val.q });
+      }
+    });
+
+    fbPresMapRef.on("child_changed", (childSnap) => {
+      const k = childSnap.key;
+      if (k === PRES.me) return;
+      const val = childSnap.val();
+      if (!val) return;
+      const player = PRES.list.get(k);
+      if (!player) {
+        if (val.s && val.p) presAdd({ id: k, s: val.s, p: val.p, q: val.q });
+      } else {
+        if (val.s) presSetSnap(player, val.s);
+        if (val.p) presMove(player, val.p, val.q);
+      }
+    });
+
+    fbPresMapRef.on("child_removed", (childSnap) => {
+      const k = childSnap.key;
+      if (k === PRES.me) return;
+      PRES.list.delete(k);
+    });
+  } catch (e) {
+    console.warn("presJoinFirebase err:", e);
+  }
+}
+
+function presLeaveFirebase() {
+  if (fbPresMapRef) {
+    try { fbPresMapRef.off(); } catch {}
+    fbPresMapRef = null;
+  }
+  if (fbPresMyRef) {
+    try { fbPresMyRef.remove(); } catch {}
+    fbPresMyRef = null;
+  }
+  PRES.room = "";
+  PRES.list.clear();
+}
+
+function presTickFirebase() {
+  if (!presFirebaseOn()) return;
+  if (!S || !S.fac || (typeof hasRealName == "function" && !hasRealName())) {
+    if (PRES.room) presLeaveFirebase();
+    return;
+  }
+  const mapId = presMapId();
+  if (mapId !== PRES.map) {
+    PRES.map = mapId;
+    if (!mapId) {
+      presLeaveFirebase();
+      return;
+    }
+    presJoinFirebase(mapId);
+  }
+  if (!PRES.room || !fbPresMyRef) return;
+
+  const now = Date.now();
+  if (now - PRES.sT > 2000) {
+    PRES.sT = now;
+    const s = presSnap();
+    const strS = JSON.stringify(s);
+    if (strS !== fbPresLastS) {
+      fbPresLastS = strS;
+      fbPresMyRef.child("s").set(s);
+    }
+  }
+
+  const p = presP(H);
+  const q = presQ();
+  const strP = JSON.stringify([p, q]);
+  if (strP !== fbPresLastP && now - fbPresLastMoveT >= 1000 / PRES_HZ) {
+    fbPresLastP = strP;
+    fbPresLastMoveT = now;
+    fbPresMyRef.update({ p: p, q: q, t: now });
+  }
 }
 
 // ---------------------------------------------------------------- socket
@@ -147,6 +267,9 @@ function presRetry() {
   PRES.retryAt = Date.now() + 1e3 * 2 ** PRES.retry;
 }
 function presClose() {
+  if (presFirebaseOn()) {
+    presLeaveFirebase();
+  }
   const w = PRES.ws;
   PRES.ws = null;
   PRES.st = "off";
@@ -409,6 +532,10 @@ function othDraw(c, e) {
 
 // ---------------------------------------------------------------- send loop
 function presTick() {
+  if (presFirebaseOn()) {
+    presTickFirebase();
+    return;
+  }
   if (!presOn()) {
     PRES.ws && presClose();
     return;
@@ -494,6 +621,9 @@ const PRES_VIEW_TTL = 1e4;
 async function presInfo(p, k = -1) {
   const s = p.s,
     want = k >= 0 && s.d[k] ? s.d[k].n : s.n;
+  if (typeof CHAT !== "undefined" && CHAT.isFirebase && typeof profileModal === "function") {
+    return profileModal(want || s.n);
+  }
   if (p.view && Date.now() - p.viewT < PRES_VIEW_TTL) return presView(p, presViewIdx(p.view, want, k));
   const tok = (PRES.viewTok = {});
   modal(`<h3>${esc(want || "?")}</h3><p class="dim small">Đang tải trang bị…</p>`);
@@ -760,10 +890,10 @@ function presInstall() {
       console.warn("presence", e);
     }
   }, 1e3 / PRES_HZ);
-  window.addEventListener("pointerdown", (e) => R.town && presPointerDown(e), !0);
+  window.addEventListener("pointerdown", (e) => presPointerDown(e), !0);
   window.addEventListener(
     "pointermove",
-    (e) => R.town && typeof CV != "undefined" && e.target === CV && presPointerMove(e),
+    (e) => typeof CV != "undefined" && e.target === CV && presPointerMove(e),
   );
   window.addEventListener("beforeunload", () => presClose());
 }
