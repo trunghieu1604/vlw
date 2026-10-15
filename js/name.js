@@ -1,22 +1,27 @@
 "use strict";
 const NAME_MIN = 2,
-  NAME_MAX = 14,
-  hasRealName = () => !!(S && S.name && S.name !== "Tân thủ" && !FACTIONS.some((n) => n.n === S.name));
+  NAME_MAX = 14;
+const isBannedName = (n) => {
+  if (!n) return false;
+  const s = String(n).toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[@4]/g, "a")
+    .replace(/[1!|]/g, "i")
+    .replace(/[0]/g, "o")
+    .replace(/[^a-z0-9]/g, "");
+  return s.includes("admin") || s.includes("administrator");
+};
+window.isBannedName = isBannedName;
+const hasRealName = () => !!(S && S.name && S.name !== "Tân thủ" && !FACTIONS.some((n) => n.n === S.name) && !isBannedName(S.name));
 function nameCheck(n) {
-  return (
-    (n = String(n || "")
-      .replace(/\s+/g, " ")
-      .trim()),
-    n.length < 2
-      ? { ok: !1, msg: "Tên cần ít nhất 2 ký tự" }
-      : n.length > 14
-        ? { ok: !1, msg: "Tên tối đa 14 ký tự" }
-        : FACTIONS.some((e) => e.n.toLowerCase() === n.toLowerCase()) || /^tân thủ$/i.test(n)
-          ? { ok: !1, msg: "Không dùng tên môn phái" }
-          : /[<>"'`\\]/.test(n)
-            ? { ok: !1, msg: "Tên có ký tự không hợp lệ" }
-            : { ok: !0, n }
-  );
+  n = String(n || "").replace(/\s+/g, " ").trim();
+  if (n.length < 2) return { ok: !1, msg: "Tên cần ít nhất 2 ký tự" };
+  if (n.length > 14) return { ok: !1, msg: "Tên tối đa 14 ký tự" };
+  if (isBannedName(n)) return { ok: !1, msg: "Tuyệt đối không được đặt tên là Admin hoặc Administrator!" };
+  if (FACTIONS.some((e) => e.n.toLowerCase() === n.toLowerCase()) || /^tân thủ$/i.test(n))
+    return { ok: !1, msg: "Không dùng tên môn phái" };
+  if (/[<>"'`\\]/.test(n)) return { ok: !1, msg: "Tên có ký tự không hợp lệ" };
+  return { ok: !0, n };
 }
 function nameModal(n) {
   const e = hasRealName() ? S.name : "";

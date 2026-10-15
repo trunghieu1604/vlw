@@ -278,6 +278,7 @@ function duBiModal() {
     <div class="btnrow" style="margin-top:12px">
       <button class="btn" id="dubiAll">Tất cả xuất chiến</button>
       <button class="btn" id="dubiNone">Dự bị tất cả (Chỉ 1 mình)</button>
+      <button class="btn sm${(typeof S == "object" && S && S.hideOtherParty) ? " on" : ""}" id="dubiHideOther">${(typeof S == "object" && S && S.hideOtherParty) ? "👁 Hiện đồ đệ người khác" : "🙈 Ẩn đồ đệ người khác"}</button>
       <button class="btn" onclick="closeModal(!0)">Đóng</button>
     </div>`,
     () => {
@@ -333,6 +334,14 @@ function duBiModal() {
           typeof toast == "function" && toast("Tất cả đồ đệ vào hàng Dự Bị!");
           typeof save == "function" && save();
           refresh();
+          duBiModal();
+        };
+      const bHideOther = $("#dubiHideOther");
+      if (bHideOther)
+        bHideOther.onclick = () => {
+          S.hideOtherParty = !S.hideOtherParty;
+          typeof toast == "function" && toast(S.hideOtherParty ? "Đã ẩn đồ đệ người chơi khác trên bản đồ" : "Đã hiện lại đồ đệ người chơi khác");
+          typeof save == "function" && save();
           duBiModal();
         };
     },

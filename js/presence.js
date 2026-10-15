@@ -86,18 +86,48 @@ function presSnap() {
   const s = presChar();
   s.rb = typeof rebGet == "function" ? rebGet() : 0;
   typeof ptCamp == "function" && (s.pc = ptCamp()); // màu tổ đội (title.js PT_CAMP)
+
+  // Title & Halo của nhân vật chính
+  try {
+    const worn = typeof titleWorn === "function" ? titleWorn() : null;
+    if (worn) {
+      s.tk = worn[0] || "";
+      s.tn = typeof titleName === "function" ? titleName(worn) : (worn[1] || "");
+      s.tc = (worn[0] === "admin" ? "#ffd700" : (worn[0] === "vlmc" ? "#ff3333" : (typeof TIER !== "undefined" && TIER[worn[3]] ? TIER[worn[3]].c : "#ffd700")));
+    }
+    const h = typeof getHeroHalo === "function" ? getHeroHalo() : null;
+    if (h && h.k) {
+      s.hk = h.k;
+    }
+  } catch {}
+
   s.d = [];
   if (typeof partyN == "function" && !partyAway() && !PCTX)
     for (let k = 1; k <= partyN(); k++) {
+      if (typeof pActive == "function" && !pActive(k)) continue;
       const c = withChar(k, presChar);
       c && s.d.push(c);
     }
   return s;
 }
-const presP = (h) => [Math.round(h.x), Math.round(h.y), (h.dir || 0) & 7, h.moving ? 1 : 0];
+const presP = (h) => {
+  const isAtk = h.act === "at" || (h.lastAtkT && performance.now() - h.lastAtkT < 400);
+  return [
+    Math.round(h.x),
+    Math.round(h.y),
+    (h.dir || 0) & 7,
+    isAtk ? 2 : (h.moving ? 1 : 0),
+    h.castSk || 0
+  ];
+};
 function presQ() {
   const q = [];
-  if (typeof partyN == "function" && !partyAway()) for (let k = 1; k <= partyN(); k++) q.push(presP(pAct(k).h));
+  if (typeof partyN == "function" && !partyAway()) {
+    for (let k = 1; k <= partyN(); k++) {
+      if (typeof pActive == "function" && !pActive(k)) continue;
+      q.push(presP(pAct(k).h));
+    }
+  }
   return q;
 }
 
@@ -210,7 +240,8 @@ function presTickFirebase() {
   const p = presP(H);
   const q = presQ();
   const strP = JSON.stringify([p, q]);
-  if (strP !== fbPresLastP && now - fbPresLastMoveT >= 1000 / PRES_HZ) {
+  const isAtk = p[3] === 2;
+  if (strP !== fbPresLastP && (isAtk ? now - fbPresLastMoveT >= 60 : now - fbPresLastMoveT >= 1000 / PRES_HZ)) {
     fbPresLastP = strP;
     fbPresLastMoveT = now;
     fbPresMyRef.update({ p: p, q: q, t: now });
@@ -343,10 +374,15 @@ function presCleanChar(c) {
     k: presNum(c.k, 0, 99999),
     r: [0, 1, 2, 3].map((i) => presNum(r[i] ?? -1, -1, 255)),
     m: c.m ? 1 : 0,
+    tk: c.tk ? String(c.tk).slice(0, 30) : "",
+    tn: c.tn ? String(c.tn).slice(0, 30) : "",
+    tc: c.tc ? String(c.tc).slice(0, 20) : "",
+    hk: c.hk ? String(c.hk).slice(0, 10) : "",
+    rb: presNum(c.rb, 0, 99),
   };
 }
 function presEnt(p) {
-  const e = { x: 0, y: 0, dir: 0, act: "st", actT: Math.random() * 2, buf: [], runT: 0, oth: null };
+  const e = { x: 0, y: 0, dir: 0, act: "st", actT: Math.random() * 2, buf: [], runT: 0, atkT: 0, oth: null };
   p && presSample(e, p, !0);
   return e;
 }
@@ -364,6 +400,10 @@ function presSetSnap(p, s) {
   const c = presCleanChar(s);
   c.v = s.v ? 1 : 0;
   c.rb = presNum(s.rb, 0, 99);
+  c.tk = s.tk || "";
+  c.tn = s.tn || "";
+  c.tc = s.tc || "";
+  c.hk = s.hk || "";
   c.pc = typeof PT_CAMP < "u" && PT_CAMP[s.pc] ? s.pc : ""; // party colour ("" = older client: per-character colours)
   c.d = (Array.isArray(s.d) ? s.d : []).slice(0, 6).map(presCleanChar);
   p.s = c;
@@ -384,9 +424,16 @@ function presMove(p, pos, q, snap) {
 function presSample(e, p, snap) {
   if (!Array.isArray(p) || p.length < 2) return;
   const t = performance.now(),
-    s = { t, x: +p[0] || 0, y: +p[1] || 0, d: (p[2] | 0) & 7, a: p[3] | 0 },
+    s = { t, x: +p[0] || 0, y: +p[1] || 0, d: (p[2] | 0) & 7, a: p[3] | 0, sk: (p[4] | 0) },
     b = e.buf,
     l = b[b.length - 1];
+  if (s.a === 2) {
+    e.atkT = 0.45;
+    e.act = "at";
+    e.actT = 0;
+    e.dir = s.d;
+    e.castSk = s.sk;
+  }
   if (snap || !l || Math.hypot(s.x - l.x, s.y - l.y) > 600) {
     b.length = 0;
     b.push(s);
@@ -418,10 +465,19 @@ function presStepEnt(e, now, dt) {
   const dist = Math.hypot(x - e.x, (y - e.y) * 2);
   dist > 0.05 && (e.runT = 0.12);
   e.runT -= dt;
-  const act = e.runT > 0 ? "run" : "st";
-  act !== e.act && ((e.act = act), (e.actT = 0));
-  // JX1 run cycle: one frame per RunSpeed (10) scene units, like the local hero (render.js stepAct)
-  e.actT += act === "run" ? (Math.min(dist, 96) / 10) * ((typeof JX_MS == "object" ? JX_MS.run : 42.5) / 1e3) : dt;
+  if (e.atkT > 0) {
+    e.atkT -= dt;
+    e.act = "at";
+    e.actT += dt;
+    if (e.atkT <= 0) {
+      e.act = e.runT > 0 ? "run" : "st";
+      e.actT = 0;
+    }
+  } else {
+    const act = e.runT > 0 ? "run" : "st";
+    act !== e.act && ((e.act = act), (e.actT = 0));
+    e.actT += act === "run" ? (Math.min(dist, 96) / 10) * ((typeof JX_MS == "object" ? JX_MS.run : 42.5) / 1e3) : dt;
+  }
   e.x = x;
   e.y = y;
   e.dir = d;
@@ -463,12 +519,13 @@ function presStep() {
       cand.push([Math.hypot(p.ent.x - H.x, (p.ent.y - H.y) * 2), p]);
   }
   cand.sort((a, b) => a[0] - b[0]);
+  const hideOtherParty = !!(typeof S == "object" && S && (S.hideOtherParty || S.partyAway));
   let n = 0;
   for (const [, p] of cand.slice(0, PRES_MAX_DRAW)) {
     if (n >= PRES_MAX_ACT) break;
     out.push(p.ent);
     n++;
-    if (p.s.d.length) for (const e of p.d) n < PRES_MAX_ACT && onScreen(e.x, e.y, 200) && (out.push(e), n++);
+    if (!hideOtherParty && p.s.d.length) for (const e of p.d) n < PRES_MAX_ACT && onScreen(e.x, e.y, 200) && (out.push(e), n++);
   }
 }
 const presLookOf = (e) => (e.oth.k < 0 ? e.oth.p.look : e.oth.p.dl[e.oth.k]);
@@ -501,6 +558,20 @@ function othDraw(c, e) {
   const ch = presCharOf(e),
     L = presLookOf(e);
   if (!ch) return;
+  const main = e.oth.k < 0;
+
+  // 1. Draw Halo (vòng sáng) under foot for main character
+  if (main) {
+    if (ch.hk && typeof drawHalo === "function") {
+      drawHalo(c, ch.hk, e.x, e.y, 0.96);
+    } else if (ch.rb > 0 && typeof JXCS !== "undefined") {
+      const csIdx = Math.min(5, ch.rb);
+      if (JXCS[csIdx] && typeof drawState === "function") {
+        drawState(c, JXCS[csIdx], e.x, e.y, 0, (typeof R !== "undefined" && R.clock) || 0, (typeof ST_HERO_K !== "undefined" ? ST_HERO_K : 1 / 0.6), 0.95);
+      }
+    }
+  }
+
   let h = 0;
   const jx = presJx() && L;
   // layered look: nothing until all its sheets are loaded (no pop from the old single-sheet sprite)
@@ -517,8 +588,9 @@ function othDraw(c, e) {
     c.restore();
   }
   // JX1 pate height (render.js heroLabelLift) of the remote character
-  const lift = 10 + Math.round(((ch.x ? 80 : 90) + (ch.m ? 20 : 0) + 13) * 0.866),
-    main = e.oth.k < 0;
+  const lift = 10 + Math.round(((ch.x ? 80 : 90) + (ch.m ? 20 : 0) + 13) * 0.866);
+  const subText = main && ch.tn ? (ch.tk === "admin" ? ch.tn : `«${ch.tn}»`) : "";
+  const subCol = main && ch.tc ? ch.tc : "#ffd700";
   label(
     e.x,
     e.y - lift,
@@ -527,6 +599,8 @@ function othDraw(c, e) {
     main ? 12 : 11,
     -1,
     "",
+    subText,
+    subCol,
   );
 }
 

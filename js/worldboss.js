@@ -118,6 +118,9 @@ function spawnWorldBoss(force = false) {
   WB.st = "up";
   WB.end = Date.now() + 5 * 60 * 1000;
   WB.playerDmg = 0;
+  WB.defeatDone = false;
+  WB.rewardClaimed = false;
+  WB.resultModalShown = false;
 
   WB.bots = WB_BOT_POOL.map((b) => ({
     name: b.n,
@@ -222,12 +225,15 @@ function wbInitFirebase() {
           WB.arena.bossInst.hp = val.hp;
         }
       }
-      if (val.st === "dead" && WB.arena.on && !WB.defeatedHandled) {
+      if (val.st === "dead" && !WB.defeatDone) {
         WB.defeatedHandled = true;
         handleBossDefeated(false, val.killer);
       }
-      if (val.st === "up") {
+      if (val.st === "up" && WB.st !== "up") {
         WB.defeatedHandled = false;
+        WB.defeatDone = false;
+        WB.rewardClaimed = false;
+        WB.resultModalShown = false;
       }
       updateWbButtonState();
       renderWbDpsMeter();
@@ -295,6 +301,10 @@ function updateWbLeaderboard() {
  * Main Tick for World Boss & simulated combat
  */
 function wbTick() {
+  if (WB.st === "dead" || WB.defeatDone) {
+    updateWbButtonState();
+    return;
+  }
   const sched = getWbSchedule();
 
   // If not manually forced 'up' and not in arena, sync with schedule
@@ -357,13 +367,26 @@ function wbTick() {
  * When Boss HP reaches 0 OR 5m timeout
  */
 function handleBossDefeated(isTimeout = false) {
-  if (WB.st === "dead") return;
+  if (WB.st === "dead" || WB.defeatDone) return;
+  WB.defeatDone = true;
   WB.st = "dead";
   const dpsEl = document.getElementById("wbDpsMeter");
   if (dpsEl) dpsEl.style.display = "none";
   const sched = getWbSchedule();
   if (S && S.rw) {
     S.rw.wbKilledDate = sched.todayKey;
+  }
+
+  // Cập nhật Firebase ngay lập tức để đồng bộ và chấm dứt spam
+  if (wbFirebaseOn()) {
+    try {
+      firebase.database().ref("worldboss/state").update({
+        st: "dead",
+        hp: 0,
+        killer: (S && S.name) || "Hiệp Sĩ",
+        endedAt: Date.now()
+      });
+    } catch (e) {}
   }
 
   updateWbLeaderboard();
@@ -405,6 +428,8 @@ function handleBossDefeated(isTimeout = false) {
  * Grant Rewards & 1-day title/halo & real items (strictly by damage ranking)
  */
 function grantPlayerWbRewards(isTimeout = false) {
+  if (WB.rewardClaimed) return;
+  WB.rewardClaimed = true;
   const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
   let knbGain = 0;
   let goldGain = 0;
@@ -558,6 +583,8 @@ function grantPlayerWbRewards(isTimeout = false) {
  * Result Dialog
  */
 function openWbResultModal(top1Name, isTimeout = false) {
+  if (WB.resultModalShown) return;
+  WB.resultModalShown = true;
   const r = WB.lastRewards || {};
   const medal = r.rank === 1 ? "👑" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank || 1}`;
   let body = `

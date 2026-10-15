@@ -1433,8 +1433,9 @@ function pickFaction() {
         ),
         ($("#ncGo").onclick = () => {
           const c = a.value.trim().replace(/\s+/g, " ");
-          if (c.length < 2) {
-            toast("Tên cần ít nhất 2 ký tự");
+          const okMain = typeof nameCheck == "function" ? nameCheck(c) : { ok: c.length >= 2, msg: "Tên cần ít nhất 2 ký tự" };
+          if (!okMain.ok) {
+            toast(`Nhân vật: ${okMain.msg}`);
             return;
           }
           const dn = [c.toLowerCase()];
@@ -1455,6 +1456,8 @@ function pickFaction() {
   );
 }
 function createCharacter(n, t, e, dd) {
+  const chk = typeof nameCheck == "function" ? nameCheck(n) : { ok: !0 };
+  if (!chk.ok) return toast(chk.msg);
   ((S.fac = "vo" + e),
     (S.sex = t),
     (S.sexSet = 1),

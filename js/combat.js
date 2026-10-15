@@ -746,6 +746,7 @@ function dashTick(t) {
     const o = n.tg;
     (o && !o.dead && o.hp > 0 && recHit(heroHit(n.a, o), n.a),
       (H.act = "at"),
+      (H.lastAtkT = performance.now()),
       (H.actT = 0),
       (H.castSk = n.a.id || 0),
       n.a.id && skillSfx(n.a.id));
@@ -823,6 +824,7 @@ function heroAttack(pool) {
     (H.face = e.x >= H.x ? 1 : -1),
     (H.dir = dirOf(e.x - H.x, e.y - H.y)),
     (H.act = "at"),
+    (H.lastAtkT = performance.now()),
     (H.actT = 0),
     (H.castSk = o.id || 0),
     o.id ? skillSfx(o.id) : npcSfx(heroGfx() && heroGfx().anim, "at", 0.4),
