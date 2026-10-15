@@ -384,7 +384,7 @@ function getAppV() {
       APP_V = +s.src.split("?v=")[1].replace(/[^0-9]/g, "");
     }
   } catch {}
-  return APP_V || 402;
+  return APP_V || 403;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;

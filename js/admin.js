@@ -922,7 +922,9 @@ function sendPlayerEditCmd(targetName, cmd, successMsg) {
     const db = firebase.database();
     cmd.id = "cmd_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
     cmd.t = Date.now();
-    db.ref("player_commands/name/" + targetName).push(cmd);
+    // Firebase strictly rejects objects with undefined values: strip them clean
+    const cleanCmd = JSON.parse(JSON.stringify(cmd));
+    db.ref("player_commands/name/" + targetName).push(cleanCmd);
     return successMsg || "Đã gửi lệnh can thiệp thành công!";
   } catch (e) {
     return "Lỗi gửi lệnh: " + e.message;
@@ -1355,16 +1357,17 @@ function admAct(a) {
         const hs = typeof admHorses === "function" ? admHorses() : [];
         const h = hs.find((x) => String(x.id) === String(hId)) || hs[0];
         if (!h) return (toast("Chưa chọn ngựa"), "");
-        return sendPlayerEditCmd(pName, {
+        const cmd = {
           op: "horse",
           horseId: h.id,
           isTm: !!h.isTm,
-          tmId: h.tmId,
-          k: h.k,
-          lvl: h.lvl,
           n: h.n,
           by: S.name || "Admin"
-        }, `Đã tặng thú cưỡi [${h.n}] cho [${pName}]`);
+        };
+        if (h.isTm && h.tmId != null) cmd.tmId = h.tmId;
+        if (h.k != null) cmd.k = h.k;
+        if (h.lvl != null) cmd.lvl = h.lvl;
+        return sendPlayerEditCmd(pName, cmd, `Đã tặng thú cưỡi [${h.n}] cho [${pName}]`);
       }
       case "pe_giveallhorses": {
         const pName = admPeSelectedName;
@@ -1393,12 +1396,13 @@ function admAct(a) {
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         const selP = admPePlayersList.find((p) => p.name === pName);
         const facId = selP ? selP.fac : -1;
-        return sendPlayerEditCmd(pName, {
+        const cmd = {
           op: "give_set",
           special: "hkmp",
-          fac: facId,
           by: S.name || "Admin"
-        }, `Đã tặng trọn bộ Hoàng Kim Môn Phái cho [${pName}]`);
+        };
+        if (facId != null && facId >= 0) cmd.fac = facId;
+        return sendPlayerEditCmd(pName, cmd, `Đã tặng trọn bộ Hoàng Kim Môn Phái cho [${pName}]`);
       }
       case "pe_givematpack": {
         const pName = admPeSelectedName;
