@@ -226,8 +226,9 @@ function spawnMis(f, m, x1, y1, x2, y2, delay, depth, tgt) {
     return;
   }
   const d = Math.hypot(x2 - x1, y2 - y1),
+    fullAnimLife = (m.fly && m.fly.n && m.fly.ms ? (m.fly.n * m.fly.ms) / 1000 : 0) || m.life || 0.6,
     dur = still
-      ? clamp(m.life || 0.6, 0.3, f.ef ? 2.4 : Ta)
+      ? Math.max(0.3, fullAnimLife)
       : clamp(d / Math.max(60, m.spd || 300), 0.12, Math.min(0.9, Math.max(0.2, m.life || 0.9)));
   R.fx.push({
     k: "mis",
