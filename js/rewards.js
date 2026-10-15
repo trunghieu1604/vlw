@@ -365,10 +365,17 @@ function doReborn() {
   for (const e in S.sk) SK[e] && SK[e].book && (s[e] = 1);
   ((S.lvl = 1), (S.xp = 0), (S.attr = { str: 0, dex: 0, vit: 0, eng: 0 }), (S.attrPts = REB_ATTR));
   const i = {};
-  for (const e in S.sk)
-    SK[e] && SK[e].tier === 90 && S.sk[e] > 0 && !(typeof isBr90 == "function" && isBr90(e)) && (i[e] = S.sk[e]);
+  for (const e in S.sk) {
+    if (!SK[e] || S.sk[e] <= 0) continue;
+    if (SK[e].tier === 90 && !(typeof isBr90 == "function" && isBr90(e))) {
+      i[e] = S.sk[e];
+    } else if (typeof skIsExp == "function" && skIsExp(e)) {
+      i[e] = S.sk[e];
+    }
+  }
   ((S.sk = Object.assign({}, i)),
     (S.skPts = REB_SK),
+    typeof syncExpSkills == "function" && syncExpSkills(),
     o && ((S.sk[o] = 1), (S.main = o)),
     (S.mainLock = !1),
     (S.slots = [0, 0, 0, 0]),
@@ -377,7 +384,7 @@ function doReborn() {
       ? (R.dirty = !0)
       : ((S.stage = 1), (S.wave = 1), (R.tower = null), (R.enemies = []), (R.dirty = !0), (R.zoneShown = null)),
     log(
-      `<b class="up">Chuyển sinh lần ${n}!</b> Tẩy toàn bộ điểm cũ (giữ võ công 90${
+      `<b class="up">Chuyển sinh lần ${n}!</b> Tẩy toàn bộ điểm cũ (giữ võ công 90, 120, 150${
         Object.keys(i).length
           ? ": " +
             Object.keys(i)

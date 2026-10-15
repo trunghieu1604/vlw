@@ -43,10 +43,19 @@ function tayTuy(n, t) {
     const s = FAC[S.fac].starter,
       o = S.bkOk || (S.bkOk = {}),
       i = {};
-    for (const c in S.sk)
-      (SK[c] && SK[c].book && (o[c] = 1),
-        SK[c] && SK[c].tier === 90 && !isBr90(c) ? (i[c] = S.sk[c]) : (S.skPts += S.sk[c]));
+    for (const c in S.sk) {
+      if (!SK[c] || S.sk[c] <= 0) continue;
+      SK[c].book && (o[c] = 1);
+      if (SK[c].tier === 90 && !isBr90(c)) {
+        i[c] = S.sk[c];
+      } else if (typeof skIsExp == "function" && skIsExp(c)) {
+        i[c] = S.sk[c];
+      } else {
+        S.skPts += S.sk[c];
+      }
+    }
     ((S.sk = i), (S.main = 0), (S.mainLock = !1), (S.slots = [0, 0, 0, 0]));
+    typeof syncExpSkills == "function" && syncExpSkills();
   }
   ((R.dirty = !0),
     recalc(),

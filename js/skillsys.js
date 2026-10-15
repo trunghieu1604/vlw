@@ -486,6 +486,19 @@ function syncExpSkills() {
   if (!S || !S.sk || !S.fac) return;
   init120Skills();
   const tm = skTrainMap();
+  const skl = typeof SKL == "function" ? SKL() : (S.skL || {});
+  for (const id in skl) {
+    if (skIsExp(id) && !tm[id] && skl[id] && skl[id].lv > 0) {
+      tm[id] = { lv: skl[id].lv, xp: skl[id].xp || 0 };
+    }
+  }
+  if (S.bkOk) {
+    for (const id in S.bkOk) {
+      if (S.bkOk[id] && skIsExp(id) && !tm[id] && SK[id] && SK[id].f === S.fac) {
+        tm[id] = { lv: 1, xp: 0 };
+      }
+    }
+  }
   for (const id in S.sk) {
     if (skIsExp(id)) {
       if (SK[id] && SK[id].f !== S.fac) {
