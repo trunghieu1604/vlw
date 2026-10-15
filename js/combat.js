@@ -856,12 +856,10 @@ function heroAttack(pool) {
             .slice(0, maxTargets - 1)
         : []);
   f.unshift(e);
-  const u = typeof JFX < "u" && JFX.f[o.id] && JFX.f[o.id].meleeFly;
-  const singleFx = u || o.nMis > 1 || o.geo || o.around;
+  skillFx(H, e, o);
   for (const c of f) {
     const dmg = heroHit(o, c);
     recHit(dmg, o);
-    (!singleFx || c === e) && skillFx(H, c, o);
     // 120 Ngũ Độc - Hấp Tinh Yểm (yểm độc theo sát thương)
     if (S.sk && S.sk[711] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[711], 1, 15)) {
       const pDmg = dmg * (sk120Scale(S.sk[711], 30, 85) / 100);

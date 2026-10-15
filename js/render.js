@@ -48,7 +48,7 @@ const JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} },
   UA = 2,
   GA = 0.3,
   dir16 = (dx, dy) => ((Math.round(Math.atan2(-dx, dy) / (Math.PI / 8)) % 16) + 16) % 16,
-  animDur = (s) => (s && s.n && s.ms ? Math.min(1.2, (s.n * s.ms) / 1000) : 0.6),
+  animDur = (s) => (s && s.n && s.ms ? Math.max(0.2, (s.n * s.ms) / 1000) : 0.6),
   PRELOADED_SKILLS = new Set();
 
 function preloadSkillFx(id, depth = 0) {
@@ -314,26 +314,113 @@ function stepFx(fx, dt) {
   return false;
 }
 
+const FEATHER_CACHE = new Map();
+
+function getFeatheredSheet(image, sheet) {
+  if (!image || !image.complete || !image.naturalWidth) return image;
+  const key = sheet.f;
+  if (FEATHER_CACHE.has(key)) return FEATHER_CACHE.get(key);
+
+  const w = sheet.w || image.naturalWidth;
+  const h = sheet.h || image.naturalHeight;
+  const n = sheet.n || 1;
+  const d = sheet.d || 1;
+
+  // Tự động làm mềm viền (feather) cho các hiệu ứng chạm viền frame
+  const padX = Math.min(18, Math.floor(w * 0.08));
+  const padY = Math.min(18, Math.floor(h * 0.08));
+
+  if (padX < 3 && padY < 3) {
+    FEATHER_CACHE.set(key, image);
+    return image;
+  }
+
+  try {
+    const cv = document.createElement("canvas");
+    cv.width = image.naturalWidth;
+    cv.height = image.naturalHeight;
+    const ctx = cv.getContext("2d");
+    ctx.drawImage(image, 0, 0);
+
+    ctx.globalCompositeOperation = "destination-out";
+
+    for (let c = 0; c < n; c++) {
+      const fx = c * w;
+      for (let r = 0; r < d; r++) {
+        const fy = r * h;
+
+        if (padX >= 3) {
+          const gL = ctx.createLinearGradient(fx, fy, fx + padX, fy);
+          gL.addColorStop(0, "rgba(0,0,0,1)");
+          gL.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = gL;
+          ctx.fillRect(fx, fy, padX, h);
+
+          const gR = ctx.createLinearGradient(fx + w - padX, fy, fx + w, fy);
+          gR.addColorStop(0, "rgba(0,0,0,0)");
+          gR.addColorStop(1, "rgba(0,0,0,1)");
+          ctx.fillStyle = gR;
+          ctx.fillRect(fx + w - padX, fy, padX, h);
+        }
+
+        if (padY >= 3) {
+          const gT = ctx.createLinearGradient(fx, fy, fx, fy + padY);
+          gT.addColorStop(0, "rgba(0,0,0,1)");
+          gT.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = gT;
+          ctx.fillRect(fx, fy, w, padY);
+
+          const gB = ctx.createLinearGradient(fx, fy + h - padY, fx, fy + h);
+          gB.addColorStop(0, "rgba(0,0,0,0)");
+          gB.addColorStop(1, "rgba(0,0,0,1)");
+          ctx.fillStyle = gB;
+          ctx.fillRect(fx, fy + h - padY, w, padY);
+        }
+      }
+    }
+
+    FEATHER_CACHE.set(key, cv);
+    return cv;
+  } catch (err) {
+    FEATHER_CACHE.set(key, image);
+    return image;
+  }
+}
+
 function drawFxSpriteSheet(sheet, dir, t, x, y, loop) {
   if (!sheet || !sheet.f) return false;
-  const image = img(sheet.f);
-  if (!image || !image.complete || !image.naturalWidth) return false;
+  const rawImg = img(sheet.f);
+  if (!rawImg || !rawImg.complete || !rawImg.naturalWidth) return false;
   const ms = Math.max(1, sheet.ms || 56);
   const n = Math.max(1, sheet.n || 1);
   const d = Math.max(1, sheet.d || 1);
   const fIdx = Math.floor((1000 * Math.max(0, t)) / ms);
-  const col = loop ? (fIdx % n) : Math.min(n - 1, fIdx);
+
+  // Nếu không lặp, dừng vẽ ngay khi đã diễn xong hết frame cuối, tránh đơ/chớp hình
+  if (!loop && fIdx >= n) return false;
+
+  const col = loop ? (fIdx % n) : fIdx;
   const row = d > 1 ? (((Math.round((dir * d) / 16) % d) + d) % d) : 0;
+  const image = getFeatheredSheet(rawImg, sheet);
+
+  const dw = Math.round(sheet.w * FX_SCALE);
+  const dh = Math.round(sheet.h * FX_SCALE);
+  const dx = Math.round(x - sheet.ax * FX_SCALE);
+  const dy = Math.round(y - sheet.ay * FX_SCALE);
+
+  CX.imageSmoothingEnabled = true;
+  CX.imageSmoothingQuality = "high";
+
   CX.drawImage(
     image,
     col * sheet.w,
     row * sheet.h,
     sheet.w,
     sheet.h,
-    x - sheet.ax * FX_SCALE,
-    y - sheet.ay * FX_SCALE,
-    sheet.w * FX_SCALE,
-    sheet.h * FX_SCALE
+    dx,
+    dy,
+    dw,
+    dh
   );
   return true;
 }
@@ -343,15 +430,16 @@ function drawFx(fx) {
   if (fx.k === "mis") {
     const m = fx.m;
     let drawn = false;
-    if (m.flyb) drawn = drawFxSpriteSheet(m.flyb, fx.dir, fx.t, fx.x, fx.y, true);
-    if (m.fly) drawn = drawFxSpriteSheet(m.fly, fx.dir, fx.t, fx.x, fx.y, true) || drawn;
+    const isLoop = !fx.still;
+    if (m.flyb) drawn = drawFxSpriteSheet(m.flyb, fx.dir, fx.t, fx.x, fx.y, isLoop);
+    if (m.fly) drawn = drawFxSpriteSheet(m.fly, fx.dir, fx.t, fx.x, fx.y, isLoop) || drawn;
     return drawn;
   }
-  if (fx.sb && fx.t < (fx.sb.n * fx.sb.ms) / 1000 + 0.05) {
-    drawFxSpriteSheet(fx.sb, fx.dir, fx.t, fx.x, fx.y, false);
-  }
-  if (fx.s && fx.t < (fx.s.n * fx.s.ms) / 1000 + 0.05) {
-    drawFxSpriteSheet(fx.s, fx.dir, fx.t, fx.x, fx.y, false);
+  if (fx.k === "boom") {
+    let drawn = false;
+    if (fx.sb) drawn = drawFxSpriteSheet(fx.sb, fx.dir, fx.t, fx.x, fx.y, false) || drawn;
+    if (fx.s) drawn = drawFxSpriteSheet(fx.s, fx.dir, fx.t, fx.x, fx.y, false) || drawn;
+    return drawn;
   }
   return true;
 }
@@ -1054,8 +1142,8 @@ function draw(i) {
       SERIES_COL[e.series],
     ),
       e.poison > 0 && ((t.fillStyle = "#8fe34a"), t.fillRect(e.x - 22, f + 5, (44 * e.poison) / 3, 2)));
-    typeof jxmDrawAbove == "function" && jxmDrawAbove(t);
   }
+  typeof jxmDrawAbove == "function" && jxmDrawAbove(t);
   // FX step+draw — chạy 1 lần/frame, NGOÀI entity loop
   const fxList = R.fx;
   R.fx = [];

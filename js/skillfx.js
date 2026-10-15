@@ -122,10 +122,21 @@ function drawState(s, t, f, c, n, e, o, i = 1) {
   else if (t.red) r = getCsRed(r);
   const u = Math.floor((e * 1e3) / t.ms) % t.n,
     a = c;
-  ((o *= ST_K),
-    (s.globalAlpha = i),
-    s.drawImage(r, u * t.w, 0, t.w, t.h, f - t.ax * o, a - t.ay * o, t.w * o, t.h * o),
-    (s.globalAlpha = 1));
+  o *= ST_K;
+  s.globalAlpha = i;
+  s.imageSmoothingEnabled = true;
+  s.drawImage(
+    r,
+    u * t.w,
+    0,
+    t.w,
+    t.h,
+    Math.round(f - t.ax * o),
+    Math.round(a - t.ay * o),
+    Math.round(t.w * o),
+    Math.round(t.h * o)
+  );
+  s.globalAlpha = 1;
 }
 const JXCS = {
   1: { f: "fx/cs_1.webp", n: 15, w: 122, h: 109, ax: 61, ay: 68, ms: 70, pos: "foot" },
