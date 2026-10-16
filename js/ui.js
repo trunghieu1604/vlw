@@ -463,7 +463,7 @@ function maskPickModal() {
     <h4 style="margin:10px 0 6px">Mặt nạ trong Hành trang (${list.length})</h4>
     ${list.length ? list.map(itemRow).join("") : '<p class="dim small">Chưa có mặt nạ nào trong túi đồ. Bạn có thể mua tại tab Mặt nạ trong Kỳ Trân Các.</p>'}
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Mặt nạ (10 KNB)</button>
+      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Mặt nạ (100 KNB)</button>
     </div>`,
     () => {
       const bUn = $("#mMaskUn");
