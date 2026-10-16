@@ -83,7 +83,7 @@ function chatRender() {
 function chatRenderNow() {
   const t = $("#chatBox");
   if (!t) return;
-  const e = CHAT.msgs.filter((o) => !chatIsCode(o.msg)),
+  const e = CHAT.msgs.filter((o) => o.sys || !chatIsCode(o.msg)),
     n = CHAT.open ? e : e.slice(-4),
     s =
       CHAT.state === "off"
@@ -138,7 +138,7 @@ function chatPush(t) {
 }
 
 const CHAT_CODE =
-    /^\s*[\/／]|(?<![A-Za-z0-9])[SR]\s*\.\s*[a-z_]{2,}\s*(\[|=|\.|\()|\w\s*=>\s*[\{\w(]|\bconsole\b|localStorage|sessionStorage|\.forEach\s*\(|\bfunction\s*\(|\bdocument\s*\.|\bwindow\s*\.|\beval\s*\(|Object\s*\.\s*(keys|assign|values)/i,
+    /^\s*[\/／](?!spam\b)|(?<![A-Za-z0-9])[SR]\s*\.\s*[a-z_]{2,}\s*(\[|=|\.|\()|\w\s*=>\s*[\{\w(]|\bconsole\b|localStorage|sessionStorage|\.forEach\s*\(|\bfunction\s*\(|\bdocument\s*\.|\bwindow\s*\.|\beval\s*\(|Object\s*\.\s*(keys|assign|values)/i,
   chatIsCode = (t) => CHAT_CODE.test(String(t || ""));
 
 function chatPruneFirebase() {
@@ -209,6 +209,44 @@ async function chatSend(t) {
     !t)
   )
     return;
+  const spamMatch = t.match(/^\/spam(?:\s+(.*))?$/i);
+  if (spamMatch) {
+    const msgText = (spamMatch[1] || "").trim();
+    if (!msgText) return toast("Cú pháp: /spam <nội dung thông báo>");
+    const isAdm = (typeof S !== "undefined" && S && S.adm) ||
+                  (typeof admHostOk === "function" && admHostOk()) ||
+                  (typeof admUnlocked !== "undefined" && admUnlocked);
+    if (!isAdm) return toast("Lệnh /spam chỉ dành cho Admin!");
+    const bcastMsg = "📢 [THÔNG BÁO]: " + msgText;
+    if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+      try {
+        await firebase.database().ref("chat/msgs").push({
+          cid: "admin",
+          sys: true,
+          name: "Hệ Thống",
+          msg: bcastMsg,
+          ts: Date.now()
+        });
+        $("#chatTxt").value = "";
+        toast("Đã phát thông báo toàn server!");
+      } catch (e) {
+        toast("Lỗi phát thông báo: " + e.message);
+      }
+    } else {
+      CHAT.msgs.push({
+        id: "sys" + Date.now(),
+        cid: "admin",
+        sys: true,
+        name: "Hệ Thống",
+        msg: bcastMsg,
+        ts: Date.now()
+      });
+      chatRender();
+      $("#chatTxt").value = "";
+      toast("Đã phát thông báo toàn server!");
+    }
+    return;
+  }
   if (chatIsCode(t)) return toast("Không gửi được tin dạng câu lệnh / mã lệnh");
   if (!CHAT.sb) return toast(CHAT.state === "load" ? "Chat đang kết nối, thử lại sau giây lát" : "Chat chưa kết nối");
   if (typeof hasRealName == "function" && !hasRealName())

@@ -115,6 +115,9 @@
   function run(g) {
     switch (g.op) {
       case "lvl":
+        if (typeof g.delta !== "undefined") {
+          return inCh(g.ch, () => lvSet(S.lvl + (+g.delta || 0)));
+        }
         return inCh(g.ch, () => lvSet(g.v));
       case "xp":
         return inCh(g.ch, () => xpAdd(g.v));
@@ -123,10 +126,22 @@
       case "move":
         return moveTo(g.uids, g.ch | 0);
       case "gold":
+        if (g.setZero) {
+          S.gold = 0;
+          R.dirty = !0;
+          return `${nm()}đưa ngân lượng về 0`;
+        }
         S.gold = Math.max(0, (S.gold || 0) + (+g.v || 0));
+        R.dirty = !0;
         return `${nm()}${(+g.v >= 0 ? "+" : "") + fmtL(g.v)} ngân lượng`;
       case "knb":
+        if (g.setZero) {
+          S.knb = 0;
+          R.dirty = !0;
+          return `${nm()}đưa KNB về 0`;
+        }
         S.knb = Math.max(0, (S.knb || 0) + (+g.v || 0));
+        R.dirty = !0;
         return `${nm()}${(+g.v >= 0 ? "+" : "") + (+g.v)} KNB`;
       case "msg":
         setTimeout(() => {
@@ -355,6 +370,153 @@
         typeof save == "function" && save();
         typeof refresh == "function" && refresh();
         return `${nm()}đã bị thu hồi danh hiệu <b>VÕ LÂM MINH CHỦ</b>`;
+      }
+      case "give_vlmc": {
+        const rw = S.rw || (S.rw = {});
+        const titles = rw.titles || (rw.titles = {});
+        titles.vlmc = 1;
+        rw.title = "vlmc";
+        const gc = S.gc || (S.gc = {});
+        gc.VLMC = 1;
+        R.dirty = !0;
+        typeof save == "function" && save();
+        typeof refresh == "function" && refresh();
+        return `${nm()}được phong tặng danh hiệu <b>VÕ LÂM MINH CHỦ</b>`;
+      }
+      case "revoke_horse": {
+        const hName = g.n;
+        const hId = g.horseId;
+        let removed = 0;
+        const matchHorse = (h) => {
+          if (!h) return false;
+          if (hName && (h.n === hName || (h.n && h.n.includes(hName)))) return true;
+          if (hId && (String(h.id) === String(hId) || String(h.k) === String(hId))) return true;
+          if (g.tmId != null && h.tmId === g.tmId) return true;
+          return false;
+        };
+        if (S.eq && S.eq.horse && matchHorse(S.eq.horse)) {
+          delete S.eq.horse;
+          removed++;
+        }
+        if (Array.isArray(S.stable)) {
+          const before = S.stable.length;
+          S.stable = S.stable.filter((h) => !matchHorse(h));
+          removed += (before - S.stable.length);
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((h) => !(typeof isHorse === "function" ? isHorse(h) : h.d === 10) || !matchHorse(h));
+          removed += (before - S.inv.length);
+        }
+        if (typeof horseAttr === "function") horseAttr();
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}thu hồi ${removed} thú cưỡi [${esc(hName || "ngựa")}]`;
+      }
+      case "revoke_all_horses": {
+        let count = 0;
+        if (S.eq && S.eq.horse) {
+          delete S.eq.horse;
+          count++;
+        }
+        if (Array.isArray(S.stable)) {
+          count += S.stable.length;
+          S.stable = [];
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((h) => !(typeof isHorse === "function" ? isHorse(h) : h.d === 10));
+          count += (before - S.inv.length);
+        }
+        if (typeof horseAttr === "function") horseAttr();
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}thu hồi toàn bộ thú cưỡi (${count} con), dọn sạch Mã Trường`;
+      }
+      case "revoke_set": {
+        let setNames = [];
+        const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
+        if (g.setId) {
+          const found = all.find((x) => String(x.id) === String(g.setId));
+          if (found && Array.isArray(found.rows)) {
+            setNames = found.rows.map((r) => r.n || r[1] || "").filter(Boolean);
+          }
+        }
+        if (g.special === "hkmp") {
+          all.filter((x) => x.cat === "hkmp").forEach((s) => {
+            if (Array.isArray(s.rows)) s.rows.forEach((r) => setNames.push(r.n || r[1] || ""));
+          });
+        } else if (g.special === "ab") {
+          const ab = all.find((x) => x.n && x.n.includes("An Bang"));
+          if (ab && Array.isArray(ab.rows)) setNames = ab.rows.map((r) => r.n || r[1] || "");
+        } else if (g.special === "dq") {
+          const dq = all.find((x) => x.n && x.n.includes("Định Quốc"));
+          if (dq && Array.isArray(dq.rows)) setNames = dq.rows.map((r) => r.n || r[1] || "");
+        }
+        let removed = 0;
+        const matchItem = (it) => {
+          if (!it) return false;
+          if (setNames.some((sn) => sn && (it.n === sn || (it.n && it.n.includes(sn))))) return true;
+          if (g.special === "hkmp" && (it.hkmp || it.r === 4)) return true;
+          return false;
+        };
+        for (const k in S.eq || {}) {
+          if (matchItem(S.eq[k])) {
+            delete S.eq[k];
+            removed++;
+          }
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => !matchItem(it));
+          removed += (before - S.inv.length);
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}thu hồi ${removed} món trang bị [${esc(g.setName || g.special || "set")}]`;
+      }
+      case "strip_wear": {
+        let count = 0;
+        for (const k in S.eq || {}) {
+          if (S.eq[k]) {
+            delete S.eq[k];
+            count++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}lột toàn bộ ${count} món trang bị đang mặc trên người`;
+      }
+      case "enh_reset": {
+        let count = 0;
+        for (const k in S.eq || {}) {
+          const it = S.eq[k];
+          if (it && (typeof isHorse !== "function" || !isHorse(it))) {
+            it.enh = 0;
+            count++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        return `${nm()}giảm cường hóa về +0 toàn thân (${count} món)`;
+      }
+      case "revoke_matpack": {
+        S.mats = { ht: {}, ore: {}, shard: {}, misc: {} };
+        if (typeof RW === "function") RW().fd = 0;
+        R.dirty = !0;
+        return `${nm()}thu hồi toàn bộ kho nguyên liệu ép đồ (Huyền Tinh, Thủy Tinh, Đá c6, Phúc Duyên)`;
+      }
+      case "revoke_potions": {
+        if (typeof potStock === "function") {
+          for (const kind of ["life", "mana"]) {
+            const arr = potStock(kind);
+            if (Array.isArray(arr)) {
+              for (let i = 0; i < arr.length; i++) arr[i] = 0;
+            }
+          }
+        }
+        R.dirty = !0;
+        return `${nm()}rút toàn bộ dược phẩm (máu & mana về 0)`;
       }
     }
     return "";
