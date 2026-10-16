@@ -1265,12 +1265,15 @@ function admAct(a) {
           S.stash = S.stash.filter((it) => it && it.d !== 11);
           removed += before - S.stash.length;
         }
-        if (S.gc) delete S.gc["VUACHUA"];
+        if (S.gc) {
+          delete S.gc["VUACHUA"];
+          delete S.gc["NGUYETCA"];
+        }
         R.dirty = !0;
         typeof invDirty != "undefined" && (invDirty = !0);
         save();
         refresh();
-        return `Đã xóa ${removed} mặt nạ & reset thời hạn mua tại Kỳ Trân Các (Có thể nhập lại code VUACHUA)!`;
+        return `Đã xóa ${removed} mặt nạ & reset thời hạn mua tại Kỳ Trân Các (Có thể nhập lại code NGUYETCA)!`;
       }
       case "mask_refresh": {
         if (typeof migrateMasks == "function") migrateMasks();

@@ -586,22 +586,23 @@ async function netRedeem(t) {
     };
   }
 
-  // Giftcode VUACHUA: Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)
-  if (t === "VUACHUA") {
+  // Giftcode NGUYETCA: Mặt nạ Nguyệt Ca Đảo Chủ (3 ngày)
+  if (t === "NGUYETCA" || t === "VUACHUA") {
     if (S.inv.length >= INV_MAX) throw new Error("Hành trang đã đầy! Hãy dọn túi rồi nhận lại.");
-    const maskItem = typeof makeMaskItem === "function" ? makeMaskItem(1, true) : null;
+    const maskItem = typeof makeMaskItem === "function" ? makeMaskItem(1, false) : null;
     if (!maskItem) throw new Error("Lỗi khởi tạo mặt nạ");
     S.inv.unshift(maskItem);
+    S.gc["NGUYETCA"] = Date.now();
     S.gc[t] = Date.now();
     R.dirty = !0;
     invDirty = !0;
     save();
     refresh();
     uiSfx("levelup");
-    log(`<span class="admlog">[Giftcode]</span> Nhận thành công <b>Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)</b>!`);
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công <b>Mặt nạ Nguyệt Ca Đảo Chủ (3 ngày)</b>!`);
     return {
       note: "Mặt nạ Nguyệt Ca Đảo Chủ",
-      out: ["Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)"],
+      out: ["Mặt nạ Nguyệt Ca Đảo Chủ (3 ngày)"],
     };
   }
 
