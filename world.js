@@ -2237,6 +2237,13 @@ window.JW = {
       hurt: { f: "pl_kunlun_hurt.webp", n: 4, d: 8, w: 65, h: 50, ax: 32, ay: 48, ms: 83, sc: 0.6, fixed: 1 },
       die: { f: "pl_kunlun_die.webp", n: 6, d: 8, w: 130, h: 75, ax: 65, ay: 53, ms: 100, sc: 0.6, fixed: 1 },
     },
+    enemy206: {
+      st: { f: "enemy206_st.webp", n: 16, d: 8, w: 140, h: 151, ax: 38, ay: 131, ms: 143, fixed: 1 },
+      run: { f: "enemy206_run.webp", n: 16, d: 8, w: 144, h: 117, ax: 72, ay: 94, ms: 38, fixed: 1 },
+      at: { f: "enemy206_at.webp", n: 16, d: 8, w: 267, h: 196, ax: 107, ay: 148, ms: 31, fixed: 1 },
+      hurt: { f: "enemy206_hurt.webp", n: 8, d: 8, w: 249, h: 177, ax: 89, ay: 142, ms: 42, fixed: 1 },
+      die: { f: "enemy206_die.webp", n: 9, d: 8, w: 284, h: 205, ax: 128, ay: 140, ms: 50, fixed: 1 },
+    },
   },
   town: { id: 37, n: "Biện Kinh", bg: "img/z/town.jpg" },
 };

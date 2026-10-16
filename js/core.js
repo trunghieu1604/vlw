@@ -314,17 +314,19 @@ window.isGodMode = isGodMode;
 J.items[11] = {
   n: "Mặt nạ",
   list: [
-    { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/mask_nguyetca.png", perm: true },
-    { k: 2, n: "Mặt nạ Đoạt Phách Vệ Sĩ", anim: "enemy029", d: "Đeo vào hóa thân thành Đoạt Phách Vệ Sĩ uy phong lẫm liệt, tay cầm khiên kiếm hoàng lăng.", ic: "img/ep/mask_doatphach.png", duration: 3 * 86400 * 1000 },
-    { k: 3, n: "Mặt nạ Lam Y Nữ Hiệp", anim: "boss002", d: "Đeo vào hóa thân thành Lam Y Nữ Hiệp kiều diễm, song kiếm vô song phong hoa tuyệt đại.", ic: "img/ep/mask_lamy.png", duration: 3 * 86400 * 1000 },
-    { k: 4, n: "Mặt nạ Miêu Cương Thánh Nữ", anim: "boss008", d: "Đeo vào hóa thân thành Miêu Cương Thánh Nữ áo tiên vương miện đài các kiêu sa.", ic: "img/ep/mask_thanhnu.png", duration: 3 * 86400 * 1000 },
-    { k: 5, n: "Mặt nạ Hồng Y Nữ Hiệp", anim: "boss005", d: "Đeo vào hóa thân thành Hồng Y Nữ Hiệp kiều diễm, tóc đuôi ngựa thướt tha, kiếm vũ khuynh thành.", ic: "img/ep/mask_hongy.png", duration: 3 * 86400 * 1000 },
-    { k: 6, n: "Mặt nạ Thúy Y Tiên Tử", anim: "enemy059", d: "Đeo vào hóa thân thành Thúy Y Tiên Tử áo lục song kiếm, dáng ngọc thanh tân thoát tục.", ic: "img/ep/mask_thuyy.png", duration: 3 * 86400 * 1000 },
-    { k: 7, n: "Mặt nạ Tiêu Dao Phiến Khách", anim: "boss006", d: "Đeo vào hóa thân thành Tiêu Dao Phiến Khách lãng tử hào hoa, tay phe phẩy quạt ngạo thị quần hùng.", ic: "img/ep/mask_phienkhach.png", duration: 3 * 86400 * 1000 },
-    { k: 8, n: "Mặt nạ Thi Nghi Sinh", anim: "enemy003", d: "Đeo vào hóa thân thành Thi Nghi Sinh nho nhã phong lưu, văn võ song toàn.", ic: "img/ep/mask_thinghisinh.png", duration: 3 * 86400 * 1000 },
-    { k: 9, n: "Mặt nạ Phi Sa Cuồng Đao", anim: "enemy083", d: "Đeo vào hóa thân thành Phi Sa Cuồng Đao dũng mãnh, phong trần cái thế.", ic: "img/ep/mask_phisa.png", duration: 3 * 86400 * 1000 },
-    { k: 10, n: "Mặt nạ Lạc Quang Thiền Sư", anim: "enemy021", d: "Đeo vào hóa thân thành Lạc Quang Thiền Sư võ công thâm hậu, độc bộ võ lâm.", ic: "img/ep/mask_lacquang.png", duration: 3 * 86400 * 1000 },
-    { k: 11, n: "Mặt nạ Boss Vân Tuyết Sơn", anim: "boss013", d: "Đeo vào hóa thân thành Đại Boss Vân Tuyết Sơn oai phong lẫm liệt chấn nhiếp bát phương.", ic: "img/ep/mask_vantuyetson.png", duration: 3 * 86400 * 1000 },
+    { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/ldt.png", perm: true },
+    { k: 2, n: "Mặt nạ Đoạt Phách Vệ Sĩ", anim: "enemy029", d: "Đeo vào hóa thân thành Đoạt Phách Vệ Sĩ uy phong lẫm liệt, tay cầm khiên kiếm hoàng lăng.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 3, n: "Mặt nạ Lam Y Nữ Hiệp", anim: "boss002", d: "Đeo vào hóa thân thành Lam Y Nữ Hiệp kiều diễm, song kiếm vô song phong hoa tuyệt đại.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 4, n: "Mặt nạ Miêu Cương Thánh Nữ", anim: "boss008", d: "Đeo vào hóa thân thành Miêu Cương Thánh Nữ áo tiên vương miện đài các kiêu sa.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 5, n: "Mặt nạ Hồng Y Nữ Hiệp", anim: "boss005", d: "Đeo vào hóa thân thành Hồng Y Nữ Hiệp kiều diễm, tóc đuôi ngựa thướt tha, kiếm vũ khuynh thành.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 6, n: "Mặt nạ Thúy Y Tiên Tử", anim: "enemy059", d: "Đeo vào hóa thân thành Thúy Y Tiên Tử áo lục song kiếm, dáng ngọc thanh tân thoát tục.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 7, n: "Mặt nạ Tiêu Dao Phiến Khách", anim: "boss006", d: "Đeo vào hóa thân thành Tiêu Dao Phiến Khách lãng tử hào hoa, tay phe phẩy quạt ngạo thị quần hùng.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 8, n: "Mặt nạ Thi Nghi Sinh", anim: "enemy003", d: "Đeo vào hóa thân thành Thi Nghi Sinh nho nhã phong lưu, văn võ song toàn.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 9, n: "Mặt nạ Phi Sa Cuồng Đao", anim: "enemy083", d: "Đeo vào hóa thân thành Phi Sa Cuồng Đao dũng mãnh, phong trần cái thế.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 10, n: "Mặt nạ Lạc Quang Thiền Sư", anim: "enemy021", d: "Đeo vào hóa thân thành Lạc Quang Thiền Sư võ công thâm hậu, độc bộ võ lâm.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 11, n: "Mặt nạ Boss Vân Tuyết Sơn", anim: "boss013", d: "Đeo vào hóa thân thành Đại Boss Vân Tuyết Sơn oai phong lẫm liệt chấn nhiếp bát phương.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 12, n: "Mặt nạ Thừa Phong Kiếm Khách", anim: "enemy069", d: "Đeo vào hóa thân thành Thừa Phong Kiếm Khách Kim Sơn Đảo xuất chiêu cuồng phong bão táp.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
+    { k: 13, n: "Mặt nạ Chiến Tướng Liêu Định", anim: "enemy206", d: "Đeo vào hóa thân thành Thiết Giáp Chiến Tướng Liêu Định thân mang trọng giáp hùng dũng trấn ải.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
   ],
 };
 
@@ -374,4 +376,73 @@ function migrateMasks() {
   if (S.stash && Array.isArray(S.stash)) S.stash.forEach(updateItem);
 }
 window.migrateMasks = migrateMasks;
+
+function getActive3DayMask() {
+  if (typeof S === "undefined" || !S) return null;
+  const now = Date.now();
+  if (S.eq && S.eq.mask && !S.eq.mask.perm && S.eq.mask.expireAt && S.eq.mask.expireAt > now) {
+    return S.eq.mask;
+  }
+  if (S.inv && Array.isArray(S.inv)) {
+    const found = S.inv.find((it) => it && it.d === 11 && !it.perm && it.expireAt && it.expireAt > now);
+    if (found) return found;
+  }
+  if (S.stash && Array.isArray(S.stash)) {
+    const found = S.stash.find((it) => it && it.d === 11 && !it.perm && it.expireAt && it.expireAt > now);
+    if (found) return found;
+  }
+  return null;
+}
+window.getActive3DayMask = getActive3DayMask;
+
+function maskBoxHave() {
+  return typeof matHave === "function" ? matHave("misc", "rmatna") : 0;
+}
+window.maskBoxHave = maskBoxHave;
+
+function maskBoxOpen() {
+  if (typeof S === "undefined" || !S) return null;
+  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  const pool = list.slice(1);
+  if (!pool.length) return null;
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const item = typeof makeMaskItem === "function" ? makeMaskItem(picked.k, false) : null;
+  if (!item) return null;
+
+  if (typeof addItem === "function") {
+    addItem(item, true, true, true);
+  } else {
+    S.inv.unshift(item);
+  }
+  return item;
+}
+window.maskBoxOpen = maskBoxOpen;
+
+function maskBoxUse(n = 1) {
+  if (maskBoxHave() < 1) {
+    if (typeof toast === "function") toast("Không có Rương Mặt Nạ trong túi");
+    return;
+  }
+  if (S.inv.length >= INV_MAX) {
+    if (typeof toast === "function") toast("Hành trang đã đầy!");
+    return;
+  }
+  matAdd("misc", "rmatna", -1);
+  const item = maskBoxOpen();
+  if (!item) {
+    if (typeof toast === "function") toast("Lỗi mở rương!");
+    return;
+  }
+  if (typeof uiSfx === "function") uiSfx("levelup");
+  if (typeof toast === "function") toast(`Nhận: ${item.n} (Hạn 3 ngày)`);
+  if (typeof log === "function") {
+    log(`🎭 <b style="color:#ffd24a">Mở Rương Mặt Nạ!</b> Nhận được <b style="color:#ff9e42">${esc(item.n)}</b> (Hạn sử dụng 3 ngày). Đeo ở phím F3 để đổi ngoại trang!`);
+  }
+  if (typeof R !== "undefined") R.dirty = !0;
+  if (typeof invDirty !== "undefined") invDirty = !0;
+  if (typeof save === "function") save();
+  if (typeof refresh === "function") refresh();
+  if (typeof ktcModal === "function" && document.getElementById("mBody")) ktcModal();
+}
+window.maskBoxUse = maskBoxUse;
 
