@@ -121,19 +121,19 @@ const KNB_GOLD = 1e6,
     },
     {
       k: "bk120",
-      n: "Bí Kíp 120",
+      n: "Mật Tịch 120",
       ic: "img/ep/dtbk.png",
       knb: 1000,
       d: "Dùng để lĩnh ngộ tuyệt kỹ 120 của môn phái (cần cấp 120)",
-      use: () => (matAdd("misc", "bk120", 1), "Nhận 1 Bí Kíp 120 (bấm Lĩnh ngộ để học chiêu)"),
+      use: () => (matAdd("misc", "bk120", 1), "Nhận 1 Mật Tịch 120 (bấm Lĩnh ngộ để học chiêu)"),
     },
     {
       k: "bk150",
-      n: "Bí Kíp 150",
+      n: "Mật Tịch 150",
       ic: "img/ep/dtbk.png",
       knb: 2000,
       d: "Dùng để lĩnh ngộ 1 võ công 150 của môn phái (cần cấp 150)",
-      use: () => (matAdd("misc", "bk150", 1), "Nhận 1 Bí Kíp 150 (bấm Lĩnh ngộ để chọn chiêu)"),
+      use: () => (matAdd("misc", "bk150", 1), "Nhận 1 Mật Tịch 150 (bấm Lĩnh ngộ để chọn chiêu)"),
     },
     {
       k: "rhk",
@@ -634,7 +634,7 @@ function ktcBk120Modal() {
   }
   const have = matHave("misc", "bk120");
   if (have < 1) {
-    toast("Chưa có Bí Kíp 120");
+    toast("Chưa có Mật Tịch 120");
     return;
   }
   const id = typeof sk120IdOf == "function" ? sk120IdOf(S.fac) : 0;
@@ -645,8 +645,8 @@ function ktcBk120Modal() {
   const sk = SK[id];
   const learned = S.sk[id] > 0;
   modal(
-    `<h3>Lĩnh ngộ tuyệt kỹ 120 <small>${have} Bí Kíp 120</small></h3>
-    <p class="desc">Dùng 1 Bí Kíp 120 để lĩnh ngộ tuyệt kỹ 120 bổn phái (cần cấp 120, học cấp 1 sau đó luyện theo điểm kinh nghiệm).</p>
+    `<h3>Lĩnh ngộ tuyệt kỹ 120 <small>${have} Mật Tịch 120</small></h3>
+    <p class="desc">Dùng 1 Mật Tịch 120 để lĩnh ngộ tuyệt kỹ 120 bổn phái (cần cấp 120, học cấp 1 sau đó luyện theo điểm kinh nghiệm).</p>
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;padding:8px">
       <div style="display:flex;align-items:center;gap:8px">
         <img src="${esc(sk.ic || "")}" alt="" style="width:36px;height:36px;border-radius:4px;image-rendering:pixelated">
@@ -669,7 +669,7 @@ function ktcBk120Modal() {
           save();
           closeModal(true);
           toast(`Đã lĩnh ngộ ${sk.n}!`);
-          log(`📕 Dùng Bí Kíp 120: lĩnh ngộ tuyệt kỹ 120 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
+          log(`📕 Dùng Mật Tịch 120: lĩnh ngộ tuyệt kỹ 120 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
           uiSfx("levelup");
           refresh();
         };
@@ -689,7 +689,7 @@ function ktcBk150Modal() {
   }
   const have = matHave("misc", "bk150");
   if (have < 1) {
-    toast("Chưa có Bí Kíp 150");
+    toast("Chưa có Mật Tịch 150");
     return;
   }
   const list = typeof sk150List == "function" ? sk150List(S.fac) : [];
@@ -713,8 +713,8 @@ function ktcBk150Modal() {
   }).join("");
 
   modal(
-    `<h3>Lĩnh ngộ võ công 150 <small>${have} Bí Kíp 150</small></h3>
-    <p class="desc">Dùng 1 Bí Kíp 150 để lĩnh ngộ tuyệt kỹ 150 bổn phái (cần cấp 150, sau đó luyện theo điểm kinh nghiệm).</p>
+    `<h3>Lĩnh ngộ võ công 150 <small>${have} Mật Tịch 150</small></h3>
+    <p class="desc">Dùng 1 Mật Tịch 150 để lĩnh ngộ tuyệt kỹ 150 bổn phái (cần cấp 150, sau đó luyện theo điểm kinh nghiệm).</p>
     <div class="list">${rows}</div>`,
     () => {
       document.querySelectorAll("#mBody [data-learn150]").forEach(btn => {
@@ -730,7 +730,7 @@ function ktcBk150Modal() {
           save();
           closeModal(true);
           toast(`Đã lĩnh ngộ ${sk.n}!`);
-          log(`📕 Dùng Bí Kíp 150: lĩnh ngộ võ công 150 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
+          log(`📕 Dùng Mật Tịch 150: lĩnh ngộ võ công 150 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
           uiSfx("levelup");
           refresh();
         };

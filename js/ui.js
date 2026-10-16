@@ -1264,7 +1264,7 @@ function renderMore() {
     o && typeof netLogout == "function" && (o.onclick = () => netLogout(o));
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
-  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
+  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
     <h3>Lưu game</h3><div class="card">
     <div class="btnrow"><button class="btn" id="bDl">Tải Save</button><button class="btn" id="bFile">Nạp Save</button></div>
     <p class="dim small" style="margin-top:8px">File save có mã hóa, Không được chỉnh sửa.</p></div>
@@ -1290,7 +1290,7 @@ function renderMore() {
       <label><input type="checkbox" id="cBuy" ${S.autoBuy === !1 ? "" : "checked"}> Tự mua vũ khí đúng loại ở Biện Kinh khi mạnh hơn ≥ 25% (tối đa 60% ngân lượng)</label>
       <div class="btnrow">
         <button class="btn" id="bWbSys">Boss Thế Giới</button>
-        <button class="btn" id="bGiftSys">🎁 Phần thưởng</button>
+        <button class="btn" id="bGiftSys">Phần thưởng</button>
         <button class="btn" id="bCompactSys">⊟ Thu gọn sân đấu</button>
       </div>
       <div class="btnrow" style="margin-top:6px">
@@ -1302,9 +1302,9 @@ function renderMore() {
       </div></div>
     <h3>Trợ năng</h3><div class="card lootf">
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
-      <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label><br>
-      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> 📱 Chế độ màn vuông mini</label>
-      <small class="dim">Tay cầm: cần analog / D-pad để đi, A B X Y dùng chiêu 1–4, LB / RB uống thuốc HP / MP. Phím Esc đóng hộp thoại.<br>Phím tắt (như Võ Lâm 1): F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–5 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
+      <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (30FPS)</label><br>
+      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> Chế độ màn vuông</label>
+      <small class="dim">Phím tắt: F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–4 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
     <h3>Điều khiển & Hiển thị</h3><div class="card">
       <div class="row" style="margin-bottom:6px">
         <b>🔍 Thu phóng sân đấu:</b> <span id="lblArenaZoom" style="color:#f3d88a;font-weight:bold">${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}%</span>
