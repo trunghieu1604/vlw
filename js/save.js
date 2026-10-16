@@ -165,6 +165,23 @@ function migrate(n) {
     (e.inv = (Array.isArray(e.inv) ? e.inv : [])
       .filter((t) => t && typeof t == "object" && Array.isArray(t.base) && Array.isArray(t.mag))
       .slice(0, INV_MAX)));
+  // Cập nhật mặt nạ (d === 11) sang danh sách model người và icon mới nhất
+  const maskList = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  if (maskList.length) {
+    const updateMask = (it) => {
+      if (!it || it.d !== 11) return;
+      const def = maskList.find((m) => m.k === it.k) || maskList[0];
+      if (def) {
+        it.n = def.n;
+        it.anim = def.anim;
+        it.ic = def.ic;
+        if (def.perm) it.perm = true;
+      }
+    };
+    if (Array.isArray(e.inv)) e.inv.forEach(updateMask);
+    if (e.eq && e.eq.mask) updateMask(e.eq.mask);
+    if (Array.isArray(e.stash)) e.stash.forEach(updateMask);
+  }
   // disciples (js/party.js): sanitize their sheets; their worn items and bags count for uid uniqueness
   e.party =
     Array.isArray(n.party) && typeof partySanitize == "function"

@@ -269,9 +269,10 @@ const STAGES = ZONES.length * ZONE_STAGES,
     ["ring2", "Nhẫn 2"],
     ["pendant", "Ngọc bội"],
     ["horse", "Ngựa"],
+    ["mask", "Mặt nạ"],
   ],
   SLOT_VI = Object.fromEntries(SLOTS),
-  DETAIL_SLOT = ["weapon", "weapon", "armor", "ring", "amulet", "boot", "belt", "helm", "cuff", "pendant", "horse"],
+  DETAIL_SLOT = ["weapon", "weapon", "armor", "ring", "amulet", "boot", "belt", "helm", "cuff", "pendant", "horse", "mask"],
   MELEE_KIND = ["sword", "blade", "wand", "spear", "hammer", "dualblades"],
   RANGE_KIND = ["darts", "knife", "crossbow"],
   AFFIX_KEY = {
@@ -308,3 +309,69 @@ function isGodMode() {
   return false;
 }
 window.isGodMode = isGodMode;
+
+// Danh sách mặt nạ ngoại trang Võ Lâm (DetailType = 11: mask)
+J.items[11] = {
+  n: "Mặt nạ",
+  list: [
+    { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/mask_nguyetca.png", perm: true },
+    { k: 2, n: "Mặt nạ Đoạt Phách Vệ Sĩ", anim: "enemy029", d: "Đeo vào hóa thân thành Đoạt Phách Vệ Sĩ uy phong lẫm liệt, tay cầm khiên kiếm hoàng lăng.", ic: "img/ep/mask_doatphach.png", duration: 3 * 86400 * 1000 },
+    { k: 3, n: "Mặt nạ Lam Y Nữ Hiệp", anim: "boss002", d: "Đeo vào hóa thân thành Lam Y Nữ Hiệp kiều diễm, song kiếm vô song phong hoa tuyệt đại.", ic: "img/ep/mask_lamy.png", duration: 3 * 86400 * 1000 },
+    { k: 4, n: "Mặt nạ Miêu Cương Thánh Nữ", anim: "boss008", d: "Đeo vào hóa thân thành Miêu Cương Thánh Nữ áo tiên vương miện đài các kiêu sa.", ic: "img/ep/mask_thanhnu.png", duration: 3 * 86400 * 1000 },
+    { k: 5, n: "Mặt nạ Hồng Y Nữ Hiệp", anim: "boss005", d: "Đeo vào hóa thân thành Hồng Y Nữ Hiệp kiều diễm, tóc đuôi ngựa thướt tha, kiếm vũ khuynh thành.", ic: "img/ep/mask_hongy.png", duration: 3 * 86400 * 1000 },
+    { k: 6, n: "Mặt nạ Thúy Y Tiên Tử", anim: "enemy059", d: "Đeo vào hóa thân thành Thúy Y Tiên Tử áo lục song kiếm, dáng ngọc thanh tân thoát tục.", ic: "img/ep/mask_thuyy.png", duration: 3 * 86400 * 1000 },
+    { k: 7, n: "Mặt nạ Tiêu Dao Phiến Khách", anim: "boss006", d: "Đeo vào hóa thân thành Tiêu Dao Phiến Khách lãng tử hào hoa, tay phe phẩy quạt ngạo thị quần hùng.", ic: "img/ep/mask_phienkhach.png", duration: 3 * 86400 * 1000 },
+    { k: 8, n: "Mặt nạ Thi Nghi Sinh", anim: "enemy003", d: "Đeo vào hóa thân thành Thi Nghi Sinh nho nhã phong lưu, văn võ song toàn.", ic: "img/ep/mask_thinghisinh.png", duration: 3 * 86400 * 1000 },
+    { k: 9, n: "Mặt nạ Phi Sa Cuồng Đao", anim: "enemy083", d: "Đeo vào hóa thân thành Phi Sa Cuồng Đao dũng mãnh, phong trần cái thế.", ic: "img/ep/mask_phisa.png", duration: 3 * 86400 * 1000 },
+    { k: 10, n: "Mặt nạ Lạc Quang Thiền Sư", anim: "enemy021", d: "Đeo vào hóa thân thành Lạc Quang Thiền Sư võ công thâm hậu, độc bộ võ lâm.", ic: "img/ep/mask_lacquang.png", duration: 3 * 86400 * 1000 },
+    { k: 11, n: "Mặt nạ Boss Vân Tuyết Sơn", anim: "boss013", d: "Đeo vào hóa thân thành Đại Boss Vân Tuyết Sơn oai phong lẫm liệt chấn nhiếp bát phương.", ic: "img/ep/mask_vantuyetson.png", duration: 3 * 86400 * 1000 },
+  ],
+};
+
+function makeMaskItem(k, perm = false) {
+  const list = J.items[11].list;
+  const def = list.find((m) => m.k === k) || list[0];
+  const it = {
+    uid: typeof genUid === "function" ? genUid() : Date.now() + Math.floor(Math.random() * 10000),
+    d: 11,
+    k: def.k,
+    lvl: 1,
+    r: perm || def.perm ? 4 : 3,
+    n: def.n,
+    anim: def.anim,
+    ic: def.ic,
+    mag: [],
+    base: [],
+    req: [],
+  };
+  if (perm || def.perm) {
+    it.perm = true;
+  } else {
+    it.expireAt = Date.now() + (def.duration || 3 * 86400 * 1000);
+  }
+  return it;
+}
+window.makeMaskItem = makeMaskItem;
+
+function migrateMasks() {
+  if (typeof S === "undefined" || !S) return;
+  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  if (!list.length) return;
+
+  const updateItem = (it) => {
+    if (!it || it.d !== 11) return;
+    const def = list.find((m) => m.k === it.k) || list[0];
+    if (def) {
+      it.n = def.n;
+      it.anim = def.anim;
+      it.ic = def.ic;
+      if (def.perm) it.perm = true;
+    }
+  };
+
+  if (S.inv && Array.isArray(S.inv)) S.inv.forEach(updateItem);
+  if (S.eq && S.eq.mask) updateItem(S.eq.mask);
+  if (S.stash && Array.isArray(S.stash)) S.stash.forEach(updateItem);
+}
+window.migrateMasks = migrateMasks;
+

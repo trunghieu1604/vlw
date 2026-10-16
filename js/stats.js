@@ -837,6 +837,7 @@ const sexReqOkFor = (t, n) => {
   sexReqOk = (t) => sexReqOkFor({ req: t }, S.sex),
   sexOk = (t) => sexReqOk(t.req);
 function reqOk(t) {
+  if (t && t.d === 11 && t.expireAt && t.expireAt <= Date.now()) return !1;
   if (!sexOk(t)) return !1;
   for (const [n, e] of t.req || [])
     if (

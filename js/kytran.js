@@ -188,39 +188,139 @@ function ktcBuy(i, n = 1) {
     save(),
     ktcModal());
 }
-function ktcModal() {
+let ktcTab = "item";
+
+function getActiveMask(maskKey) {
+  if (S.eq && S.eq.mask && S.eq.mask.k === maskKey && (!S.eq.mask.expireAt || S.eq.mask.expireAt > Date.now())) {
+    return S.eq.mask;
+  }
+  const found = (S.inv || []).find((it) => it && it.d === 11 && it.k === maskKey && (!it.expireAt || it.expireAt > Date.now()));
+  return found || null;
+}
+window.getActiveMask = getActiveMask;
+
+function buyMask(maskKey) {
+  const active = getActiveMask(maskKey);
+  if (active) {
+    toast("Bạn đang sở hữu mặt nạ này, cần chờ sau 3 ngày hết hạn mới được mua tiếp!");
+    return;
+  }
+  if ((S.knb || 0) < 10) {
+    toast("Không đủ Kim Nguyên Bảo (cần 10 KNB)");
+    return;
+  }
+  if (S.inv.length >= INV_MAX) {
+    toast("Hành trang đã đầy, hãy dọn túi trước");
+    return;
+  }
+  S.knb -= 10;
+  const it = typeof makeMaskItem === "function" ? makeMaskItem(maskKey, false) : null;
+  if (!it) {
+    toast("Không thể tạo mặt nạ");
+    return;
+  }
+  S.inv.unshift(it);
+  RW().stat.ktc = (RW().stat.ktc || 0) + 1;
+  log(`🏮 Kỳ Trân Các: mua 1 × <b style="color:#ffd24a">${esc(it.n)}</b> (−10 Kim Nguyên Bảo) · Hạn sử dụng 3 ngày`);
+  toast(`Mua thành công ${it.n} (Hạn dùng 3 ngày)`);
+  uiSfx("learn");
+  R.dirty = !0;
+  invDirty = !0;
+  save();
+  ktcModal("mask");
+}
+window.buyMask = buyMask;
+
+function ktcModal(tab) {
+  if (typeof migrateMasks == "function") migrateMasks();
+  if (tab) ktcTab = tab;
   const i = R.P ? Math.round(R.P.lucky) : 0;
+  const KTC_TABS = [
+    ["item", "Vật phẩm"],
+    ["mask", "🎭 Mặt Nạ (Ngoại Trang)"],
+  ];
+  const tabHeader = `<div class="dtabs" id="ktcTabs" style="margin-bottom:10px">${KTC_TABS.map(([k, l]) => `<button data-kt="${k}" class="${k === ktcTab ? "on" : ""}">${l}</button>`).join("")}</div>`;
+
+  let contentHtml = "";
+  if (ktcTab === "mask") {
+    const maskList = (J.items && J.items[11] && J.items[11].list) || [];
+    const forSaleMasks = maskList.slice(1);
+
+    const masksHtml = forSaleMasks.map((m) => {
+      const active = getActiveMask(m.k);
+      let timeStr = "";
+      if (active) {
+        const left = active.expireAt - Date.now();
+        const d = Math.floor(left / 86400000);
+        const h = Math.floor((left % 86400000) / 3600000);
+        const min = Math.floor((left % 3600000) / 60000);
+        timeStr = `${d > 0 ? d + " ngày " : ""}${h}h ${min}p`;
+      }
+      const canBuy = !active && (S.knb || 0) >= 10;
+      return `<div class="shoprow ktc${active ? " bad" : ""}">
+        <img src="${m.ic}" alt="" style="image-rendering:pixelated">
+        <span>
+          <b>${esc(m.n)}</b>
+          <small>${esc(m.d)} · Hạn dùng: <b>3 ngày</b>${active ? `<br><span class="cp">Đang sở hữu (còn ${timeStr}) · Chờ hết hạn 3 ngày để mua tiếp</span>` : ""}</small>
+        </span>
+        <span class="btnrow">
+          ${active ? `<button class="btn sm" disabled title="Cần chờ hết hạn 3 ngày mới được mua tiếp">Còn ${timeStr}</button>` : `<button class="btn sm knb" data-mask="${m.k}" ${canBuy ? "" : "disabled"}>10 KNB</button>`}
+        </span>
+      </div>`;
+    }).join("");
+
+    contentHtml = `
+      <p class="desc">Tất cả mặt nạ bán với giá <b>10 KNB</b>, hạn sử dụng <b>3 ngày</b>. Mua rồi cần chờ sau 3 ngày hết hạn mới được mua tiếp mặt nạ đó. Đeo mặt nạ ở khung Nhân vật (F3) để biến hình ngoại trang Võ Lâm.</p>
+      <div class="shoplist">${masksHtml}</div>
+    `;
+  } else {
+    contentHtml = `
+      <p class="desc">Giá cố định. Mua bằng <b>Kim Nguyên Bảo</b> (rơi từ trùm 10%, trùm Hoàng Kim / boss tuần 50%); Rương Huyền Tinh và Rương Đá Thuộc Tính mua bằng ngân lượng. Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa cất vào túi, bấm Dùng để mở.</p>
+      ${buffText() ? `<div class="card small">Đang có: ${buffText()}</div>` : ""}
+      <div class="shoplist">${KTC.map((n) => {
+        const t = ktcOk(n),
+          c =
+            n.k === "mt90"
+              ? matHave("misc", "bk90")
+              : n.k === "dtbk"
+                ? matHave("misc", "dtbk")
+                : n.k === "ldp"
+                  ? matHave("misc", "ldp")
+                  : n.k === "ldt"
+                    ? matHave("misc", "ldt")
+                    : n.k === "dgt"
+                      ? matHave("misc", "dgt")
+                      : n.k === "rngua"
+                        ? matHave("misc", "rngua")
+                        : n.k === "bk120"
+                          ? matHave("misc", "bk120")
+                          : n.k === "bk150"
+                            ? matHave("misc", "bk150")
+                            : n.k === "knb"
+                              ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
+                              : null;
+        return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
+          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+      }).join("")}</div>
+      <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>
+    `;
+  }
+
   modal(
     `<h3>🏮 Kỳ Trân Các <small><img src="img/ep/knb.png" alt="" style="height:14px;vertical-align:middle;image-rendering:pixelated"> ${S.knb || 0} Kim Nguyên Bảo · ${fmtL(S.gold)} lượng</small></h3>
-    <p class="desc">Giá cố định. Mua bằng <b>Kim Nguyên Bảo</b> (rơi từ trùm 10%, trùm Hoàng Kim / boss tuần 50%); Rương Huyền Tinh và Rương Đá Thuộc Tính mua bằng ngân lượng. Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa cất vào túi, bấm Dùng để mở.</p>
-    ${buffText() ? `<div class="card small">Đang có: ${buffText()}</div>` : ""}
-    <div class="shoplist">${KTC.map((n) => {
-      const t = ktcOk(n),
-        c =
-          n.k === "mt90"
-            ? matHave("misc", "bk90")
-            : n.k === "dtbk"
-              ? matHave("misc", "dtbk")
-              : n.k === "ldp"
-                ? matHave("misc", "ldp")
-                : n.k === "ldt"
-                  ? matHave("misc", "ldt")
-                  : n.k === "dgt"
-                    ? matHave("misc", "dgt")
-                    : n.k === "rngua"
-                      ? matHave("misc", "rngua")
-                      : n.k === "bk120"
-                        ? matHave("misc", "bk120")
-                        : n.k === "bk150"
-                          ? matHave("misc", "bk150")
-                          : n.k === "knb"
-                            ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
-                            : null;
-      return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-        <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
-    }).join("")}</div>
-    <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>`,
+    ${tabHeader}
+    ${contentHtml}`,
     () => {
+      document.querySelectorAll("#mBody [data-kt]").forEach((b) => {
+        b.onclick = () => ktcModal(b.dataset.kt);
+      });
+      if (ktcTab === "mask") {
+        document.querySelectorAll("#mBody [data-mask]").forEach((b) => {
+          b.onclick = () => buyMask(+b.dataset.mask);
+        });
+        return;
+      }
+
       (document.querySelectorAll("#mBody [data-ktc]").forEach((l) => (l.onclick = () => ktcBuy(l.dataset.ktc, 1))),
         document
           .querySelectorAll("#mBody [data-ktc10]")

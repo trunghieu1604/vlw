@@ -39,10 +39,11 @@ const fmtVan = (n) => (
     pendant: [12, 200, 46, 66],
     boot: [180, 176, 60, 62],
     horse: [92, 228, 64, 64],
+    mask: [180, 242, 60, 50],
   };
 function u2DrawDoll() {
   const n = $("#u2doll");
-  if (!n || typeof drawJxHero != "function" || !R.jx) return;
+  if (!n) return;
   const a = document.createElement("canvas");
   ((a.width = 600), (a.height = 600));
   const c = a.getContext("2d"),
@@ -50,7 +51,13 @@ function u2DrawDoll() {
   CX = c;
   let i = !1;
   try {
-    i = drawJxHero("st", 0, 0, 300, 440, 1, 1); // native 1:1, scaled up below by a whole factor
+    const mask = S && S.eq && S.eq.mask;
+    if (mask && (!mask.expireAt || mask.expireAt > Date.now()) && mask.anim && typeof drawAnim == "function") {
+      i = drawAnim(mask.anim, "st", 0, 0, 300, 440, 1.8, 1);
+    }
+    if (!i && typeof drawJxHero == "function" && R.jx) {
+      i = drawJxHero("st", 0, 0, 300, 440, 1, 1); // native 1:1, scaled up below by a whole factor
+    }
   } catch {
     i = !1;
   } finally {
@@ -149,10 +156,15 @@ function renderChar20() {
           (e.onclick = () =>
             e.parentNode.dataset.slot === "horse"
               ? horsePickModal()
-              : itemModal(findItem(e.dataset.uid), e.parentNode.dataset.slot)),
+              : e.parentNode.dataset.slot === "mask"
+                ? (typeof maskPickModal == "function" ? maskPickModal() : itemModal(findItem(e.dataset.uid), "mask"))
+                : itemModal(findItem(e.dataset.uid), e.parentNode.dataset.slot)),
       ));
   const h = document.querySelector('#t-char .slot[data-slot="horse"]');
-  (h && !S.eq.horse && (h.onclick = () => horsePickModal()), u2DrawDoll());
+  (h && !S.eq.horse && (h.onclick = () => horsePickModal()));
+  const mk = document.querySelector('#t-char .slot[data-slot="mask"]');
+  (mk && !S.eq.mask && (mk.onclick = () => (typeof maskPickModal == "function" ? maskPickModal() : ktcModal())));
+  u2DrawDoll();
   typeof ptCampBind == "function" && ptCampBind($("#t-char"));
 }
 // "Kỹ năng chính" of the character shown in this Võ công window (main or disciple: partyui binds the handlers
@@ -527,9 +539,18 @@ const KTC_CAT = [
   ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Thú cưỡi", ["rngua"]],
+  ["Mặt nạ", "mask"],
 ];
 let u2KtcCat = 0;
-function ktcModal20() {
+function ktcModal20(cat) {
+  if (typeof migrateMasks == "function") migrateMasks();
+  if (cat === "mask" || cat === "Mặt nạ") {
+    const idx = KTC_CAT.findIndex(([t, val]) => val === "mask" || t === "Mặt nạ");
+    if (idx >= 0) u2KtcCat = idx;
+  } else if (typeof cat === "number" && cat >= 0 && cat < KTC_CAT.length) {
+    u2KtcCat = cat;
+  }
+  const isMask = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][1] === "mask";
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
@@ -538,17 +559,53 @@ function ktcModal20() {
           : null,
     a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua" },
     c = !1,
-    s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
+    s = c || isMask ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
       const o = ktcOk(t),
         d = n(t.k);
       return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(t.n)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
       <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
     };
+
+  let cardsHtml = "";
+  if (isMask) {
+    const maskList = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+    const forSaleMasks = maskList.slice(1);
+    cardsHtml = forSaleMasks.map((m) => {
+      const active = typeof getActiveMask === "function" ? getActiveMask(m.k) : null;
+      let timeStr = "";
+      if (active) {
+        const left = active.expireAt - Date.now();
+        const d = Math.floor(left / 86400000);
+        const h = Math.floor((left % 86400000) / 3600000);
+        const min = Math.floor((left % 3600000) / 60000);
+        timeStr = `${d > 0 ? d + "n " : ""}${h}h ${min}p`;
+      }
+      const canBuy = !active && (S.knb || 0) >= 10;
+      return `<div class="u2card${active ? " bad" : ""}" title="${esc(m.d)}">
+        <div class="u2ct">${esc(m.n)}</div>
+        <div class="u2cb">
+          <img src="${m.ic}" alt="" style="image-rendering:pixelated;width:36px;height:36px">
+          <div>
+            <div>Giá: <b class="gold">10 KNB</b></div>
+            <small class="dim">${active ? `<span style="color:#ff9e42">Đang có (${timeStr})</span>` : `Hạn dùng: 3 ngày`}</small>
+          </div>
+        </div>
+        <div class="u2cf">
+          ${active 
+            ? `<button class="u2buy" disabled style="font-size:11px;cursor:default" title="Cần chờ hết hạn 3 ngày mới được mua tiếp">Còn ${timeStr}</button>` 
+            : `<button class="u2buy gold" data-mask="${m.k}" ${canBuy ? "" : "disabled"}>Mua 10 KNB</button>`}
+        </div>
+      </div>`;
+    }).join("");
+  } else {
+    cardsHtml = s.map(i).join("");
+  }
+
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
-    <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${s.map(i).join("")}</div>`}
-    ${c ? "" : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
+    <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${cardsHtml}</div>`}
+    ${c ? "" : isMask ? `<p class="dim small">Tất cả mặt nạ bán với giá <b>10 KNB</b>, hạn sử dụng <b>3 ngày</b>. Mua rồi cần chờ sau 3 ngày hết hạn mới được mua tiếp mặt nạ đó. Đeo mặt nạ ở khung Nhân vật (F3) để biến hình ngoại trang Võ Lâm.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
     () => {
       (document.querySelectorAll("#mBody [data-kc]").forEach(
         (o) =>
@@ -556,11 +613,21 @@ function ktcModal20() {
             ((u2KtcCat = +o.dataset.kc), ktcModal());
           }),
       ),
-        c && bindThanMa(() => ktcModal()),
-        document.querySelectorAll("#mBody [data-ktc]").forEach((o) => (o.onclick = () => ktcBuy(o.dataset.ktc, 1))),
-        document
-          .querySelectorAll("#mBody [data-ktc10]")
-          .forEach((o) => (o.onclick = () => ktcBuy(o.dataset.ktc10, 10))));
+        c && bindThanMa(() => ktcModal()));
+
+      if (isMask) {
+        document.querySelectorAll("#mBody [data-mask]").forEach((o) => {
+          o.onclick = () => {
+            if (typeof buyMask === "function") buyMask(+o.dataset.mask);
+          };
+        });
+        return;
+      }
+
+      document.querySelectorAll("#mBody [data-ktc]").forEach((o) => (o.onclick = () => ktcBuy(o.dataset.ktc, 1))),
+      document
+        .querySelectorAll("#mBody [data-ktc10]")
+        .forEach((o) => (o.onclick = () => ktcBuy(o.dataset.ktc10, 10)));
       const t = (o, d) => {
         const u = $("#" + o);
         u && (u.onclick = d);

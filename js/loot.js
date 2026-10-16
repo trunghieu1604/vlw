@@ -262,7 +262,7 @@ function reqLineText(n, e) {
 function itemLines(n) {
   const e = [],
     t = enhMul(n),
-    r = J.items[n.d] && J.items[n.d].list.find((s) => s.k === n.k && s.lvl === n.lvl),
+    r = J.items[n.d] && J.items[n.d].list.find((s) => s.k === n.k && (s.lvl == null || s.lvl === n.lvl)),
     o = n.d === 10 ? 1 : enhLineMul(n),
     u = (s) =>
       o === 1 || attrName(s.a) === "allskill_v"
@@ -270,6 +270,21 @@ function itemLines(n) {
         : magText(Object.assign({}, s, { p: s.p.map((i, f) => (i === -1 || f > 1 ? i : Math.round(i * o))) }));
   (n.s >= 0 && e.push(["b", "Ngũ hành thuộc tính: " + SERIES[n.s], SERIES_COL[n.s]]),
     r && r.d && e.push(["b in", r.d]));
+  if (n.d === 11) {
+    if (n.perm) {
+      e.push(["m", "Thời hạn: Vĩnh viễn", "#ffcc00"]);
+    } else if (n.expireAt) {
+      const left = n.expireAt - Date.now();
+      if (left <= 0) {
+        e.push(["rq", "Thời hạn: ĐÃ HẾT HẠN (không còn tác dụng)", "#ff4444"]);
+      } else {
+        const d = Math.floor(left / 86400000);
+        const h = Math.floor((left % 86400000) / 3600000);
+        const m = Math.floor((left % 3600000) / 60000);
+        e.push(["m", `Thời hạn còn lại: ${d > 0 ? d + " ngày " : ""}${h} giờ ${m} phút`, "#44ff88"]);
+      }
+    }
+  }
   const a = (s) => (n.d === 10 && typeof horseAdj == "function" ? horseAdj(n, s) : s);
   for (const [s, i, f] of (n.base || [])) {
     const d = attrName(s);

@@ -586,6 +586,25 @@ async function netRedeem(t) {
     };
   }
 
+  // Giftcode VUACHUA: Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)
+  if (t === "VUACHUA") {
+    if (S.inv.length >= INV_MAX) throw new Error("Hành trang đã đầy! Hãy dọn túi rồi nhận lại.");
+    const maskItem = typeof makeMaskItem === "function" ? makeMaskItem(1, true) : null;
+    if (!maskItem) throw new Error("Lỗi khởi tạo mặt nạ");
+    S.inv.unshift(maskItem);
+    S.gc[t] = Date.now();
+    R.dirty = !0;
+    invDirty = !0;
+    save();
+    refresh();
+    uiSfx("levelup");
+    log(`<span class="admlog">[Giftcode]</span> Nhận thành công <b>Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)</b>!`);
+    return {
+      note: "Mặt nạ Nguyệt Ca Đảo Chủ",
+      out: ["Mặt nạ Nguyệt Ca Đảo Chủ (Vĩnh viễn)"],
+    };
+  }
+
   // Giftcode Sư tử Tân Thủ (cấp 1, chỉ +50% tốc độ chạy, không tính trong Trại Ngựa)
   if (t === "NEWBIE2") {
     if (S.inv.length >= INV_MAX) throw new Error(`Hành trang đã đầy (${S.inv.length}/${INV_MAX})! Cần ít nhất 1 ô trống.`);

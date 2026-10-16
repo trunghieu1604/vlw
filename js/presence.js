@@ -80,6 +80,7 @@ function presChar() {
     k,
     r: presRows(),
     m: S.eq && S.eq.horse && R.mounted ? 1 : 0,
+    mask: S.eq && S.eq.mask && (!S.eq.mask.expireAt || S.eq.mask.expireAt > Date.now()) ? S.eq.mask.anim : "",
   };
 }
 function presSnap() {
@@ -549,6 +550,10 @@ function othShadows(c) {
     const ch = presCharOf(e),
       L = presLookOf(e);
     if (!ch) continue;
+    if (ch.mask && typeof shAnim === "function") {
+      shAnim(c, ch.mask, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE);
+      continue;
+    }
     if (presJx() && L && shJxHero(c, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE, null, L)) continue;
     const g = heroGfx(ch.f, ch.x);
     g && g.anim && shAnim(c, g.anim, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE);
@@ -573,12 +578,16 @@ function othDraw(c, e) {
   }
 
   let h = 0;
-  const jx = presJx() && L;
-  // layered look: nothing until all its sheets are loaded (no pop from the old single-sheet sprite)
-  if (jx) h = drawJxHero(e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE, 1, null, L);
-  else {
-    const g = heroGfx(ch.f, ch.x);
-    h = g && g.anim ? drawAnim(g.anim, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE) : 0;
+  if (ch.mask && typeof drawAnim === "function") {
+    h = drawAnim(ch.mask, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE);
+  } else {
+    const jx = presJx() && L;
+    // layered look: nothing until all its sheets are loaded (no pop from the old single-sheet sprite)
+    if (jx) h = drawJxHero(e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE, 1, null, L);
+    else {
+      const g = heroGfx(ch.f, ch.x);
+      h = g && g.anim ? drawAnim(g.anim, e.act, e.dir, e.actT, e.x, e.y, HERO_SCALE) : 0;
+    }
   }
   if (!h) ((c.fillStyle = "#0007"), c.beginPath(), c.ellipse(e.x, e.y, 14, 5, 0, 0, 7), c.fill());
   if (PRES.hover === e && h && presJx() && L) {

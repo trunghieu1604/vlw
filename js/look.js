@@ -98,6 +98,19 @@ function tintedFrame(n, f, o, l, e) {
   );
 }
 function drawHeroAnim(n, f, o, l, e, i, t, r = 1) {
+  const mask = S && S.eq && S.eq.mask;
+  if (mask) {
+    if (mask.expireAt && mask.expireAt <= Date.now()) {
+      delete S.eq.mask;
+      if (typeof toast === "function") toast(`Mặt nạ [${mask.n || "Mặt nạ"}] đã hết hạn sử dụng!`);
+      R.dirty = !0;
+      if (typeof save === "function") save();
+      if (typeof refresh === "function") refresh();
+    } else if (mask.anim && typeof drawAnim === "function") {
+      const s = drawAnim(mask.anim, f, o, l, e, i, t, r);
+      if (s) return s;
+    }
+  }
   if (typeof jxOn == "function" && jxOn() && R.jx) {
     const s = drawJxHero(f, o, l, e, i, t, r, n);
     if (s) return s;

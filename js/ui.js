@@ -118,7 +118,7 @@ function unequip(n) {
   }
 }
 const sellProtected = (n) =>
-  !!((n.set && setKept(n)) || n.vio || n.plv || n.lock || n.thanma || (typeof dtNeed == "function" && dtNeed(n)));
+  !!(n.d === 11 || (n.set && setKept(n)) || n.vio || n.plv || n.lock || n.thanma || (typeof dtNeed == "function" && dtNeed(n)));
 function sellUnmatched() {
   const n = S.inv.filter((e) => !lootMatch(e) && !sellProtected(e));
   let t = 0;
@@ -195,7 +195,7 @@ function autoEquipAll() {
     for (const c of S.inv.concat(
       typeof epBox == "function" ? epBox().filter((i) => i.vio && (i.mag || []).length) : [],
     )) {
-      if (!reqOk(c)) continue;
+      if (!reqOk(c) || c.d === 11) continue;
       const i = FAC[S.fac];
       if (DETAIL_SLOT[c.d] === "weapon" && i && !weaponFits(c)) continue;
       const d = equipGain(c);
@@ -221,8 +221,18 @@ function itemModal(n, t) {
     s = !t && typeof enhGain == "function" && !isUpgrade(n) && enhGain(n);
   modal(
     `${itemHTML(n)}${cmpLines(n, t)}${s ? `<div class="cp small">△ Cường hóa lên +${s.enh}: mạnh hơn đồ đang mặc ${(s.gain * 100).toFixed(1)}% · ước tính ${enhExpected(n, s.enh)} KNB</div>` : ""}${e ? `<div class="cmp"><small class="dim">Đang mặc:</small>${itemHTML(e)}</div>` : ""}
-    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}${owned(n) && typeof chatShowItem == "function" && !document.body.classList.contains("nochat") ? '<button class="btn" id="bChatShow">💬 Khoe</button>' : ""}</div>`,
+    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `${n.d === 11 && n.expireAt && n.expireAt <= Date.now() ? '<button class="btn red" id="bDelExp">Bỏ mặt nạ hết hạn</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>`}${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}${owned(n) && typeof chatShowItem == "function" && !document.body.classList.contains("nochat") ? '<button class="btn" id="bChatShow">💬 Khoe</button>' : ""}</div>`,
     () => {
+      const bDelExp = $("#bDelExp");
+      bDelExp &&
+        (bDelExp.onclick = () => {
+          S.inv = S.inv.filter((x) => x !== n);
+          invDirty = !0;
+          save();
+          toast("Đã bỏ mặt nạ hết hạn");
+          closeModal();
+          refresh();
+        });
       const a = $("#bEq"),
         c = $("#bSell"),
         i = $("#bUn"),
@@ -389,11 +399,119 @@ function renderChar() {
           (o.onclick = () =>
             o.parentNode.dataset.slot === "horse"
               ? horsePickModal()
-              : itemModal(findItem(o.dataset.uid), o.parentNode.dataset.slot)),
+              : o.parentNode.dataset.slot === "mask"
+                ? (typeof maskPickModal == "function" ? maskPickModal() : itemModal(findItem(o.dataset.uid), "mask"))
+                : itemModal(findItem(o.dataset.uid), o.parentNode.dataset.slot)),
       ));
   const m = document.querySelector('#t-char .slot[data-slot="horse"]');
   m && !S.eq.horse && (m.onclick = () => horsePickModal());
+  const mk = document.querySelector('#t-char .slot[data-slot="mask"]');
+  mk && !S.eq.mask && (mk.onclick = () => (typeof maskPickModal == "function" ? maskPickModal() : ktcModal("mask")));
 }
+
+function maskPickModal() {
+  if (typeof migrateMasks == "function") migrateMasks();
+  const m = S.eq && S.eq.mask;
+  const list = (S.inv || []).filter((it) => it && it.d === 11);
+  const timeDesc = (it) => {
+    if (it.perm) return '<span style="color:#ffd24a;font-weight:bold">Vĩnh viễn</span>';
+    if (!it.expireAt) return '<span style="color:#ffd24a;font-weight:bold">Vĩnh viễn</span>';
+    const left = it.expireAt - Date.now();
+    if (left <= 0) return '<span style="color:#ff4d4d;font-weight:bold">ĐÃ HẾT HẠN</span>';
+    const d = Math.floor(left / 86400000);
+    const h = Math.floor((left % 86400000) / 3600000);
+    const min = Math.floor((left % 3600000) / 60000);
+    return `<span style="color:#52e396">Còn ${d > 0 ? d + " ngày " : ""}${h}h ${min}p</span>`;
+  };
+
+  const itemRow = (it) => {
+    const isExp = it.expireAt && it.expireAt <= Date.now();
+    return `<div class="qrow" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin:6px 0;background:#181814;border:1px solid #3e3c30;border-radius:6px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="${esc(it.ic || "")}" alt="" style="width:36px;height:36px;image-rendering:pixelated">
+        <div>
+          <b style="color:${RAR_COL[it.r] || '#ffd24a'}">${esc(it.n)}</b><br>
+          <small class="dim">${timeDesc(it)}</small>
+        </div>
+      </div>
+      <div class="btnrow">
+        ${isExp ? `<button class="btn sm red" data-delmask="${it.uid}">Bỏ</button>` : `<button class="btn sm on" data-eqmask="${it.uid}">Đeo</button>`}
+      </div>
+    </div>`;
+  };
+
+  modal(
+    `<h3>🎭 Mặt Nạ Ngoại Trang</h3>
+    <p class="desc">Đeo mặt nạ để biến hóa diện mạo nhân vật sang hình mẫu Kiếm Thế. Có thể đổi qua lại giữa các mặt nạ đang có.</p>
+    ${
+      m
+        ? `<div class="card" style="margin-bottom:10px;border:1px solid #c9a04a;background:#1e1a12">
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="${esc(m.ic || "")}" alt="" style="width:40px;height:40px;image-rendering:pixelated">
+              <div>
+                <b style="color:${RAR_COL[m.r] || '#ffd24a'}">${esc(m.n)}</b> <small class="cp">[Đang đeo]</small><br>
+                <small class="dim">${timeDesc(m)}</small>
+              </div>
+            </div>
+            <div class="btnrow" style="margin-top:8px">
+              <button class="btn sm" id="mMaskInfo">Chi tiết</button>
+              <button class="btn sm red" id="mMaskUn">Tháo mặt nạ</button>
+            </div>
+          </div>`
+        : '<p class="dim small" style="margin-bottom:10px">Chưa đeo mặt nạ nào.</p>'
+    }
+    <h4 style="margin:10px 0 6px">Mặt nạ trong Hành trang (${list.length})</h4>
+    ${list.length ? list.map(itemRow).join("") : '<p class="dim small">Chưa có mặt nạ nào trong túi đồ. Bạn có thể mua tại tab Mặt nạ trong Kỳ Trân Các.</p>'}
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Mặt nạ (10 KNB)</button>
+    </div>`,
+    () => {
+      const bUn = $("#mMaskUn");
+      if (bUn) {
+        bUn.onclick = () => {
+          if (S.inv.length >= INV_MAX) {
+            toast("Hành trang đã đầy");
+            return;
+          }
+          unequip("mask");
+          maskPickModal();
+        };
+      }
+      const bInfo = $("#mMaskInfo");
+      if (bInfo) {
+        bInfo.onclick = () => itemModal(m, "mask");
+      }
+      document.querySelectorAll("#mBody [data-eqmask]").forEach((btn) => {
+        btn.onclick = () => {
+          const uid = +btn.dataset.eqmask;
+          const it = S.inv.find((x) => x && x.uid === uid);
+          if (it) {
+            equip(it);
+            maskPickModal();
+          }
+        };
+      });
+      document.querySelectorAll("#mBody [data-delmask]").forEach((btn) => {
+        btn.onclick = () => {
+          const uid = +btn.dataset.delmask;
+          S.inv = S.inv.filter((x) => x && x.uid !== uid);
+          invDirty = !0;
+          save();
+          toast("Đã bỏ mặt nạ hết hạn");
+          maskPickModal();
+        };
+      });
+      const bKtc = $("#bOpenKtcMask");
+      if (bKtc) {
+        bKtc.onclick = () => {
+          closeModal(!0);
+          ktcModal("mask");
+        };
+      }
+    }
+  );
+}
+window.maskPickModal = maskPickModal;
 function unlearnSkill(n) {
   const t = S.sk[n] || 0;
   if (!t) return !1;

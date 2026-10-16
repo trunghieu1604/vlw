@@ -1789,12 +1789,26 @@ window.JW = {
       hurt: { f: "boss024_hurt.webp", n: 8, d: 8, w: 150, h: 113, ax: 63, ay: 107, ms: 42, fixed: 1 },
       die: { f: "boss024_die.webp", n: 17, d: 8, w: 179, h: 136, ax: 75, ay: 121, ms: 53, fixed: 1 },
     },
+    boss093: {
+      st: { f: "boss093_st.webp", n: 16, d: 8, w: 187, h: 170, ax: 74, ay: 134, ms: 143, fixed: 1 },
+      run: { f: "boss093_run.webp", n: 12, d: 8, w: 164, h: 144, ax: 82, ay: 130, ms: 38, fixed: 1 },
+      at: { f: "boss093_at.webp", n: 12, d: 8, w: 245, h: 203, ax: 85, ay: 173, ms: 31, fixed: 1 },
+      hurt: { f: "boss093_hurt.webp", n: 6, d: 8, w: 207, h: 175, ax: 85, ay: 136, ms: 42, fixed: 1 },
+      die: { f: "boss093_die.webp", n: 13, d: 8, w: 238, h: 193, ax: 93, ay: 146, ms: 50, fixed: 1 },
+    },
     enemy003: {
       st: { f: "enemy003_st.webp", n: 6, d: 8, w: 38, h: 74, ax: 19, ay: 70, ms: 143, fixed: 1 },
       run: { f: "enemy003_run.webp", n: 14, d: 8, w: 60, h: 75, ax: 30, ay: 68, ms: 36, fixed: 1 },
       at: { f: "enemy003_at.webp", n: 14, d: 8, w: 88, h: 93, ax: 44, ay: 83, ms: 31, fixed: 1 },
       hurt: { f: "enemy003_hurt.webp", n: 7, d: 8, w: 80, h: 77, ax: 40, ay: 71, ms: 47, fixed: 1 },
       die: { f: "enemy003_die.webp", n: 13, d: 8, w: 174, h: 118, ax: 87, ay: 78, ms: 54, fixed: 1 },
+    },
+    enemy004: {
+      st: { f: "enemy004_st.webp", n: 15, d: 8, w: 62, h: 81, ax: 31, ay: 67, ms: 143, fixed: 1 },
+      run: { f: "enemy004_run.webp", n: 14, d: 8, w: 62, h: 82, ax: 31, ay: 66, ms: 38, fixed: 1 },
+      at: { f: "enemy004_at.webp", n: 19, d: 8, w: 94, h: 99, ax: 47, ay: 70, ms: 31, fixed: 1 },
+      hurt: { f: "enemy004_hurt.webp", n: 6, d: 8, w: 72, h: 82, ax: 36, ay: 68, ms: 42, fixed: 1 },
+      die: { f: "enemy004_die.webp", n: 13, d: 8, w: 156, h: 115, ax: 78, ay: 67, ms: 50, fixed: 1 },
     },
     enemy021: {
       st: { f: "enemy021_st.webp", n: 8, d: 8, w: 120, h: 111, ax: 61, ay: 109, ms: 143, fixed: 1 },
@@ -1865,6 +1879,13 @@ window.JW = {
       at: { f: "enemy051_at.webp", n: 14, d: 8, w: 128, h: 99, ax: 64, ay: 91, ms: 31, fixed: 1 },
       hurt: { f: "enemy051_hurt.webp", n: 8, d: 8, w: 65, h: 86, ax: 32, ay: 81, ms: 42, fixed: 1 },
       die: { f: "enemy051_die.webp", n: 16, d: 8, w: 114, h: 104, ax: 57, ay: 80, ms: 50, fixed: 1 },
+    },
+    enemy059: {
+      st: { f: "enemy059_st.webp", n: 14, d: 8, w: 72, h: 68, ax: 36, ay: 64, ms: 143, fixed: 1 },
+      run: { f: "enemy059_run.webp", n: 14, d: 8, w: 82, h: 72, ax: 41, ay: 68, ms: 38, fixed: 1 },
+      at: { f: "enemy059_at.webp", n: 15, d: 8, w: 106, h: 111, ax: 53, ay: 95, ms: 31, fixed: 1 },
+      hurt: { f: "enemy059_hurt.webp", n: 6, d: 8, w: 78, h: 73, ax: 39, ay: 68, ms: 42, fixed: 1 },
+      die: { f: "enemy059_die.webp", n: 14, d: 8, w: 152, h: 131, ax: 76, ay: 90, ms: 50, fixed: 1 },
     },
     enemy067: {
       st: { f: "enemy067_st.webp", n: 15, d: 8, w: 48, h: 91, ax: 24, ay: 87, ms: 143, fixed: 1 },

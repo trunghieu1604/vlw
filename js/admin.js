@@ -734,7 +734,13 @@ function admTabEq() {
     <button class="btn sm" data-a="setwear">Nhận & Tự mặc</button>
   </div>
   <div class="admh">Ngựa & Thú Cưỡi (Đầy đủ ${hs.length} loại · Cả Thần Mã)</div>
-  <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button><button class="btn sm on" data-a="horseall" title="Thu thập đủ 48 loài ngựa vào Mã Trường">⚡ Đủ 48 ngựa Mã Trường</button></div>`;
+  <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button><button class="btn sm on" data-a="horseall" title="Thu thập đủ 48 loài ngựa vào Mã Trường">⚡ Đủ 48 ngựa Mã Trường</button></div>
+  <div class="admh">🎭 Mặt Nạ & Ngoại Trang (Mặt Nạ Võ Lâm)</div>
+  <div class="btnrow">
+    <button class="btn sm red" data-a="mask_reset" title="Xóa toàn bộ mặt nạ trong túi/người và reset thời hạn 3 ngày ở Kỳ Trân Các để mua test">🗑️ Reset / Xóa Hết Mặt Nạ</button>
+    <button class="btn sm on" data-a="mask_refresh" title="Cập nhật tất cả mặt nạ trong túi sang icon và model người mới nhất">🔄 Cập Nhật Mặt Nạ Mới</button>
+    <button class="btn sm" data-a="mask_all" title="Nhận trọn bộ 11 mặt nạ Võ Lâm vào túi để test">🎁 Nhận 11 Mặt Nạ (Test)</button>
+  </div>`;
 }
 
 // ---------- Chiến đấu ----------
@@ -1206,6 +1212,52 @@ function admAct(a) {
         return admEnhFull();
       case "matpack":
         return admMatPack();
+      case "mask_reset": {
+        let removed = 0;
+        if (S.inv) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => it && it.d !== 11);
+          removed += before - S.inv.length;
+        }
+        if (S.eq && S.eq.mask) {
+          delete S.eq.mask;
+          removed++;
+        }
+        if (S.stash) {
+          const before = S.stash.length;
+          S.stash = S.stash.filter((it) => it && it.d !== 11);
+          removed += before - S.stash.length;
+        }
+        if (S.gc) delete S.gc["VUACHUA"];
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return `Đã xóa ${removed} mặt nạ & reset thời hạn mua tại Kỳ Trân Các (Có thể nhập lại code VUACHUA)!`;
+      }
+      case "mask_refresh": {
+        if (typeof migrateMasks == "function") migrateMasks();
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return "Đã cập nhật toàn bộ mặt nạ trong túi sang model người và icon mới nhất!";
+      }
+      case "mask_all": {
+        const list = (typeof J != "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        let added = 0;
+        for (const m of list) {
+          if (admInvFree() < 1) break;
+          const it = makeMaskItem(m.k, m.k === 1);
+          S.inv.unshift(it);
+          added++;
+        }
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return `Đã thêm ${added} mặt nạ Võ Lâm vào hành trang!`;
+      }
       case "titleall":
         return admTitleAll();
       case "titlemodal":

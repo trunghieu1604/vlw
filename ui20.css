@@ -702,6 +702,10 @@ body.u20 #panel .it.r3 {
   text-align: center;
   line-height: 11px;
 }
+.u2s[data-slot="horse"],
+.u2s[data-slot="mask"] {
+  cursor: pointer;
+}
 .u2a {
   display: grid;
   grid-template-columns: 1fr 50px 24px 24px;
