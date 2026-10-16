@@ -24,6 +24,9 @@ function zflipApply() {
   const changed = document.body.classList.contains("zflip") !== on;
   document.body.classList.toggle("zflip", on);
 
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute("content", on ? "#000000" : "#0e1412");
+
   if (on) {
     zflipInit();
     zflipSyncDock();

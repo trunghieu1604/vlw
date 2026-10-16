@@ -130,7 +130,10 @@ function renderChar20() {
             .map(([e, l]) => ` · ${SK[e] ? esc(SK[e].n) : e} +${l}`)
             .join("")}</div>`
         : "";
-  (($("#t-char").innerHTML = `<div class="u2char">
+  const charSub = window._charSubTab || "doll";
+  const ctabs = `<div class="u2tabs u2ctabs"><button class="${charSub === "doll" ? "on" : ""}" data-ct="doll">⚔ Trang bị</button><button class="${charSub === "info" ? "on" : ""}" data-ct="info">📊 Chỉ số & Tiềm năng</button></div>`;
+  (($("#t-char").innerHTML = `<div class="u2char${charSub === "info" ? " show-info" : ""}">
+    ${ctabs}
     <div class="u2dollw"><div class="u2nm">${esc(hasRealName() ? S.name : a.n)}</div><div class="u2doll"><canvas id="u2doll" width="252" height="300"></canvas>${t}</div>
       <div class="u2btns"><button class="btn sm" id="bTitle">Danh hiệu</button><button class="btn sm${hasRealName() ? "" : " on"}" id="bName">Đặt tên</button><button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">Dự Bị</button><button class="btn sm" id="bRankChar" title="Bảng xếp hạng">🏆 Xếp hạng</button>${matHave("misc", "ldp") > 0 ? '<button class="btn sm on" id="bDoiPhai">Đổi phái</button>' : ""}</div></div>
     <div class="u2info"><div class="u2box"><b style="color:${SERIES_COL[a.series]}">${esc(a.n)}</b> · hệ ${SERIES[a.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">CS ${rebornN()}</small>` : ""}
@@ -139,6 +142,12 @@ function renderChar20() {
       <div class="u2box">${o}</div>
       <div class="u2h">Chỉ số</div><div class="u2box u2st">${d.map(([e, l]) => `<span>${e}</span><span>${l}</span>`).join("")}</div>${u}${typeof ptCampHTML == "function" ? ptCampHTML() : ""}</div></div>
     ${c.length ? `<div class="reqbad"><b>⚠ ${c.length} món chưa đủ điều kiện, không được cộng chỉ số:</b><br>${c.map((e) => `${esc(e.n)}: ${esc(reqProblems(e).join("; "))}`).join("<br>")}</div>` : ""}`),
+    document.querySelectorAll("#t-char [data-ct]").forEach((e) => {
+      e.onclick = () => {
+        window._charSubTab = e.dataset.ct;
+        renderChar20();
+      };
+    }),
     ($("#bTTa").onclick = tayTuyModal),
     document.querySelectorAll("#t-char .plus").forEach((e) => (e.onclick = () => attrAddModal(e.dataset.a))),
     document.querySelectorAll("#t-char .minus").forEach((e) => (e.onclick = () => unspendAttr(e.dataset.a))),

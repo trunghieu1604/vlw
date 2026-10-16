@@ -28,7 +28,7 @@ body.zflip #app {
   box-shadow: none !important;
   display: block !important;
   overflow: hidden !important;
-  background: #050807 !important;
+  background: #000000 !important;
 }
 
 /* Sân đấu toàn màn hình */
@@ -42,7 +42,7 @@ body.zflip #battle {
   height: 100% !important;
   flex: none !important;
   z-index: 1 !important;
-  background: #1a211b !important;
+  background: #000000 !important;
 }
 
 body.zflip #arena {
@@ -488,6 +488,105 @@ body.zflip #t-more {
 }
 
 /* ========================================================
+   BẢNG NHÂN VẬT (#t-char) TRÊN Z FLIP:
+   Gọn gàng 1 cột vừa 360px, có sub-tab chuyển Trang bị / Chỉ số
+   ======================================================== */
+.u2ctabs {
+  display: none !important;
+}
+
+body.zflip .u2ctabs {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 326px !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  margin: 0 auto 6px !important;
+}
+
+body.zflip .u2ctabs button {
+  flex: 1 !important;
+  padding: 5px 8px !important;
+  font-size: 11.5px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+body.zflip .u2char {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 6px !important;
+  padding: 0 4px 16px !important;
+  box-sizing: border-box !important;
+}
+
+body.zflip .u2char:not(.show-info) .u2info {
+  display: none !important;
+}
+
+body.zflip .u2char.show-info .u2dollw {
+  display: none !important;
+}
+
+body.zflip .u2dollw {
+  width: 100% !important;
+  max-width: 326px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin: 0 auto !important;
+}
+
+body.zflip .u2dollw .u2nm {
+  width: 100% !important;
+  max-width: 252px !important;
+  box-sizing: border-box !important;
+}
+
+body.zflip .u2doll {
+  width: 252px !important;
+  height: 300px !important;
+  margin: 0 auto !important;
+  flex: none !important;
+}
+
+body.zflip .u2dollw .u2btns {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  max-width: 326px !important;
+  margin: 6px auto 0 !important;
+}
+
+body.zflip .u2dollw .u2btns .btn {
+  height: 26px !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+}
+
+body.zflip .u2info {
+  width: 100% !important;
+  max-width: 326px !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+}
+
+body.zflip .u2info .u2box {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+body.zflip .u2info .u2h {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ========================================================
    KHI CỬA SỔ, CHAT HOẶC MAP MỞ: ẨN HOÀN TOÀN CÁC NÚT CHIẾN ĐẤU / MAP ĐỂ KHÔNG BỊ ĐÈ
    ======================================================== */
 body.zflip.u20win #u20zone,
@@ -527,7 +626,14 @@ body.zflip:has(#u20zl:not(.hidden)) #skBuffs,
 body.zflip:has(#u20zl:not(.hidden)) #modeSw,
 body.zflip:has(#u20zl:not(.hidden)) #hud,
 body.zflip:has(#u20zl:not(.hidden)) #pad,
-body.zflip:has(#u20zl:not(.hidden)) #chatBox {
+body.zflip:has(#u20zl:not(.hidden)) #chatBox,
+body.zflip:has(#modal:not(.hidden)) #u20zone,
+body.zflip:has(#modal:not(.hidden)) #topCtl,
+body.zflip:has(#modal:not(.hidden)) #skBuffs,
+body.zflip:has(#modal:not(.hidden)) #modeSw,
+body.zflip:has(#modal:not(.hidden)) #hud,
+body.zflip:has(#modal:not(.hidden)) #pad,
+body.zflip:has(#modal:not(.hidden)) #chatBox {
   display: none !important;
 }
 
@@ -747,14 +853,14 @@ body.zflip #zflipDock {
   bottom: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  height: 40px !important;
-  background: rgba(14, 18, 16, 0.96) !important;
-  border-top: 1px solid #6b5a32 !important;
+  height: calc(40px + env(safe-area-inset-bottom, 0px)) !important;
+  background: #000000 !important;
+  border-top: 1px solid #4a3e25 !important;
   z-index: 60 !important;
   justify-content: space-around !important;
   align-items: center !important;
-  padding: 0 2px !important;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.7) !important;
+  padding: 0 2px env(safe-area-inset-bottom, 0px) !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.9) !important;
   box-sizing: border-box !important;
 }
 
@@ -799,14 +905,73 @@ body.zflip #zflipDock {
   letter-spacing: -0.3px;
 }
 
-/* Hộp thoại Popup Modal */
-body.zflip #modal .mbox {
-  width: calc(100vw - 8px) !important;
-  max-width: calc(100vw - 8px) !important;
-  height: calc(100% - 8px) !important;
-  max-height: calc(100% - 8px) !important;
-  margin: 4px auto !important;
+/* ========================================================
+   HỘP THOẠI POPUP MODAL TRÊN Z FLIP (Bảng Xếp Hạng, v.v.)
+   Đẩy sát lên đỉnh (top: 0), không bị che bởi thanh dock
+   ======================================================== */
+body.zflip #modal.hidden {
+  display: none !important;
+}
+
+body.zflip #modal:not(.hidden) {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: calc(40px + env(safe-area-inset-bottom, 0px)) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: calc(100% - 40px - env(safe-area-inset-bottom, 0px)) !important;
+  max-height: calc(100% - 40px - env(safe-area-inset-bottom, 0px)) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  z-index: 100 !important;
+  background: rgba(0, 0, 0, 0.85) !important;
   box-sizing: border-box !important;
+}
+
+body.zflip #modal .mbox {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  padding: 8px 6px 12px !important;
+  box-sizing: border-box !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--w2bg, #1a1a14) !important;
+  color: var(--w2tx, #e0d8be) !important;
+}
+
+body.zflip #modal .mx {
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+  width: 32px !important;
+  height: 28px !important;
+  line-height: 26px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  background: linear-gradient(180deg, #8a2424, #501212) !important;
+  color: #fff !important;
+  border: 1px solid #ff7777 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 20 !important;
+  padding: 0 !important;
 }
 
 /* ========================================================
