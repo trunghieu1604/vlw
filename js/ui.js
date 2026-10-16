@@ -1125,9 +1125,10 @@ function renderMore() {
     o && typeof netLogout == "function" && (o.onclick = () => netLogout(o));
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
+  const HIDE_SAVE_EXPORT = true; // Tạm ẩn phần Lưu game (tải/nạp file & xuất/nhập mã) để tránh share nick
   $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>${
-    n
-      ? "" // online: saved on the server automatically; no cloud-save / slot / delete controls in our version
+    n || HIDE_SAVE_EXPORT
+      ? "" // online hoặc tạm ẩn: giữ nguyên code lưu game, chỉ ẩn giao diện tải/nạp file và xuất/nhập mã
       : `<h3>Lưu game</h3><div class="card"><p class="dim small">Nhân vật lưu trong trình duyệt của từng thiết bị. Để chơi trên thiết bị khác: bấm <b>Tải file lưu</b>, chuyển file <code></code> sang thiết bị kia (Zalo, Drive, cáp…), rồi mở game ở đó và bấm <b>Nạp từ file</b>. File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p>
     <div class="btnrow"><button class="btn" id="bDl">Tải file lưu</button><button class="btn" id="bFile">Nạp từ file</button></div>
     <p class="dim small">Hoặc dùng mã văn bản:</p><div class="btnrow"><button class="btn" id="bExp">Xuất mã</button><button class="btn" id="bImp">Nhập mã</button></div><textarea id="saveTxt" rows="4" placeholder="Mã lưu game"></textarea></div>`
