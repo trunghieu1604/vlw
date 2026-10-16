@@ -1052,7 +1052,7 @@ async function netRankBody(t) {
       <select id="nrFac"><option value="">Mọi phái</option>${FACTIONS.filter((a) => !a.novice)
         .map((a) => `<option value="${a.key}" ${a.key === NET.rfac ? "selected" : ""}>${esc(a.n)}</option>`)
         .join("")}</select>
-      ${typeof CHAT !== "undefined" && CHAT.isFirebase ? '<button class="btn sm" id="bSyncRank" title="Đẩy thông tin nhân vật của bạn lên BXH">🔄 Cập nhật của tôi</button>' : ''}
+      ${typeof CHAT !== "undefined" && CHAT.isFirebase ? '<button class="btn sm" id="bSyncRank" title="Đẩy thông tin nhân vật của bạn lên BXH" style="white-space:nowrap">Cập nhật</button>' : ''}
       </div>
     <table class="dktbl small"><tr><th>#</th><th>Nhân vật</th><th>Phái</th><th>${RANKS.find((a) => a[0] === n)[1]}</th></tr>
     ${s.map((a, o) => `<tr${S && a.name === S.name ? ' style="background:#2a2410"' : ""}><td>${o + 1}</td><td><a href="#" data-pn="${esc(a.name)}" style="color:${typeof campCol == "function" ? campCol(a.fac) : "#ffd76a"}">${esc(a.name)}</a></td><td>${esc(facName(a.fac))}</td><td>${i(a)}</td></tr>`).join("") || '<tr><td colspan="4" class="dim">Chưa có ai</td></tr>'}</table>
