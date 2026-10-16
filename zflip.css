@@ -587,6 +587,158 @@ body.zflip .u2info .u2h {
 }
 
 /* ========================================================
+   BẢNG VÕ CÔNG (#t-skill) TRÊN Z FLIP:
+   Gọn gàng vừa 360px, cuộn ngang mượt mà, đầy đủ các chiêu
+   ======================================================== */
+body.zflip #t-skill {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 4px 6px 16px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+body.zflip #t-skill .u2tabs {
+  width: 100% !important;
+  max-width: 330px !important;
+  margin: 0 auto 6px !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+body.zflip #t-skill .u2tabs button {
+  flex: 1 !important;
+  font-size: 11.5px !important;
+  padding: 4px 8px !important;
+  text-align: center !important;
+}
+
+body.zflip #t-skill .u2mainbar {
+  width: 100% !important;
+  max-width: 330px !important;
+  margin: 0 auto 6px !important;
+  padding: 4px 6px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px 6px !important;
+  font-size: 11px !important;
+}
+
+body.zflip #t-skill .u2mainbar select {
+  max-width: 130px !important;
+  font-size: 11px !important;
+  height: 24px !important;
+}
+
+body.zflip #t-skill .u2mainbar .btn {
+  height: 24px !important;
+  font-size: 11px !important;
+  padding: 0 6px !important;
+}
+
+body.zflip #t-skill .u2kg {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 4px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-x !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 6px 4px 10px !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+  justify-content: flex-start !important;
+}
+
+body.zflip #t-skill .u2kc {
+  min-width: 48px !important;
+  width: 48px !important;
+  flex: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+body.zflip #t-skill .u2kh {
+  font-size: 9.5px !important;
+  padding: 2px 0 !important;
+  white-space: nowrap !important;
+}
+
+body.zflip #t-skill .u2k {
+  width: 48px !important;
+  height: 48px !important;
+}
+
+body.zflip #t-skill .u2k img {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+body.zflip #t-skill .u2k i {
+  font-size: 10px !important;
+  left: 2px !important;
+  bottom: 0 !important;
+}
+
+body.zflip #t-skill .u2k .plus {
+  width: 16px !important;
+  height: 16px !important;
+  font-size: 13px !important;
+  line-height: 14px !important;
+}
+
+body.zflip #t-skill .u2foot {
+  width: 100% !important;
+  max-width: 330px !important;
+  margin: 6px auto 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 4px 6px !important;
+  font-size: 10.5px !important;
+}
+
+body.zflip #t-skill .u2foot .btn {
+  height: 26px !important;
+  font-size: 11px !important;
+  padding: 2px 8px !important;
+}
+
+body.zflip #t-skill .u2tip {
+  width: 100% !important;
+  max-width: 330px !important;
+  margin: 4px auto 0 !important;
+  font-size: 9.5px !important;
+  text-align: center !important;
+  color: #a89870 !important;
+}
+
+/* ========================================================
+   KHU VỰC CAMERA VÀ DẢI ĐÁY AMOLED PURE BLACK
+   ======================================================== */
+body.zflip::after {
+  content: "" !important;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 80px !important;
+  background: #000000 !important;
+  z-index: 55 !important;
+  pointer-events: none !important;
+}
+
+/* ========================================================
    KHI CỬA SỔ, CHAT HOẶC MAP MỞ: ẨN HOÀN TOÀN CÁC NÚT CHIẾN ĐẤU / MAP ĐỂ KHÔNG BỊ ĐÈ
    ======================================================== */
 body.zflip.u20win #u20zone,

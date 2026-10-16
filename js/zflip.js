@@ -22,7 +22,10 @@ function zflipOn() {
 function zflipApply() {
   const on = zflipOn();
   const changed = document.body.classList.contains("zflip") !== on;
+  document.documentElement.classList.toggle("zflip", on);
   document.body.classList.toggle("zflip", on);
+  document.documentElement.style.backgroundColor = on ? "#000000" : "";
+  document.body.style.backgroundColor = on ? "#000000" : "";
 
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) metaTheme.setAttribute("content", on ? "#000000" : "#0e1412");
