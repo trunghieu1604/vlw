@@ -26,8 +26,8 @@ body.u20 #battle {
 }
 /* thanh trang thai tren cung */
 body.u20 #hud {
-  left: 190px !important;
-  right: 340px !important;
+  left: 8px !important;
+  right: 385px !important;
   transform: none !important;
   width: auto !important;
   top: 0 !important;
@@ -106,12 +106,13 @@ body.u20 #panel::before {
   top: 4px;
   z-index: 8;
   display: flex;
+  flex-direction: row;
   gap: 6px;
-  align-items: flex-start;
+  align-items: center;
 }
 .u20r-col {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
   align-items: center;
 }
@@ -998,26 +999,36 @@ body.u20 #panel .it.r3 {
 }
 #u20trk {
   position: fixed;
-  right: 46px;
+  right: 6px;
   z-index: 7;
-  width: 210px;
+  width: 150px;
+  max-width: 150px;
+  box-sizing: border-box;
   background: #000a;
   border: 1px solid #6d6a52;
   font-size: 11.5px;
   line-height: 15px;
   color: #e8e0c0;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 #u20trk .u2trh {
   text-align: center;
   background: linear-gradient(#3e3e32, #1d1d16);
-  padding: 2px;
+  padding: 2px 16px 2px 4px;
   color: #fff;
-  font-size: 12px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 #u20trk > div[data-q],
 #u20trk > div:not(.u2trh) {
   padding: 3px 6px;
   cursor: pointer;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 #u20trk b {
   color: #ffd24a;
@@ -1737,7 +1748,7 @@ body.u2m #tabs button.on {
 body.u2s #hud {
   left: 4px !important;
   right: auto !important;
-  width: min(52vw, 460px) !important;
+  width: min(44vw, 380px) !important;
   padding: 1px 6px !important;
 }
 body.u2s .u20rb {
@@ -1809,9 +1820,20 @@ body.u2s .u20wh {
   height: 26px !important;
 }
 body.u2s #u20trk {
-  width: 170px;
-  font-size: 10.5px;
+  width: 104px !important;
+  max-width: 104px !important;
+  font-size: 10px;
   line-height: 13px;
+}
+body.u2s #u20trk .u2trh {
+  font-size: 9.5px;
+  padding: 2px 14px 2px 2px;
+}
+body.u2s #u20trk > div[data-q],
+body.u2s #u20trk > div:not(.u2trh) {
+  padding: 2px 3px;
+  font-size: 10px;
+  line-height: 12px;
 }
 body.u2s #u20boss {
   top: 24px;
@@ -2119,7 +2141,10 @@ body.u20logoff #u20ct button[data-lt] {
     margin-left: 2px !important;
   }
   #u20trk .u2trh {
-    padding: 6px 2px;
+    padding: 5px 16px 5px 4px;
+  }
+  body.u2s #u20trk .u2trh {
+    padding: 4px 14px 4px 2px;
   }
 }
 #u20menu .u20mi.off {
@@ -2144,7 +2169,9 @@ body.u20 #toast {
   position: fixed;
   right: 6px;
   z-index: 7;
-  width: 210px;
+  width: 150px;
+  max-width: 150px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2152,7 +2179,9 @@ body.u20 #toast {
 }
 #u20rc #u20trk {
   position: static !important;
-  width: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   right: auto !important;
   top: auto !important;
 }
@@ -2195,7 +2224,9 @@ body.u20 #toast {
   display: none !important;
 }
 body.u2s #u20rc {
-  width: 170px;
+  right: 4px !important;
+  width: 104px !important;
+  max-width: 104px !important;
 }
 @media (pointer: coarse) {
   body.u2s #u20mail {
@@ -2603,6 +2634,15 @@ body.u20 #npcDlg {
   bottom: 12px !important;
   max-height: calc(100vh - 24px) !important;
   z-index: 100 !important;
+}
+
+#skBuffs {
+  top: 26px !important;
+  left: 8px !important;
+}
+body.u2s #skBuffs {
+  top: 56px !important;
+  left: 4px !important;
 }
 
 

@@ -155,7 +155,10 @@
   top: 26px !important;
 }
 #skBuffs {
-  top: 54px !important;
+  top: 26px !important;
+}
+body.u2s #skBuffs {
+  top: 56px !important;
 }
 
 /* ---- khung hop thoai: hoa van bac tren + duoi nhu bang Do vat ---- */

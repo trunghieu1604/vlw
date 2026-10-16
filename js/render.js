@@ -557,7 +557,7 @@ function drawTiledBg(i, t) {
         i.restore());
     }
 }
-const MINI = { s: 92, m: 8, top: 62 };
+const MINI = { s: 92, m: 8, top: 26 };
 function drawMinimap(i) {
   if (R.town || S.miniMap === !1) return;
   const t = MINI.s,

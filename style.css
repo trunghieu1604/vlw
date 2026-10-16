@@ -1778,7 +1778,7 @@ button.ep-htc {
 #skBuffs {
   position: absolute;
   left: 8px;
-  top: 58px;
+  top: 26px;
   z-index: 4;
   display: flex;
   flex-wrap: wrap;
@@ -1805,9 +1805,12 @@ button.ep-htc {
 /* bieu tuong trang thai kieu JX1 */
 #skBuffs {
   gap: 2px;
-  top: 56px;
+  top: 26px;
   left: 6px;
   max-width: 70%;
+}
+body.u2s #skBuffs {
+  top: 56px !important;
 }
 #skBuffs .sti {
   width: 26px;

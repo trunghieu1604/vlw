@@ -41,7 +41,7 @@ function u20Init() {
       `<div id="u20side">${U20_SIDE.map(([n, i], u) => `<button class="u20sq" data-s="${u}" data-n="${i}">${n}</button>`).join("")}</div>`,
     ),
     t(
-      '<div id="u20r"><button class="u20rb" id="u20fs" title="Toàn màn hình">Toàn<br>màn</button><button class="u20rb" id="u20gift">Phần<br>thưởng</button><div class="u20r-col"><button class="u20rb" id="u20ktc" title="Kỳ Trân Các">Kỳ Trân<br>Các</button><button class="u20rb" id="u20wb" title="Boss thế giới">Boss<br>thế giới</button></div></div>',
+      '<div id="u20r"><button class="u20rb" id="u20gift" title="Phần thưởng">Phần<br>thưởng</button><button class="u20rb" id="u20ktc" title="Kỳ Trân Các">Kỳ Trân<br>Các</button><button class="u20rb" id="u20wb" title="Boss thế giới">Boss<br>thế giới</button><button class="u20rb" id="u20fs" title="Toàn màn hình">Toàn<br>màn</button></div>',
     ),
     t(
       '<div id="u20gold"><span><img src="img/ep/knb.png" alt=""><b id="u20knb">0</b></span><span>🪙 <b id="u20g">0</b></span></div>',
@@ -437,14 +437,15 @@ function u20Apply() {
     typeof MINI < "u" &&
       (t
         ? ((MINI.s = s ? 104 : 150), (MINI.top = s ? 2 : 4), (MINI.m = s ? 4 : 6))
-        : ((MINI.s = 92), (MINI.top = 62), (MINI.m = 8))),
+        : ((MINI.s = 92), (MINI.top = 26), (MINI.m = 8))),
     t)
   ) {
     $("#u20r").style.right = MINI.s + MINI.m + (s ? 6 : 12) + "px";
     const n = MINI.s + MINI.top + 2;
     Object.assign($("#u20zone").style, { top: n + "px", right: MINI.m + "px", width: MINI.s + "px" });
     const i = s && matchMedia("(pointer: coarse)").matches ? 32 : 24;
-    (($("#u20side").style.top = n + i + 4 + "px"), ($("#u20rc").style.top = n + i + 4 + "px"));
+    Object.assign($("#u20side").style, { top: n + i + 4 + "px", right: MINI.m + "px" });
+    Object.assign($("#u20rc").style, { top: n + i + 4 + "px", right: MINI.m + "px", width: MINI.s + "px" });
   }
   o && u2mZonePos();
   const e = $("#chatBox");
