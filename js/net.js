@@ -568,8 +568,8 @@ async function netRedeem(t) {
     };
   }
 
-  // Giftcode Danh hiệu Võ Lâm Minh Chủ (Mở Lệnh Bài Admin tại NPC Trung Hiếu)
-  if (t === "ANDYTRAN") {
+  // Giftcode Danh hiệu Võ Lâm Minh Chủ
+  if (t === "VLMC") {
     const rw = RW();
     rw.titles = rw.titles || {};
     rw.titles.vlmc = 1;

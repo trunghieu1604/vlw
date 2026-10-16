@@ -342,6 +342,20 @@
         R.dirty = !0;
         return `${nm()}nhận <b>+500 mọi loại bình dược phẩm (máu & nội lực)</b>`;
       }
+      case "revoke_vlmc": {
+        if (S.rw) {
+          if (S.rw.titles && S.rw.titles.vlmc) delete S.rw.titles.vlmc;
+          if (S.rw.title === "vlmc") S.rw.title = "";
+        }
+        if (S.gc) {
+          delete S.gc.ANDYTRAN;
+          delete S.gc.VLMC;
+        }
+        R.dirty = !0;
+        typeof save == "function" && save();
+        typeof refresh == "function" && refresh();
+        return `${nm()}đã bị thu hồi danh hiệu <b>VÕ LÂM MINH CHỦ</b>`;
+      }
     }
     return "";
   }

@@ -1037,6 +1037,11 @@ function admTabPlayers() {
     <button class="btn sm on" data-a="pe_resetall">Tẩy Toàn Bộ</button>
   </div>
 
+  <div class="admh">👑 Danh Hiệu & Đặc Quyền</div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm" data-a="pe_revokevlmc" title="Thu hồi danh hiệu Võ Lâm Minh Chủ của người này">🚫 Thu hồi VLMC</button>
+  </div>
+
   <div class="admh">💰 Bơm Ngân Lượng & KNB</div>
   <div class="admf">
     <label>Ngân lượng: <input type="number" id="admPeGoldVal" placeholder="Số lượng" value="10000000" style="width:110px"></label>
@@ -1427,6 +1432,11 @@ function admAct(a) {
         const pName = admPeSelectedName;
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         return sendPlayerEditCmd(pName, { op: "give_set", special: "dq", by: S.name || "Admin" }, `Đã tặng bộ Định Quốc cho [${pName}]`);
+      }
+      case "pe_revokevlmc": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, { op: "revoke_vlmc", by: S.name || "Admin" }, `Đã gửi lệnh thu hồi danh hiệu Võ Lâm Minh Chủ của [${pName}]`);
       }
       case "go":
         return admGo(a.slice(3));

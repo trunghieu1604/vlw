@@ -1,29 +1,29 @@
 "use strict";
 
 const HALO_DEFS = {
-  bj: { f: "img/halo/bj.webp", n: 10, w: 156, h: 141, ax: 76, ay: 107, ms: 150, name: "Vòng sáng Bá Chủ", title: "VÕ LÂM MINH CHỦ", titleKey: "vlmc", life: 15, luck: 15 },
+  bj: { f: "img/halo/bj.webp", n: 10, w: 156, h: 141, ax: 76, ay: 107, ms: 150, name: "Vòng sáng Bá Chủ", title: "Vô Song Vương Giả", titleKey: "admin", life: 15, luck: 15 },
   yl: { f: "img/halo/yl.webp", n: 10, w: 168, h: 139, ax: 84, ay: 98, ms: 180, name: "Vòng sáng Yến Lạc (Lam)", title: "Chưởng Môn", titleKey: "mp4", life: 10, luck: 10 },
   ab: { f: "img/halo/ab.webp", n: 10, w: 320, h: 191, ax: 158, ay: 99, ms: 150, name: "Vòng sáng Ám Dạ (Bát Quái)", title: "Trường Bạch Sơn Chủ", titleKey: "zone16", life: 12, luck: 12 },
   zw: { f: "img/halo/zw.webp", n: 11, w: 320, h: 165, ax: 160, ay: 67, ms: 113, name: "Vòng sáng Tử Vân (Boss TG)", title: "TOP 1 BTG", titleKey: "top1_btg", life: 20, luck: 20 },
-  dg: { f: "img/halo/dg.webp", n: 10, w: 156, h: 145, ax: 77, ay: 106, ms: 100, name: "Vòng sáng Đồ Long (Vàng)", title: "Vô Song Vương Giả", titleKey: "admin", life: 15, luck: 15 }
+  dg: { f: "img/halo/dg.webp", n: 10, w: 156, h: 145, ax: 77, ay: 106, ms: 100, name: "Vòng sáng Đồ Long (Vàng)", title: "VÕ LÂM MINH CHỦ", titleKey: "vlmc", life: 15, luck: 15 }
 };
 const xs = HALO_DEFS;
 const gz = { bj: [14, 40, 127, 96], yl: [13, 16, 142, 117], ab: [105, 3, 110, 112], zw: [120, 47, 80, 41], dg: [14, 10, 127, 130] };
 
 const TITLE_HALO_MAP = {
-  vlmc: { haloKey: "bj", titleName: "VÕ LÂM MINH CHỦ" },         // Võ Lâm Minh Chủ dùng vòng sáng Bá Chủ (Vàng)
+  vlmc: { haloKey: "dg", titleName: "VÕ LÂM MINH CHỦ" },         // Võ Lâm Minh Chủ dùng vòng sáng Đồ Long (Vàng)
   mp4: { haloKey: "yl", titleName: "Chưởng Môn" },              // Chưởng Môn dùng vòng sáng Yến Lạc (Lam)
   zone16: { haloKey: "ab", titleName: "Trường Bạch Sơn Chủ" },  // Trường Bạch Sơn Chủ dùng Ám Dạ (Bát Quái)
   top1_btg: { haloKey: "zw", titleName: "TOP 1 BTG" },          // TOP 1 BTG dùng Tử Vân (Boss TG - 1 ngày)
-  admin: { haloKey: "dg", titleName: "Vô Song Vương Giả" }      // Vô Song dùng Đồ Long (Vàng)
+  admin: { haloKey: "bj", titleName: "Vô Song Vương Giả" }      // Vô Song dùng Bá Chủ
 };
 
 const HALO_TO_TITLE_MAP = {
-  bj: "vlmc",
+  bj: "admin",
   yl: "mp4",
   ab: "zone16",
   zw: "top1_btg",
-  dg: "admin"
+  dg: "vlmc"
 };
 
 // Check if player is wearing the title "VÕ LÂM MINH CHỦ"
