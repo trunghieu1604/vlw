@@ -1284,7 +1284,8 @@ function renderMore() {
       </div></div>
     <h3>Trợ năng</h3><div class="card lootf">
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
-      <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label>
+      <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label><br>
+      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> 📱 Chế độ màn ngoài Z Flip / Màn vuông mini (Auto toàn màn hình, thanh phím gọn, bảng full screen)</label>
       <small class="dim">Tay cầm: cần analog / D-pad để đi, A B X Y dùng chiêu 1–4, LB / RB uống thuốc HP / MP. Phím Esc đóng hộp thoại.<br>Phím tắt (như Võ Lâm 1): F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–5 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
     <h3>Điều khiển & Hiển thị</h3><div class="card"><div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
       <label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
@@ -1385,12 +1386,20 @@ function renderMore() {
     ($("#uFs").onchange = (e) => {
       setUiPref({ fs: +e.target.value });
     }),
-    ($("#uSaver").onchange = (e) => setUiPref({ saver: e.target.checked })));
+    ($("#uSaver").onchange = (e) => setUiPref({ saver: e.target.checked })),
+    $("#cZflip") &&
+      ($("#cZflip").onchange = (e) => {
+        S.zflipMode = e.target.checked;
+        save();
+        typeof zflipApply == "function" && zflipApply();
+        toast(S.zflipMode ? "Đã bật giao diện Z Flip / Màn vuông" : "Đã tắt giao diện Z Flip");
+      }));
 }
 function showTab(n) {
   ((curTab = n),
     document.querySelectorAll("#tabs button").forEach((t) => t.classList.toggle("on", t.dataset.t === n)),
     document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("hidden", t.id !== "t-" + n)),
+    typeof zflipSyncPanel == "function" && zflipSyncPanel(),
     refresh());
 }
 function refresh() {

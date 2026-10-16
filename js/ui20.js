@@ -427,7 +427,8 @@ function u20Apply() {
     o = u2mOn();
   (document.body.classList.toggle("u20", t),
     document.body.classList.toggle("u2s", s),
-    document.body.classList.toggle("u2m", o));
+    document.body.classList.toggle("u2m", o),
+    typeof zflipApply == "function" && zflipApply());
   for (const n of ["u20menu", "u20side", "u20r", "u20gold", "u20log", "u20boss", "u20rc", "u20rank"]) {
     const i = document.getElementById(n);
     i && (i.style.display = t ? "" : "none");
