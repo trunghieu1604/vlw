@@ -30,7 +30,8 @@ let admTab = "lv",
   admSet = "",
   admSetCat = "all",
   admSetFac = "mine",
-  admHorse = "";
+  admHorse = "",
+  admMask = 1;
 const ADM_PASS = "16104";
 let admUnlocked = true;
 
@@ -591,6 +592,10 @@ function admHorseOpts(hs, cur) {
   }
   return out;
 }
+function admMaskOpts(cur) {
+  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  return list.map((m) => `<option value="${m.k}"${Number(m.k) === Number(cur) ? " selected" : ""}>${m.k}. ${esc(m.n)}${m.perm ? " (Vĩnh viễn)" : " (3 ngày)"}</option>`).join("");
+}
 function admHorseGive() {
   const hs = admHorses();
   const curId = (typeof $ == "function" && $("#admHorse") && $("#admHorse").value) || admHorse;
@@ -736,10 +741,14 @@ function admTabEq() {
   <div class="admh">Ngựa & Thú Cưỡi (Đầy đủ ${hs.length} loại · Cả Thần Mã)</div>
   <div class="admf"><select id="admHorse">${admHorseOpts(hs, admHorse)}</select><button class="btn sm" data-a="horse">Nhận ngựa</button><button class="btn sm on" data-a="horseall" title="Thu thập đủ 48 loài ngựa vào Mã Trường">⚡ Đủ 48 ngựa Mã Trường</button></div>
   <div class="admh">🎭 Mặt Nạ & Ngoại Trang (Mặt Nạ Võ Lâm)</div>
-  <div class="btnrow">
-    <button class="btn sm red" data-a="mask_reset" title="Xóa toàn bộ mặt nạ trong túi/người và reset thời hạn 3 ngày ở Kỳ Trân Các để mua test">🗑️ Reset / Xóa Hết Mặt Nạ</button>
-    <button class="btn sm on" data-a="mask_refresh" title="Cập nhật tất cả mặt nạ trong túi sang icon và model người mới nhất">🔄 Cập Nhật Mặt Nạ Mới</button>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admMask">${admMaskOpts(admMask)}</select>
+    <button class="btn sm on" data-a="mask">Nhận Mặt Nạ</button>
     <button class="btn sm" data-a="mask_all" title="Nhận trọn bộ 13 mặt nạ Võ Lâm vào túi để test">🎁 Nhận 13 Mặt Nạ (Test)</button>
+  </div>
+  <div class="btnrow">
+    <button class="btn sm on" data-a="mask_refresh" title="Cập nhật tất cả mặt nạ trong túi sang model người mới nhất">🔄 Cập Nhật Mặt Nạ Mới</button>
+    <button class="btn sm red" data-a="mask_reset" title="Xóa toàn bộ mặt nạ trong túi/người và reset thời hạn 3 ngày ở Kỳ Trân Các để mua test">🗑️ Reset / Xóa Hết Mặt Nạ</button>
   </div>`;
 }
 
@@ -871,6 +880,8 @@ let admPePlayersList = [];
 let admPeSelectedName = "";
 let admPeSet = "";
 let admPeHorse = "";
+let admPeMask = 1;
+let admPeMaskPerm = false;
 
 function admPeSetOptions(targetFac) {
   const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
@@ -916,13 +927,19 @@ function admPeSetOptions(targetFac) {
 }
 
 function sendPlayerEditCmd(targetName, cmd, successMsg) {
+  cmd.id = "cmd_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+  cmd.t = Date.now();
   if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) {
+    if (typeof S !== "undefined" && S && S.name === targetName && typeof peApply === "function") {
+      S.admQ = S.admQ || {};
+      S.admQ[cmd.id] = cmd;
+      peApply();
+      return successMsg || "Đã áp dụng lệnh can thiệp thành công!";
+    }
     return toast("Firebase chưa kết nối"), "";
   }
   try {
     const db = firebase.database();
-    cmd.id = "cmd_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
-    cmd.t = Date.now();
     // Firebase strictly rejects objects with undefined values: strip them clean
     const cleanCmd = JSON.parse(JSON.stringify(cmd));
     db.ref("player_commands/name/" + targetName).push(cleanCmd);
@@ -1034,6 +1051,22 @@ function admTabPlayers() {
     <button class="btn sm red" data-a="pe_revokeallhorses" title="Thu hồi toàn bộ ngựa và dọn sạch Mã Trường">🧹 Dọn Sạch Mã Trường</button>
   </div>
 
+  <div class="admh">🎭 Mặt Nạ & Ngoại Trang (Tặng / Thu Hồi)</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admPeMask" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      ${admMaskOpts(admPeMask || 1)}
+    </select>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#ffd76a;white-space:nowrap;margin:0 4px">
+      <input type="checkbox" id="admPeMaskPerm" ${admPeMaskPerm ? "checked" : ""}> Vĩnh viễn
+    </label>
+    <button class="btn sm on" data-a="pe_givemask">🎁 Tặng Mặt Nạ Này</button>
+    <button class="btn sm red" data-a="pe_revokemask" title="Thu hồi loại mặt nạ đang chọn trong dropdown">🚫 Thu Hồi Mặt Nạ Này</button>
+  </div>
+  <div class="btnrow" style="margin-bottom:6px">
+    <button class="btn sm on" data-a="pe_giveallmasks" title="Tặng toàn bộ 13 loại mặt nạ Võ Lâm cho người chơi">⚡ Tặng Đủ 13 Mặt Nạ</button>
+    <button class="btn sm red" data-a="pe_revokeallmasks" title="Thu hồi toàn bộ mặt nạ trên người, trong túi và kho">🧹 Thu Hồi Hết Mặt Nạ</button>
+  </div>
+
   <div class="admh">🎁 Trang Bị & Bộ Trang Bị (Tặng / Thu Hồi)</div>
   <div class="admf" style="margin-bottom:6px">
     <select id="admPeSet" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
@@ -1115,6 +1148,8 @@ function admModal() {
       });
       v("admPeSet") && (v("admPeSet").onchange = () => (admPeSet = v("admPeSet").value));
       v("admPeHorse") && (v("admPeHorse").onchange = () => (admPeHorse = v("admPeHorse").value));
+      v("admPeMask") && (v("admPeMask").onchange = () => (admPeMask = +v("admPeMask").value || 1));
+      v("admPeMaskPerm") && (v("admPeMaskPerm").onchange = () => (admPeMaskPerm = !!v("admPeMaskPerm").checked));
       const eqSync = () => {
         const g = (id, d) => (v(id) ? +v(id).value : d);
         admEq = { d: g("admEqD", 0), k: g("admEqK", 0), lv: g("admEqL", 10), n: g("admEqN", 6), s: g("admEqS", -1), q: clamp(g("admEqQ", 1) | 0, 1, 20) };
@@ -1125,6 +1160,7 @@ function admModal() {
       v("admSetFac") && (v("admSetFac").onchange = () => { admSetFac = v("admSetFac").value; admSet = ""; admModal(); });
       v("admSet") && (v("admSet").onchange = () => (admSet = v("admSet").value));
       v("admHorse") && (v("admHorse").onchange = () => (admHorse = v("admHorse").value));
+      v("admMask") && (v("admMask").onchange = () => (admMask = +v("admMask").value || 1));
       v("admThQ") &&
         typeof thFilter == "function" &&
         (v("admThQ").oninput = () => thFilter($("#mBody .admlist"), v("admThQ").value));
@@ -1137,6 +1173,7 @@ function admAct(a) {
   const tab = {
     lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv", reb: "lv",
     eqmake: "eq", eqfull: "eq", set: "eq", setwear: "eq", horse: "eq", horseall: "eq", enhfull: "eq", matpack: "eq",
+    mask: "eq", mask_all: "eq", mask_reset: "eq", mask_refresh: "eq",
     skmax: "skill", cd: "skill", full: "skill"
   }[k] || k;
   admDo(() => admInCh(tab, () => {
@@ -1242,6 +1279,17 @@ function admAct(a) {
         save();
         refresh();
         return "Đã cập nhật toàn bộ mặt nạ trong túi sang model người và icon mới nhất!";
+      }
+      case "mask": {
+        const curK = +($("#admMask") ? $("#admMask").value : admMask) || admMask || 1;
+        if (admInvFree() < 1) return (toast("Hành trang đã đầy"), "");
+        const it = makeMaskItem(curK, curK === 1);
+        S.inv.unshift(it);
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return `Đã thêm [${it.n}] vào hành trang!`;
       }
       case "mask_all": {
         const list = (typeof J != "undefined" && J.items && J.items[11] && J.items[11].list) || [];
@@ -1517,6 +1565,54 @@ function admAct(a) {
         const pName = admPeSelectedName;
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         return sendPlayerEditCmd(pName, { op: "revoke_all_horses", by: S.name || "Admin" }, `Đã gửi lệnh thu hồi toàn bộ ngựa và dọn Mã Trường của [${pName}]`);
+      }
+      case "pe_givemask": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const maskK = +($("#admPeMask") ? $("#admPeMask").value : admPeMask) || admPeMask || 1;
+        const isPerm = $("#admPeMaskPerm") ? $("#admPeMaskPerm").checked : admPeMaskPerm;
+        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const mDef = list.find((x) => x.k === maskK) || list[0];
+        const mName = mDef ? mDef.n : "Mặt nạ";
+        return sendPlayerEditCmd(pName, {
+          op: "give_mask",
+          maskK: maskK,
+          maskName: mName,
+          perm: !!isPerm,
+          by: S.name || "Admin"
+        }, `Đã tặng [${mName}${isPerm ? " (Vĩnh viễn)" : " (3 ngày)"}] cho [${pName}]`);
+      }
+      case "pe_giveallmasks": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const isPerm = $("#admPeMaskPerm") ? $("#admPeMaskPerm").checked : admPeMaskPerm;
+        return sendPlayerEditCmd(pName, {
+          op: "give_all_masks",
+          perm: !!isPerm,
+          by: S.name || "Admin"
+        }, `Đã gửi tặng trọn bộ 13 mặt nạ${isPerm ? " (Vĩnh viễn)" : ""} cho [${pName}]`);
+      }
+      case "pe_revokemask": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const maskK = +($("#admPeMask") ? $("#admPeMask").value : admPeMask) || admPeMask || 1;
+        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const mDef = list.find((x) => x.k === maskK) || list[0];
+        const mName = mDef ? mDef.n : "Mặt nạ";
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_mask",
+          maskK: maskK,
+          maskName: mName,
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi [${mName}] của [${pName}]`);
+      }
+      case "pe_revokeallmasks": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_all_masks",
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi toàn bộ mặt nạ của [${pName}]`);
       }
       case "pe_giveset":
       case "pe_givesetwear": {

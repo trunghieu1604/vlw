@@ -250,6 +250,50 @@
         R.dirty = !0;
         return `${nm()}nhận <b>${added} loài ngựa</b> vào Mã Trường (đầy đủ bộ sưu tập)`;
       }
+      case "give_mask": {
+        const k = +g.maskK || 1;
+        const perm = !!g.perm;
+        let item = null;
+        if (typeof makeMaskItem === "function") {
+          item = makeMaskItem(k, perm);
+        }
+        if (item) {
+          S.inv = S.inv || [];
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(item);
+          } else if (Array.isArray(S.stash)) {
+            S.stash.push(item);
+          }
+          R.dirty = !0;
+          typeof invDirty !== "undefined" && (invDirty = !0);
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
+          return `${nm()}nhận được mặt nạ <b>${esc(item.n)}</b>${perm ? " (Vĩnh viễn)" : ""}`;
+        }
+        return `${nm()}lỗi khi tạo mặt nạ`;
+      }
+      case "give_all_masks": {
+        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const perm = !!g.perm;
+        let added = 0;
+        S.inv = S.inv || [];
+        for (const m of list) {
+          const it = typeof makeMaskItem === "function" ? makeMaskItem(m.k, perm || m.k === 1) : null;
+          if (!it) continue;
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(it);
+            added++;
+          } else if (Array.isArray(S.stash)) {
+            S.stash.push(it);
+            added++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}nhận trọn bộ <b>${added} mặt nạ Võ Lâm</b>${perm ? " (Vĩnh viễn)" : ""}`;
+      }
       case "give_set": {
         let setRows = null;
         let setKind = "gold";
@@ -432,6 +476,61 @@
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
         return `${nm()}thu hồi toàn bộ thú cưỡi (${count} con), dọn sạch Mã Trường`;
+      }
+      case "revoke_mask": {
+        const k = g.maskK;
+        const mName = g.maskName;
+        let removed = 0;
+        const matchMask = (it) => {
+          if (!it || it.d !== 11) return false;
+          if (k != null && Number(it.k) === Number(k)) return true;
+          if (mName && (it.n === mName || (it.n && it.n.includes(mName)))) return true;
+          return false;
+        };
+        if (S.eq && S.eq.mask && matchMask(S.eq.mask)) {
+          delete S.eq.mask;
+          removed++;
+          if (typeof PRES !== "undefined") PRES.sT = 0;
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => !matchMask(it));
+          removed += (before - S.inv.length);
+        }
+        if (Array.isArray(S.stash)) {
+          const before = S.stash.length;
+          S.stash = S.stash.filter((it) => !matchMask(it));
+          removed += (before - S.stash.length);
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}thu hồi ${removed} [${esc(mName || "mặt nạ")}]`;
+      }
+      case "revoke_all_masks": {
+        let count = 0;
+        if (S.eq && S.eq.mask) {
+          delete S.eq.mask;
+          count++;
+          if (typeof PRES !== "undefined") PRES.sT = 0;
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => !(it && it.d === 11));
+          count += (before - S.inv.length);
+        }
+        if (Array.isArray(S.stash)) {
+          const before = S.stash.length;
+          S.stash = S.stash.filter((it) => !(it && it.d === 11));
+          count += (before - S.stash.length);
+        }
+        if (S.gc) delete S.gc["VUACHUA"];
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}thu hồi toàn bộ mặt nạ (${count} chiếc)`;
       }
       case "revoke_set": {
         let setNames = [];
