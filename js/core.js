@@ -404,10 +404,18 @@ window.maskBoxHave = maskBoxHave;
 function maskBoxOpen() {
   if (typeof S === "undefined" || !S) return null;
   const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
-  const pool = list;
-  if (!pool.length) return null;
+  if (!list.length) return null;
+
+  // Tỷ lệ 3% mở ra mặt nạ VĨNH VIỄN (trừ Nguyệt Ca Đảo Chủ)
+  const isPerm = Math.random() < 0.03;
+  let pool = list;
+  if (isPerm) {
+    const permPool = list.filter((m) => m.k !== 1 && !/Nguyệt Ca Đảo Chủ/i.test(m.n));
+    if (permPool.length) pool = permPool;
+  }
+
   const picked = pool[Math.floor(Math.random() * pool.length)];
-  const item = typeof makeMaskItem === "function" ? makeMaskItem(picked.k, false) : null;
+  const item = typeof makeMaskItem === "function" ? makeMaskItem(picked.k, isPerm) : null;
   if (!item) return null;
 
   if (typeof addItem === "function") {
@@ -428,17 +436,54 @@ function maskBoxUse(n = 1) {
     if (typeof toast === "function") toast("Hành trang đã đầy!");
     return;
   }
-  matAdd("misc", "rmatna", -1);
-  const item = maskBoxOpen();
-  if (!item) {
-    if (typeof toast === "function") toast("Lỗi mở rương!");
-    return;
+
+  let opened = 0;
+  const permHits = [];
+  const tempHits = [];
+
+  for (let i = 0; i < n; i++) {
+    if (maskBoxHave() < 1) break;
+    if (S.inv.length >= INV_MAX) {
+      if (typeof toast === "function") toast("Hành trang đã đầy!");
+      break;
+    }
+    matAdd("misc", "rmatna", -1);
+    opened++;
+    const item = maskBoxOpen();
+    if (item) {
+      if (item.perm) permHits.push(item);
+      else tempHits.push(item);
+    }
   }
-  if (typeof uiSfx === "function") uiSfx("levelup");
-  if (typeof toast === "function") toast(`Nhận: ${item.n} (Hạn 3 ngày)`);
-  if (typeof log === "function") {
-    log(`🎭 <b style="color:#ffd24a">Mở Rương Mặt Nạ!</b> Nhận được <b style="color:#ff9e42">${esc(item.n)}</b> (Hạn sử dụng 3 ngày). Đeo ở phím F3 để đổi ngoại trang!`);
+
+  if (!opened) return;
+
+  if (typeof uiSfx === "function") uiSfx(permHits.length > 0 ? "levelup" : "learn");
+
+  if (permHits.length > 0) {
+    for (const item of permHits) {
+      if (typeof log === "function") {
+        log(`🎭 🎉 <b style="color:#ff3333">[TỶ LỆ 3% VĨNH VIỄN] Mở Rương Mặt Nạ!</b> Chúc mừng nhận được <b style="color:#ffd24a">${esc(item.n)}</b> (VĨNH VIỄN). Đeo ở phím F3 để đổi ngoại trang!`);
+      }
+      if (typeof toast === "function") toast(`🎉 [3% VĨNH VIỄN] Nhận: ${item.n}!`);
+    }
   }
+
+  if (tempHits.length > 0) {
+    if (tempHits.length === 1 && permHits.length === 0) {
+      const item = tempHits[0];
+      if (typeof log === "function") {
+        log(`🎭 <b style="color:#ffd24a">Mở Rương Mặt Nạ!</b> Nhận được <b style="color:#ff9e42">${esc(item.n)}</b> (Hạn sử dụng 3 ngày). Đeo ở phím F3 để đổi ngoại trang!`);
+      }
+      if (typeof toast === "function") toast(`Nhận: ${item.n} (Hạn 3 ngày)`);
+    } else if (permHits.length === 0) {
+      if (typeof log === "function") {
+        log(`🎭 Mở ${opened} Rương Mặt Nạ: nhận ${tempHits.map((it) => esc(it.n)).join(" · ")} (Hạn 3 ngày)`);
+      }
+      if (typeof toast === "function") toast(`Mở ${opened} Rương Mặt Nạ: nhận ${tempHits.length} mặt nạ`);
+    }
+  }
+
   if (typeof R !== "undefined") R.dirty = !0;
   if (typeof invDirty !== "undefined") invDirty = !0;
   if (typeof save === "function") save();

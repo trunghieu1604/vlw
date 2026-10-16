@@ -108,7 +108,7 @@ const KNB_GOLD = 1e6,
       n: "Rương Mặt Nạ",
       ic: "img/ep/box3.png",
       knb: 100,
-      d: "Cất vào túi, bấm Dùng để mở ra ngẫu nhiên Mặt Nạ (hạn sử dụng 3 ngày). Mua không giới hạn số lượng.",
+      d: "Cất vào túi, bấm Dùng để mở 1 Mặt Nạ (hạn 3 ngày). Có tỷ lệ 3% mở ra Mặt Nạ VĨNH VIỄN.",
       use: () => (matAdd("misc", "rmatna", 1), "Nhận 1 Rương Mặt Nạ (bấm Dùng để mở)"),
     },
     {
@@ -475,7 +475,8 @@ function ktcModal(tab) {
           <div style="flex:1">
             <div style="font-size:14px;color:#ffd24a;font-weight:bold">Rương Mặt Nạ · <span style="color:#ff9e42">100 KNB</span></div>
             <div style="font-size:12px;color:#ddd;margin:4px 0">
-              Mở ra <b>ngẫu nhiên 1 trong 13 Mặt Nạ Võ Lâm</b>. Hạn sử dụng: <b>3 ngày</b>.<br>
+              Mở ra <b>ngẫu nhiên 1 trong 13 Mặt Nạ Võ Lâm</b> (hạn dùng 3 ngày).<br>
+              <span style="color:#ffd24a;font-weight:bold">★ Đặc biệt: Có tỷ lệ 3% mở ra Mặt Nạ VĨNH VIỄN.</span><br>
               <span class="dim">Mua không giới hạn số lượng. Đeo ở phím F3 để đổi ngoại trang.</span>
             </div>
             ${hasMaskBox ? `<div style="color:#ff9e42;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasMaskBox} Rương Mặt Nạ</b> trong túi!</div>` : ""}

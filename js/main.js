@@ -410,16 +410,16 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-let APP_V = 401;
+let APP_V = 440;
 function getAppV() {
-  if (APP_V) return APP_V;
   try {
     const s = document.querySelector('script[src*="main.js"]');
     if (s && s.src.includes("?v=")) {
-      APP_V = +s.src.split("?v=")[1].replace(/[^0-9]/g, "");
+      const v = +s.src.split("?v=")[1].replace(/[^0-9]/g, "");
+      if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 404;
+  return APP_V || 440;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
