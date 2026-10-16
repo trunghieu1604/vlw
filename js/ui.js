@@ -474,6 +474,7 @@ function maskPickModal() {
             return;
           }
           unequip("mask");
+          if (typeof PRES != "undefined") PRES.sT = 0;
           maskPickModal();
         };
       }
@@ -487,6 +488,7 @@ function maskPickModal() {
           const it = S.inv.find((x) => x && x.uid === uid);
           if (it) {
             equip(it);
+            if (typeof PRES != "undefined") PRES.sT = 0;
             maskPickModal();
           }
         };
