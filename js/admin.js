@@ -594,7 +594,7 @@ function admHorseOpts(hs, cur) {
 }
 function admMaskOpts(cur) {
   const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
-  return list.map((m) => `<option value="${m.k}"${Number(m.k) === Number(cur) ? " selected" : ""}>${m.k}. ${esc(m.n)}${m.perm ? " (Vĩnh viễn)" : " (3 ngày)"}</option>`).join("");
+  return list.map((m) => `<option value="${m.k}"${Number(m.k) === Number(cur) ? " selected" : ""}>${m.k}. ${esc(m.n)} (3 ngày)</option>`).join("");
 }
 function admHorseGive() {
   const hs = admHorses();
@@ -1283,7 +1283,7 @@ function admAct(a) {
       case "mask": {
         const curK = +($("#admMask") ? $("#admMask").value : admMask) || admMask || 1;
         if (admInvFree() < 1) return (toast("Hành trang đã đầy"), "");
-        const it = makeMaskItem(curK, curK === 1);
+        const it = makeMaskItem(curK, false);
         S.inv.unshift(it);
         R.dirty = !0;
         typeof invDirty != "undefined" && (invDirty = !0);
@@ -1296,7 +1296,7 @@ function admAct(a) {
         let added = 0;
         for (const m of list) {
           if (admInvFree() < 1) break;
-          const it = makeMaskItem(m.k, m.k === 1);
+          const it = makeMaskItem(m.k, false);
           S.inv.unshift(it);
           added++;
         }

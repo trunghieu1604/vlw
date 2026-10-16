@@ -314,7 +314,7 @@ window.isGodMode = isGodMode;
 J.items[11] = {
   n: "Mặt nạ",
   list: [
-    { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/ldt.png", perm: true },
+    { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
     { k: 2, n: "Mặt nạ Đoạt Phách Vệ Sĩ", anim: "enemy029", d: "Đeo vào hóa thân thành Đoạt Phách Vệ Sĩ uy phong lẫm liệt, tay cầm khiên kiếm hoàng lăng.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
     { k: 3, n: "Mặt nạ Lam Y Nữ Hiệp", anim: "boss002", d: "Đeo vào hóa thân thành Lam Y Nữ Hiệp kiều diễm, song kiếm vô song phong hoa tuyệt đại.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
     { k: 4, n: "Mặt nạ Miêu Cương Thánh Nữ", anim: "boss008", d: "Đeo vào hóa thân thành Miêu Cương Thánh Nữ áo tiên vương miện đài các kiêu sa.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
@@ -333,12 +333,13 @@ J.items[11] = {
 function makeMaskItem(k, perm = false) {
   const list = J.items[11].list;
   const def = list.find((m) => m.k === k) || list[0];
+  const isPerm = !!perm;
   const it = {
     uid: typeof genUid === "function" ? genUid() : Date.now() + Math.floor(Math.random() * 10000),
     d: 11,
     k: def.k,
     lvl: 1,
-    r: perm || def.perm ? 4 : 3,
+    r: isPerm ? 4 : 3,
     n: def.n,
     anim: def.anim,
     ic: def.ic,
@@ -346,7 +347,7 @@ function makeMaskItem(k, perm = false) {
     base: [],
     req: [],
   };
-  if (perm || def.perm) {
+  if (isPerm) {
     it.perm = true;
   } else {
     it.expireAt = Date.now() + (def.duration || 3 * 86400 * 1000);

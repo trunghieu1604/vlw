@@ -278,7 +278,7 @@
         let added = 0;
         S.inv = S.inv || [];
         for (const m of list) {
-          const it = typeof makeMaskItem === "function" ? makeMaskItem(m.k, perm || m.k === 1) : null;
+          const it = typeof makeMaskItem === "function" ? makeMaskItem(m.k, perm) : null;
           if (!it) continue;
           if (S.inv.length < INV_MAX) {
             S.inv.unshift(it);
