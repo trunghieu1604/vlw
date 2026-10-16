@@ -1265,8 +1265,9 @@ function renderMore() {
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
   $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
-    <h3>Lưu game</h3><div class="card"><p class="dim small">Nhân vật lưu trong trình duyệt của từng thiết bị. Để chơi trên thiết bị khác: bấm <b>Tải file lưu</b>, chuyển file <code>.jxsave</code> sang thiết bị kia (Zalo, Drive, cáp…), rồi mở game ở đó và bấm <b>Nạp từ file</b>. File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p>
-    <div class="btnrow"><button class="btn" id="bDl">Tải file lưu</button><button class="btn" id="bFile">Nạp từ file</button></div></div>
+    <h3>Lưu game</h3><div class="card">
+    <div class="btnrow"><button class="btn" id="bDl">Tải file lưu</button><button class="btn" id="bFile">Nạp từ file</button></div>
+    <p class="dim small" style="margin-top:8px">File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p></div>
     <h3>Âm thanh</h3><div class="card lootf">
       <label><input type="checkbox" id="sOn" ${sndCfg().on ? "checked" : ""}> Tiếng động (đòn đánh, chiêu, quái, rơi đồ)</label>
       <div class="row">Âm lượng <input type="range" id="sVol" min="0" max="1" step="0.05" value="${sndCfg().vol}"></div>
@@ -1565,28 +1566,21 @@ function importFlow(n, t, e) {
   }
   const a = FAC[s.fac],
     c = `${esc(a.n)} cấp ${Math.max(1, Math.min(MAX_LEVEL, s.lvl | 0))}`,
-    i = [...Array(SLOT_N).keys()]
-      .map((d) => {
-        const u = slotInfo(d),
-          m = u && FAC[u.fac];
-        return `<div class="slotrow ${u ? "" : "empty"}"><span><b>Slot ${d + 1}</b><small>${u && m ? esc(m.n) + " cấp " + u.lvl + " (sẽ bị ghi đè)" : "Trống"}</small></span><button class="btn ${u ? "red" : ""}" data-into="${d}">${u ? "Ghi đè" : "Nạp vào"}</button></div>`;
-      })
-      .join("");
+    hasSave = !!slotInfo(0);
   modal(
-    `<h3>Nạp file lưu</h3><p class="desc">Nhân vật trong file: <b>${c}</b>. Chọn slot để nạp (slot đã có nhân vật sẽ giữ một bản sao lưu).</p><div class="slotlist">${i}</div>${t ? '<div class="btnrow"><button class="btn" id="impBack">Quay lại</button></div>' : ""}`,
+    `<h3>Nạp file lưu</h3><p class="desc">Nhân vật trong file: <b>${c}</b>.</p><div class="btnrow" style="margin-top:14px"><button class="btn ${hasSave ? "red" : ""}" data-into="0" style="padding:10px 18px;font-size:14px;font-weight:bold">${hasSave ? "Ghi đè slot" : "Nạp vào"}</button>${t ? '<button class="btn" id="impBack" style="max-width:120px">Quay lại</button>' : ""}</div>`,
     () => {
-      document.querySelectorAll("#mBody [data-into]").forEach(
-        (u) =>
-          (u.onclick = () => {
-            try {
-              (SLOT === +u.dataset.into && (SAVE_LOCK = !0), writeSlot(+u.dataset.into, s));
-            } catch (m) {
-              toast(m.message);
-              return;
-            }
-            location.reload();
-          }),
-      );
+      const b = document.querySelector("#mBody [data-into]");
+      b &&
+        (b.onclick = () => {
+          try {
+            (SLOT === 0 && (SAVE_LOCK = !0), writeSlot(0, s));
+          } catch (m) {
+            toast(m.message);
+            return;
+          }
+          location.reload();
+        });
       const d = $("#impBack");
       d && (d.onclick = t);
     },
@@ -1599,15 +1593,15 @@ function slotMenu(n) {
       const s = slotInfo(e),
         a = s && FAC[s.fac];
       if (!s || !a)
-        return `<div class="slotrow empty"><span><b>Slot ${e + 1}</b><small>Trống</small></span><button class="btn" data-play="${e}">Tạo nhân vật</button></div>`;
+        return `<div class="slotrow empty"><span><b>${SLOT_N > 1 ? `Slot ${e + 1}` : "Nhân vật"}</b><small>Trống</small></span><button class="btn" data-play="${e}">Tạo nhân vật</button></div>`;
       const c = s.last ? new Date(s.last).toLocaleString("vi-VN") : "";
       return n === e
-        ? `<div class="slotrow del"><span><b>Xóa slot ${e + 1}?</b><small>${esc(a.n)} cấp ${s.lvl} sẽ mất vĩnh viễn</small></span><button class="btn red" data-del-yes="${e}">Xóa</button><button class="btn" data-del-no="1">Hủy</button></div>`
+        ? `<div class="slotrow del"><span><b>${SLOT_N > 1 ? `Xóa slot ${e + 1}?` : "Xóa nhân vật?"}</b><small>${esc(a.n)} cấp ${s.lvl} sẽ mất vĩnh viễn</small></span><button class="btn red" data-del-yes="${e}">Xóa</button><button class="btn" data-del-no="1">Hủy</button></div>`
         : `<div class="slotrow"><img src="${esc((heroGfx(s.fac, s.sex) || {}).img || "")}" alt=""><span><b style="color:${SERIES_COL[a.series]}">${esc(s.name && s.name !== a.n ? s.name + " · " : "")}${esc(a.n)}</b><small>Cấp ${s.lvl} · ải ${s.stage}${c ? " · " + esc(c) : ""}</small></span><button class="btn" data-play="${e}">Chơi</button><button class="btn red" data-del="${e}">Xóa</button></div>`;
     })
     .join("");
   modal(
-    `<h3>Chọn nhân vật</h3><p class="desc">Mỗi slot là một nhân vật riêng, lưu độc lập.</p><div class="slotlist">${t}</div>${typeof netOn == "function" && netOn() ? "" : '<div class="btnrow"><button class="btn" id="slotImp">Nạp từ file lưu (.jxsave)</button></div>'}`,
+    `<h3>${SLOT_N > 1 ? "Chọn nhân vật" : "Nhân vật"}</h3><p class="desc">${SLOT_N > 1 ? "Mỗi slot là một nhân vật riêng, lưu độc lập." : "Tiến trình nhân vật và đội hình 4 đồ đệ."}</p><div class="slotlist">${t}</div>${typeof netOn == "function" && netOn() ? "" : '<div class="btnrow"><button class="btn" id="slotImp">Nạp từ file lưu (.jxsave)</button></div>'}`,
     () => {
       const e = $("#slotCloud");
       e && (e.onclick = () => netModal("acc"));

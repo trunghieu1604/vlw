@@ -1,7 +1,7 @@
 "use strict";
 const SAVE_V = 1,
   OFFLINE_MAX = 28800,
-  SLOT_N = 3,
+  SLOT_N = 1,
   SLOT_PTR = "jxidle_slot";
 let SLOT = 0,
   SAVE_LOCK = !1;
@@ -365,14 +365,27 @@ function pickSlot() {
   try {
     n = localStorage.getItem(SLOT_PTR);
   } catch {}
-  const e = [...Array(3).keys()].filter((s) => slotInfo(s));
+  const e = [...Array(SLOT_N).keys()].filter((s) => slotInfo(s));
   if (n === "menu") return { slot: e[0] ?? 0, menu: e.length > 0 };
   const a = +n;
-  return n !== null && Number.isInteger(a) && a >= 0 && a < 3
-    ? { slot: a, menu: !1 }
-    : e.length > 1
-      ? { slot: e[0], menu: !0 }
-      : { slot: e[0] ?? 0, menu: !1 };
+  if (n !== null && Number.isInteger(a) && a >= 0 && a < SLOT_N) {
+    return { slot: a, menu: !1 };
+  }
+  if (!slotInfo(0)) {
+    for (let old = 1; old < 3; old++) {
+      if (slotInfo(old)) {
+        try {
+          const oldData = localStorage.getItem(slotKey(old));
+          if (oldData) {
+            localStorage.setItem(slotKey(0), oldData);
+            localStorage.setItem(SLOT_PTR, "0");
+            return { slot: 0, menu: !1 };
+          }
+        } catch {}
+      }
+    }
+  }
+  return { slot: e[0] ?? 0, menu: !1 };
 }
 async function deleteSlot(n) {
   if (typeof netOn == "function" && netOn() && NET.user)
