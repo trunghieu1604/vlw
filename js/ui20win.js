@@ -132,7 +132,7 @@ function renderChar20() {
         : "";
   (($("#t-char").innerHTML = `<div class="u2char">
     <div class="u2dollw"><div class="u2nm">${esc(hasRealName() ? S.name : a.n)}</div><div class="u2doll"><canvas id="u2doll" width="252" height="300"></canvas>${t}</div>
-      <div class="u2btns"><button class="btn sm" id="bTitle">Danh hiệu</button><button class="btn sm${hasRealName() ? "" : " on"}" id="bName">Đặt tên</button><button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">Dự Bị</button>${matHave("misc", "ldp") > 0 ? '<button class="btn sm on" id="bDoiPhai">Đổi phái</button>' : ""}</div></div>
+      <div class="u2btns"><button class="btn sm" id="bTitle">Danh hiệu</button><button class="btn sm${hasRealName() ? "" : " on"}" id="bName">Đặt tên</button><button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">Dự Bị</button><button class="btn sm" id="bRankChar" title="Bảng xếp hạng">🏆 Xếp hạng</button>${matHave("misc", "ldp") > 0 ? '<button class="btn sm on" id="bDoiPhai">Đổi phái</button>' : ""}</div></div>
     <div class="u2info"><div class="u2box"><b style="color:${SERIES_COL[a.series]}">${esc(a.n)}</b> · hệ ${SERIES[a.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">CS ${rebornN()}</small>` : ""}
       <div class="small">Chiêu chính: <b class="gold">${esc(n.main.n)}</b></div><div class="small">Lực tay trái <b class="gold">${lucTay(n.basic)}</b></div><div class="small">Lực tay phải <b class="gold">${lucTay(n.main)}</b></div></div>
       <div class="u2h">Tiềm năng <b class="gold">${S.attrPts}</b><span class="sp"></span><button class="btn sm" id="bSugAt">Gợi ý</button><button class="btn sm" id="bTTa">Tẩy Tủy</button></div>
@@ -145,7 +145,8 @@ function renderChar20() {
     ($("#bTitle").onclick = () => titleModal()),
     ($("#bName").onclick = () => nameModal()),
     ($("#bReb").onclick = rebornModal),
-    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))));
+    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))),
+    ($("#bRankChar") && ($("#bRankChar").onclick = () => (typeof rankModal20 == "function" ? rankModal20() : typeof netModal == "function" && netModal("rank")))));
   const m = $("#bDoiPhai");
   (m && (m.onclick = doiPhaiModal),
     ($("#bSugAt").onclick = suggestModal),
@@ -538,19 +539,18 @@ const KTC_CAT = [
   ["Tiện ích", ["knb", "tt", "qht", "ldt"]],
   ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
-  ["Thú cưỡi", ["rngua"]],
-  ["Mặt nạ", ["rmatna"]],
+  ["Rương TB", ["rngua", "rmatna"]],
 ];
 let u2KtcCat = 0;
 function ktcModal20(cat) {
   if (typeof migrateMasks == "function") migrateMasks();
-  if (cat === "mask" || cat === "Mặt nạ") {
-    const idx = KTC_CAT.findIndex(([t, val]) => (Array.isArray(val) && val.includes("rmatna")) || t === "Mặt nạ");
+  if (cat === "mask" || cat === "Mặt nạ" || cat === "ruongtb" || cat === "Rương TB" || cat === "Thú cưỡi") {
+    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương TB" || (Array.isArray(val) && (val.includes("rmatna") || val.includes("rngua"))));
     if (idx >= 0) u2KtcCat = idx;
   } else if (typeof cat === "number" && cat >= 0 && cat < KTC_CAT.length) {
     u2KtcCat = cat;
   }
-  const isMask = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Mặt nạ";
+  const isRuongTb = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Rương TB";
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
@@ -563,15 +563,7 @@ function ktcModal20(cat) {
     i = (t) => {
       const o = ktcOk(t),
         d = n(t.k);
-      const active = t.k === "rmatna" && typeof getActive3DayMask === "function" ? getActive3DayMask() : null;
-      let timeStr = "";
-      if (active && active.expireAt) {
-        const left = active.expireAt - Date.now();
-        const days = Math.floor(left / 86400000);
-        const hours = Math.floor((left % 86400000) / 3600000);
-        timeStr = `${days > 0 ? days + "n " : ""}${hours}h`;
-      }
-      return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(t.n)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${active ? `<span style="color:#ff9e42">Đang có ${esc(active.n)} (${timeStr})</span>` : t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
+      return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(t.n)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
       <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
     };
 
@@ -580,7 +572,7 @@ function ktcModal20(cat) {
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
     <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${cardsHtml}</div>`}
-    ${c ? "" : isMask ? `<p class="dim small">Rương Mặt Nạ bán với giá <b>100 KNB</b>, mở ra ngẫu nhiên ngoại trang hạn sử dụng <b>3 ngày</b>. Có thể mua không giới hạn số lượng. Đeo mặt nạ ở khung Nhân vật (F3) để biến hình ngoại trang Võ Lâm.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
+    ${c ? "" : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (100 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày. Cất vào túi, bấm Dùng để mở.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
     () => {
       (document.querySelectorAll("#mBody [data-kc]").forEach(
         (o) =>

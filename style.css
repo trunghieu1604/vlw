@@ -71,13 +71,7 @@ button[disabled] {
 }
 
 #top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: calc(6px + var(--safe-t)) 10px 6px;
-  background: linear-gradient(#1a2521, #0f1613);
-  border-bottom: 1px solid var(--gold2);
-  z-index: 3;
+  display: none !important;
 }
 .lvbox {
   position: relative;
@@ -1118,6 +1112,42 @@ body.compact #compactBtn,
   background: radial-gradient(#4a3a18, #1a1206);
   box-shadow: 0 0 6px #e6c67a88;
 }
+#compactExitBtn {
+  display: none !important;
+}
+body.compact #compactExitBtn {
+  display: inline-flex !important;
+  border-color: #ffd24a;
+  color: #ffd24a;
+}
+#bWbSys.wbup {
+  border-color: #ff5533;
+  box-shadow: 0 0 8px #ff4400;
+  color: #ff7744;
+}
+#bWbSys.wbsoon {
+  border-color: #ffd24a;
+  box-shadow: 0 0 6px #ffd24a;
+  color: #ffd24a;
+}
+#bGiftSys.on,
+#bActSys.on {
+  position: relative;
+  border-color: #e6c67a;
+  color: #ffd24a;
+}
+#bGiftSys.on::after,
+#bActSys.on::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff3300;
+  box-shadow: 0 0 0 1px #0f1613;
+}
 
 /* ==== Man hinh ngang (landscape): san dau toan man hinh, bang thong tin ben phai ==== */
 @media (orientation: landscape) {
@@ -1127,11 +1157,8 @@ body.compact #compactBtn,
     width: 100vw;
     display: grid;
     grid-template-columns: 1fr min(38vw, 340px);
-    grid-template-rows: auto 1fr auto;
-    grid-template-areas: "top top" "battle panel" "tabs panel";
-  }
-  #top {
-    grid-area: top;
+    grid-template-rows: 1fr auto;
+    grid-template-areas: "battle panel" "tabs panel";
   }
   #battle {
     grid-area: battle;

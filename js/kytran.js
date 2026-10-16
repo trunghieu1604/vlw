@@ -237,46 +237,62 @@ window.buyMask = buyMask;
 
 function ktcModal(tab) {
   if (typeof migrateMasks == "function") migrateMasks();
-  if (tab) ktcTab = tab;
+  if (tab === "mask" || tab === "Mặt nạ" || tab === "ruongtb" || tab === "Rương TB") {
+    ktcTab = "ruongtb";
+  } else if (tab) {
+    ktcTab = tab;
+  }
   const i = R.P ? Math.round(R.P.lucky) : 0;
   const KTC_TABS = [
     ["item", "Vật phẩm"],
-    ["mask", "Mặt nạ"],
+    ["ruongtb", "Rương TB"],
   ];
   const tabHeader = `<div class="dtabs" id="ktcTabs" style="margin-bottom:10px">${KTC_TABS.map(([k, l]) => `<button data-kt="${k}" class="${k === ktcTab ? "on" : ""}">${l}</button>`).join("")}</div>`;
 
   let contentHtml = "";
-  if (ktcTab === "mask") {
-    const active = typeof getActive3DayMask === "function" ? getActive3DayMask() : null;
-    const hasBox = typeof maskBoxHave === "function" ? maskBoxHave() : 0;
-    let timeStr = "";
-    if (active && active.expireAt) {
-      const left = active.expireAt - Date.now();
-      const d = Math.floor(left / 86400000);
-      const h = Math.floor((left % 86400000) / 3600000);
-      const min = Math.floor((left % 3600000) / 60000);
-      timeStr = `${d > 0 ? d + " ngày " : ""}${h}h ${min}p`;
-    }
-    const canBuy = (S.knb || 0) >= 100;
+  if (ktcTab === "ruongtb" || ktcTab === "mask") {
+    const hasHorseBox = typeof matHave === "function" ? matHave("misc", "rngua") : 0;
+    const hasMaskBox = typeof maskBoxHave === "function" ? maskBoxHave() : 0;
+    const canBuyHorse = (S.knb || 0) >= 20;
+    const canBuyMask = (S.knb || 0) >= 100;
 
     contentHtml = `
-      <div style="background:linear-gradient(135deg, rgba(255,210,74,0.12), rgba(30,20,10,0.6));border:1px solid #ff9e42;border-radius:6px;padding:12px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
-        <img src="img/ep/box3.png" alt="" style="width:48px;height:48px;image-rendering:pixelated">
-        <div style="flex:1">
-          <div style="font-size:14px;color:#ffd24a;font-weight:bold">Rương Mặt Nạ · <span style="color:#ff9e42">100 KNB</span></div>
-          <div style="font-size:12px;color:#ddd;margin:4px 0">
-            Mở ra <b>ngẫu nhiên 1 trong 13 Mặt Nạ</b>. Hạn sử dụng: <b>3 ngày</b>.<br>
-            <span class="dim">Mua không giới hạn số lượng. Có thể tích trữ trong túi để mở dần.</span>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+        <!-- Rương Ngựa -->
+        <div style="background:linear-gradient(135deg, rgba(255,210,74,0.12), rgba(30,20,10,0.6));border:1px solid #ff9e42;border-radius:6px;padding:12px;display:flex;align-items:center;gap:12px">
+          <img src="img/ep/box2.png" alt="" style="width:48px;height:48px;image-rendering:pixelated">
+          <div style="flex:1">
+            <div style="font-size:14px;color:#ffd24a;font-weight:bold">Rương Ngựa · <span style="color:#ff9e42">20 KNB</span></div>
+            <div style="font-size:12px;color:#ddd;margin:4px 0">
+              Mở ra <b>ngẫu nhiên 1 trong 48 loài thú cưỡi Võ Lâm</b> (nguồn ngựa duy nhất).<br>
+              <span class="dim">Cất vào túi, bấm Dùng để mở.</span>
+            </div>
+            ${hasHorseBox ? `<div style="color:#ff9e42;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasHorseBox} Rương Ngựa</b> trong túi!</div>` : ""}
           </div>
-          ${hasBox ? `<div style="color:#ff9e42;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasBox} Rương Mặt Nạ</b> trong túi!</div>` : ""}
-          ${active ? `<div class="cp" style="font-size:12px">⏳ Đang có <b>${esc(active.n)}</b> (còn ${timeStr}).</div>` : ""}
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <button class="btn sm knb" id="ktcBuyHorseTab" ${canBuyHorse ? "" : "disabled"} style="padding:6px 14px;font-weight:bold">Mua 20 KNB</button>
+            ${hasHorseBox ? `<button class="btn sm on" id="ktcRnguaTab" style="background:#ff9e42;color:#000;font-weight:bold;padding:5px 12px;font-size:12px">Mở Rương (${hasHorseBox})</button>` : ""}
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-          <button class="btn sm knb" id="ktcBuyBoxTab" ${canBuy ? "" : "disabled"} style="padding:6px 14px;font-weight:bold">Mua 100 KNB</button>
-          ${hasBox ? `<button class="btn sm on" id="ktcRmatnaTab" style="background:#ff9e42;color:#000;font-weight:bold;padding:5px 12px;font-size:12px">Mở Rương (${hasBox})</button>` : ""}
+
+        <!-- Rương Mặt Nạ -->
+        <div style="background:linear-gradient(135deg, rgba(255,210,74,0.12), rgba(30,20,10,0.6));border:1px solid #ff9e42;border-radius:6px;padding:12px;display:flex;align-items:center;gap:12px">
+          <img src="img/ep/box3.png" alt="" style="width:48px;height:48px;image-rendering:pixelated">
+          <div style="flex:1">
+            <div style="font-size:14px;color:#ffd24a;font-weight:bold">Rương Mặt Nạ · <span style="color:#ff9e42">100 KNB</span></div>
+            <div style="font-size:12px;color:#ddd;margin:4px 0">
+              Mở ra <b>ngẫu nhiên 1 trong 13 Mặt Nạ Võ Lâm</b>. Hạn sử dụng: <b>3 ngày</b>.<br>
+              <span class="dim">Mua không giới hạn số lượng. Đeo ở phím F3 để đổi ngoại trang.</span>
+            </div>
+            ${hasMaskBox ? `<div style="color:#ff9e42;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasMaskBox} Rương Mặt Nạ</b> trong túi!</div>` : ""}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <button class="btn sm knb" id="ktcBuyMaskTab" ${canBuyMask ? "" : "disabled"} style="padding:6px 14px;font-weight:bold">Mua 100 KNB</button>
+            ${hasMaskBox ? `<button class="btn sm on" id="ktcRmatnaTab" style="background:#ff9e42;color:#000;font-weight:bold;padding:5px 12px;font-size:12px">Mở Rương (${hasMaskBox})</button>` : ""}
+          </div>
         </div>
       </div>
-      <p class="dim small">Đeo mặt nạ ở khung Nhân vật (F3) để biến hóa ngoại hình.</p>
+      <p class="dim small">Các loại rương trang bị mua bằng Kim Nguyên Bảo, cất vào túi và bấm Dùng để mở.</p>
     `;
   } else {
     contentHtml = `
@@ -321,11 +337,16 @@ function ktcModal(tab) {
       document.querySelectorAll("#mBody [data-kt]").forEach((b) => {
         b.onclick = () => ktcModal(b.dataset.kt);
       });
-      if (ktcTab === "mask") {
-        const buyBoxTab = $("#ktcBuyBoxTab");
-        buyBoxTab && (buyBoxTab.onclick = () => { ktcBuy("rmatna", 1); ktcModal("mask"); });
+      if (ktcTab === "ruongtb" || ktcTab === "mask") {
+        const buyHorseTab = $("#ktcBuyHorseTab");
+        buyHorseTab && (buyHorseTab.onclick = () => { ktcBuy("rngua", 1); ktcModal("ruongtb"); });
+        const rnguaTab = $("#ktcRnguaTab");
+        rnguaTab && (rnguaTab.onclick = () => { typeof horseBoxUse === "function" && horseBoxUse(1); ktcModal("ruongtb"); });
+
+        const buyMaskTab = $("#ktcBuyMaskTab");
+        buyMaskTab && (buyMaskTab.onclick = () => { ktcBuy("rmatna", 1); ktcModal("ruongtb"); });
         const rmatnaTab = $("#ktcRmatnaTab");
-        rmatnaTab && (rmatnaTab.onclick = () => { maskBoxUse(1); ktcModal("mask"); });
+        rmatnaTab && (rmatnaTab.onclick = () => { typeof maskBoxUse === "function" && maskBoxUse(1); ktcModal("ruongtb"); });
         return;
       }
 

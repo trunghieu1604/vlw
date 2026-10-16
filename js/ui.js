@@ -358,7 +358,7 @@ function renderChar() {
       (n.returnRes ? `<span>Kháng phản đòn</span><span>${n.returnRes}%</span>` : "") +
       (n.fatallyRes ? `<span>Kháng chí tử</span><span>${n.fatallyRes}%</span>` : "");
   (($("#t-char").innerHTML =
-    `<div class="card"><b style="color:${SERIES_COL[t.series]}">${esc(t.n)}</b> · hệ ${SERIES[t.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">chuyển sinh ${rebornN()} · mặc đồ như cấp ${eqLevel()}</small>` : ""}<br><small class="dim">Lực tay trái ${lucTay(n.basic)} · Lực tay phải ${lucTay(n.main)}</small> <button class="btn sm" id="bTitle">🎖 Danh hiệu</button> <button class="btn sm${hasRealName() ? "" : " on"}" id="bName">${hasRealName() ? "✏ " + esc(S.name) : "✏ Đặt tên"}</button> <button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">👥 Dự Bị</button>${matHave("misc", "ldp") > 0 ? ` <button class="btn sm on" id="bDoiPhai">Đổi phái (${matHave("misc", "ldp")})</button>` : ""}</div>
+    `<div class="card"><b style="color:${SERIES_COL[t.series]}">${esc(t.n)}</b> · hệ ${SERIES[t.series]} · Cấp ${S.lvl}${rebornN() ? ` <small class="cp">chuyển sinh ${rebornN()} · mặc đồ như cấp ${eqLevel()}</small>` : ""}<br><small class="dim">Lực tay trái ${lucTay(n.basic)} · Lực tay phải ${lucTay(n.main)}</small> <button class="btn sm" id="bTitle">🎖 Danh hiệu</button> <button class="btn sm${hasRealName() ? "" : " on"}" id="bName">${hasRealName() ? "✏ " + esc(S.name) : "✏ Đặt tên"}</button> <button class="btn sm${S.lvl >= REBORN_LV && RW().stat.reborn < REBORN_MAX ? " on" : ""}" id="bReb">Chuyển sinh</button><button class="btn sm" id="bDuBi" title="Dự Bị: Chọn đồ đệ tham gia xuất chiến hoặc tạm nghỉ">👥 Dự Bị</button><button class="btn sm" id="bRankChar" title="Bảng xếp hạng">🏆 Xếp hạng</button>${matHave("misc", "ldp") > 0 ? ` <button class="btn sm on" id="bDoiPhai">Đổi phái (${matHave("misc", "ldp")})</button>` : ""}</div>
     <div class="eqgrid">${c}</div>${e.length ? `<div class="reqbad"><b>⚠ ${e.length} món đang mặc chưa đủ điều kiện, không được cộng chỉ số:</b><br>${e.map((o) => `${esc(o.n)}: ${esc(reqProblems(o).join("; "))}`).join("<br>")}</div>` : ""}
     <p class="dim small">Dòng ẩn (2, 4, 6) của mỗi món mở khi hệ nhân vật hoặc 2 món liên kết <b>tương sinh</b> với hệ món đó (Kim→Thủy→Mộc→Hỏa→Thổ→Kim). Đang mở: ${
       SLOTS.filter(([o]) => S.eq[o] && S.eq[o].mag.length > 1)
@@ -386,7 +386,8 @@ function renderChar() {
     ($("#bTitle").onclick = () => titleModal()),
     ($("#bName").onclick = () => nameModal()),
     ($("#bReb").onclick = rebornModal),
-    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))));
+    ($("#bDuBi") && ($("#bDuBi").onclick = () => (typeof duBiModal == "function" ? duBiModal() : null))),
+    ($("#bRankChar") && ($("#bRankChar").onclick = () => (typeof rankModal20 == "function" ? rankModal20() : typeof netModal == "function" && netModal("rank")))));
   const u = $("#bDoiPhai");
   (u && (u.onclick = doiPhaiModal),
     ($("#bSugAt").onclick = suggestModal),
@@ -461,9 +462,9 @@ function maskPickModal() {
         : '<p class="dim small" style="margin-bottom:10px">Chưa đeo mặt nạ nào.</p>'
     }
     <h4 style="margin:10px 0 6px">Mặt nạ trong Hành trang (${list.length})</h4>
-    ${list.length ? list.map(itemRow).join("") : '<p class="dim small">Chưa có mặt nạ nào trong túi đồ. Bạn có thể mua tại tab Mặt nạ trong Kỳ Trân Các.</p>'}
+    ${list.length ? list.map(itemRow).join("") : '<p class="dim small">Chưa có mặt nạ nào trong túi đồ. Bạn có thể mua tại tab Rương TB trong Kỳ Trân Các.</p>'}
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Mặt nạ (100 KNB)</button>
+      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Rương TB (100 KNB)</button>
     </div>`,
     () => {
       const bUn = $("#mMaskUn");
@@ -507,7 +508,7 @@ function maskPickModal() {
       if (bKtc) {
         bKtc.onclick = () => {
           closeModal(!0);
-          ktcModal("mask");
+          ktcModal("ruongtb");
         };
       }
     }
@@ -1004,6 +1005,7 @@ function renderInv() {
     p = lootPresets();
   $("#t-inv").innerHTML =
     `<div class="invbar"><span>${S.inv.length}/${INV_MAX}</span><select id="iSort" title="Sắp xếp hiển thị">${INV_SORTS.map(([l, r]) => `<option value="${l}" ${(S.invSort || "new") === l ? "selected" : ""}>${r}</option>`).join("")}</select><span class="sp"></span>
+    <span style="font-size:12px;display:inline-flex;align-items:center;gap:4px">🪙 <b class="gold">${fmtVan(S.gold)}</b> · 💎 <b style="color:#ffd24a">${fmt(S.knb || 0)}</b></span>
     <button class="btn sm" id="bStash">Kho chung</button><button class="btn sm" id="bDonKho">🧹 Dọn kho</button><button class="btn sm" id="bBest">Mặc đồ tốt</button><button class="btn sm red" id="bSellAll" ${m.length ? "" : "disabled"}>${m.length ? `Bán ${m.length} món không khớp lọc` : "Không có đồ để bán"}</button></div>
     <div class="invgrid">${invSorted().map(itemCell).join("")}</div>
     <p class="dim small">${o ? `${o} món đã khóa 🔒 (không tự bán, không bán hàng loạt, không hợp Huyền Tinh). ` : ""}Mở chi tiết món đồ để khóa / mở khóa.</p>
@@ -1245,14 +1247,10 @@ function renderMore() {
     o && typeof netLogout == "function" && (o.onclick = () => netLogout(o));
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
-  const HIDE_SAVE_EXPORT = true; // Tạm ẩn phần Lưu game (tải/nạp file & xuất/nhập mã) để tránh share nick
-  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>${
-    n || HIDE_SAVE_EXPORT
-      ? "" // online hoặc tạm ẩn: giữ nguyên code lưu game, chỉ ẩn giao diện tải/nạp file và xuất/nhập mã
-      : `<h3>Lưu game</h3><div class="card"><p class="dim small">Nhân vật lưu trong trình duyệt của từng thiết bị. Để chơi trên thiết bị khác: bấm <b>Tải file lưu</b>, chuyển file <code></code> sang thiết bị kia (Zalo, Drive, cáp…), rồi mở game ở đó và bấm <b>Nạp từ file</b>. File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p>
+  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
+    <h3>Lưu game</h3><div class="card"><p class="dim small">Nhân vật lưu trong trình duyệt của từng thiết bị. Để chơi trên thiết bị khác: bấm <b>Tải file lưu</b>, chuyển file <code></code> sang thiết bị kia (Zalo, Drive, cáp…), rồi mở game ở đó và bấm <b>Nạp từ file</b>. File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p>
     <div class="btnrow"><button class="btn" id="bDl">Tải file lưu</button><button class="btn" id="bFile">Nạp từ file</button></div>
-    <p class="dim small">Hoặc dùng mã văn bản:</p><div class="btnrow"><button class="btn" id="bExp">Xuất mã</button><button class="btn" id="bImp">Nhập mã</button></div><textarea id="saveTxt" rows="4" placeholder="Mã lưu game"></textarea></div>`
-  }
+    <p class="dim small">Hoặc dùng mã văn bản:</p><div class="btnrow"><button class="btn" id="bExp">Xuất mã</button><button class="btn" id="bImp">Nhập mã</button></div><textarea id="saveTxt" rows="4" placeholder="Mã lưu game"></textarea></div>
     <h3>Âm thanh</h3><div class="card lootf">
       <label><input type="checkbox" id="sOn" ${sndCfg().on ? "checked" : ""}> Tiếng động (đòn đánh, chiêu, quái, rơi đồ)</label>
       <div class="row">Âm lượng <input type="range" id="sVol" min="0" max="1" step="0.05" value="${sndCfg().vol}"></div>
@@ -1273,7 +1271,18 @@ function renderMore() {
     <h3>Tiện ích</h3><div class="card lootf">
 
       <label><input type="checkbox" id="cBuy" ${S.autoBuy === !1 ? "" : "checked"}> Tự mua vũ khí đúng loại ở Biện Kinh khi mạnh hơn ≥ 25% (tối đa 60% ngân lượng)</label>
-      <div class="btnrow"><button class="btn" id="bKtc">🏮 Kỳ Trân Các</button><button class="btn" id="bStashM">Kho chung</button><button class="btn" id="bTut">Hướng dẫn</button><button class="btn" id="bCodex">Bách khoa</button><button class="btn" id="bSug">Gợi ý cộng điểm</button></div></div>
+      <div class="btnrow">
+        <button class="btn" id="bWbSys">👹 Boss Thế Giới</button>
+        <button class="btn" id="bGiftSys">🎁 Phần thưởng</button>
+        <button class="btn" id="bCompactSys">⊟ Thu gọn sân đấu</button>
+      </div>
+      <div class="btnrow" style="margin-top:6px">
+        <button class="btn" id="bKtc">🏮 Kỳ Trân Các</button>
+        <button class="btn" id="bStashM">Kho chung</button>
+        <button class="btn" id="bTut">Hướng dẫn</button>
+        <button class="btn" id="bCodex">Bách khoa</button>
+        <button class="btn" id="bSug">Gợi ý cộng điểm</button>
+      </div></div>
     <h3>Trợ năng</h3><div class="card lootf">
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
       <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label>
@@ -1357,11 +1366,23 @@ function renderMore() {
     ($("#cBuy").onchange = (e) => {
       ((S.autoBuy = e.target.checked), save());
     }),
+    t("#bWbSys", () => {
+      typeof openWorldBossModal == "function" && openWorldBossModal();
+    }),
+    t("#bGiftSys", () => {
+      S.fac && (typeof uiSfx == "function" && uiSfx("click"), typeof giftModal == "function" && giftModal(!0));
+    }),
+    t("#bCompactSys", () => {
+      typeof setCompact == "function" && setCompact(!document.body.classList.contains("compact"));
+    }),
     ($("#bStashM").onclick = () => stashModal()),
     ($("#bKtc").onclick = () => ktcModal()),
     ($("#bTut").onclick = () => tutorialModal(0)),
     ($("#bCodex").onclick = () => codexModal()),
     ($("#bSug").onclick = suggestModal),
+    typeof dotGift == "function" && dotGift(),
+    typeof actDot == "function" && actDot(),
+    typeof updateWbButtonState == "function" && updateWbButtonState(),
     ($("#uFs").onchange = (e) => {
       setUiPref({ fs: +e.target.value });
     }),
@@ -1411,12 +1432,20 @@ function updateTop() {
       c = $(".lvbox");
     a && c && c.style.setProperty("--pl", `url('${a.img}')`);
   }
-  (($("#lv").textContent = S.lvl), ($("#gold").textContent = fmtL(S.gold)));
+  {
+    const elLv = $("#lv");
+    elLv && (elLv.textContent = S.lvl);
+    const elGold = $("#gold");
+    elGold && (elGold.textContent = fmtL(S.gold));
+  }
   {
     const a = $("#knbTop");
     a && (a.textContent = fmt(S.knb || 0));
   }
-  $("#heroName").textContent = FAC[S.fac] ? FAC[S.fac].n : "";
+  {
+    const elHero = $("#heroName");
+    elHero && (elHero.textContent = FAC[S.fac] ? FAC[S.fac].n : "");
+  }
   {
     let a = $("#skBuffs");
     a || ((a = document.createElement("div")), (a.id = "skBuffs"), $("#battle").appendChild(a));
@@ -1427,13 +1456,18 @@ function updateTop() {
       .join("");
     a.innerHTML !== i && (a.innerHTML = i);
   }
-  $("#stageLbl").textContent = R.dg
-    ? R.dg.kind === "boat"
-      ? "⛵ Phong Lăng Độ"
-      : R.dg.kind === "wb"
-        ? "Boss tuần"
-        : R.dg.d.n
-    : `${modeOf()[1]} ${zoneOf(Math.min(S.stage, STAGES)).n} ${R.field && !R.town ? ` · hạ ${fmt(R.field.kills)}` : ""}`;
+  {
+    const elStage = $("#stageLbl");
+    if (elStage) {
+      elStage.textContent = R.dg
+        ? R.dg.kind === "boat"
+          ? "⛵ Phong Lăng Độ"
+          : R.dg.kind === "wb"
+            ? "Boss tuần"
+            : R.dg.d.n
+        : `${modeOf()[1]} ${zoneOf(Math.min(S.stage, STAGES)).n} ${R.field && !R.town ? ` · hạ ${fmt(R.field.kills)}` : ""}`;
+    }
+  }
   const cap = typeof levelCap === "function" ? levelCap() : 200,
     isMax = S.lvl >= cap,
     t = lvNeed(S.lvl) || 1;

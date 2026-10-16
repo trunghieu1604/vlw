@@ -2192,23 +2192,7 @@ body.u20 #toast {
   display: none;
 }
 #u20rank {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  height: 18px;
-  padding: 0 6px;
-  margin-left: 2px;
-  background: linear-gradient(#6b5320, #3a2c0e);
-  border: 1px solid #e0c060;
-  color: #ffe9a8;
-  font-size: 11px;
-  cursor: pointer;
-  border-radius: 3px;
-  white-space: nowrap;
-}
-body.u20 #u20rank:hover {
-  filter: brightness(1.2);
+  display: none !important;
 }
 body.u2s #u20rc {
   width: 170px;

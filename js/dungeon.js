@@ -592,12 +592,14 @@ function actModal(t) {
 }
 function actDot() {
   const t = $("#actBtn");
-  if (!t || !S.fac) return;
+  const b = $("#bActSys");
+  if (!S.fac) return;
   const n =
     DUNGEONS.some((o) => dgUnlocked(o) && dgLeft(o)) ||
     ((S.lvl >= 20 || RW().stat.reborn) && DG().wbTries < WB_TRIES) ||
     dgPending();
-  t.classList.toggle("on", !!n);
+  t && t.classList.toggle("on", !!n);
+  b && b.classList.toggle("on", !!n);
 }
 const dgNext = () =>
   DUNGEONS.filter((t) => dgUnlocked(t) && dgLeft(t) > 0 && !(R.dgSkip || {})[t.id]).sort((t, n) => n.lv - t.lv)[0] ||

@@ -233,12 +233,12 @@ function init() {
       i && (i.dataset.t === "more" && typeof u20MoreMode < "u" && (u20MoreMode = "sys"), showTab(i.dataset.t));
     }),
     ($("#mClose").onclick = () => closeModal(!0)),
-    ($("#giftBtn").onclick = () => {
+    ($("#giftBtn") && ($("#giftBtn").onclick = () => {
       S.fac && (uiSfx("click"), giftModal(!0));
-    }),
-    ($("#actBtn").onclick = () => {
+    })),
+    ($("#actBtn") && ($("#actBtn").onclick = () => {
       S.fac && (uiSfx("click"), openQuest("act"));
-    }),
+    })),
     ($("#modal").onclick = (t) => {
       t.target.id === "modal" && closeModal();
     }),
@@ -246,6 +246,7 @@ function init() {
     window.addEventListener("orientationchange", fitApp),
     window.visualViewport && window.visualViewport.addEventListener("resize", fitApp),
     ($("#compactBtn") && ($("#compactBtn").onclick = () => setCompact(!document.body.classList.contains("compact")))),
+    ($("#compactExitBtn") && ($("#compactExitBtn").onclick = () => setCompact(!1))),
     ($("#fsBtn") && ($("#fsBtn").onclick = toggleFullscreen)),
     applyUiPrefs(),
     fitApp(),

@@ -31,12 +31,8 @@ function u20Init() {
       '<div id="u20rc"><div id="u20trk" style="display:none"></div><button id="u20stb" title="Mã Trường: bộ sưu tập ngựa"><b id="u20stbN"></b></button></div>',
     ));
   {
-    const n = $("#pwS");
-    n &&
-      !$("#u20rank") &&
-      n.parentNode.insertAdjacentHTML("afterend", '<button id="u20rank" title="Bảng xếp hạng">🏆 Hạng</button>');
     const r = $("#u20rank");
-    r && (r.onclick = () => (typeof rankModal20 == "function" ? rankModal20() : typeof netModal == "function" && netModal("rank")));
+    r && r.remove();
   }
   (t(
     '<div id="u20zone"><button id="u20zb" title="Bản đồ luyện công"><span id="u20zn"></span> ▾</button><div id="u20zl" class="hidden"></div></div>',

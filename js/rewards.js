@@ -547,6 +547,8 @@ function giftPending() {
 function dotGift() {
   const t = $("#giftBtn");
   t && t.classList.toggle("on", giftPending());
+  const b = $("#bGiftSys");
+  b && b.classList.toggle("on", giftPending());
 }
 let giftTab = "login";
 function refreshGift() {

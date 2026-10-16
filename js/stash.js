@@ -247,8 +247,8 @@ function stashModal(n) {
       ["item", "Đồ"],
       ["mat", "Nguyên liệu"],
       ["gold", "Ngân lượng"],
-    ]; // Tạm ẩn tab File kho: .concat(typeof netOn == "function" && netOn() ? [] : [["file", "File kho"]]);
-  stashTab === "file" && (stashTab = "item");
+      ["file", "File kho"],
+    ];
   let i = "";
   if (
     (s &&

@@ -975,13 +975,18 @@ function updateWbButtonState() {
     topBtn.classList.toggle("wbup", WB.st === "up");
     topBtn.classList.toggle("wbsoon", WB.st === "soon");
   }
+  const sysBtn = document.getElementById("bWbSys");
+  if (sysBtn) {
+    sysBtn.classList.toggle("wbup", WB.st === "up");
+    sysBtn.classList.toggle("wbsoon", WB.st === "soon");
+  }
 }
 
 /**
- * Global Event Delegation for clicking #u20wb & #wbTopBtn
+ * Global Event Delegation for clicking #u20wb & #wbTopBtn & #bWbSys
  */
 document.addEventListener("click", function(e) {
-  const btn = e.target && e.target.closest("#u20wb, #wbTopBtn");
+  const btn = e.target && e.target.closest("#u20wb, #wbTopBtn, #bWbSys");
   if (btn) {
     e.preventDefault();
     openWorldBossModal();
