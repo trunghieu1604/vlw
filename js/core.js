@@ -404,7 +404,7 @@ window.maskBoxHave = maskBoxHave;
 function maskBoxOpen() {
   if (typeof S === "undefined" || !S) return null;
   const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
-  const pool = list.slice(1);
+  const pool = list;
   if (!pool.length) return null;
   const picked = pool[Math.floor(Math.random() * pool.length)];
   const item = typeof makeMaskItem === "function" ? makeMaskItem(picked.k, false) : null;
