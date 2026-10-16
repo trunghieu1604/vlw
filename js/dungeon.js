@@ -497,11 +497,12 @@ function drawDgHud(t) {
             ? `⛵ Phong Lăng Độ · đoạn ${n.room}/${BOAT_SEGS} · ${s}:${e}`
             : `${n.d.n} · phòng ${n.room}/${n.d.rooms} · ${s}:${e}`;
   ((t.font = '12px "IBM Plex Mono", monospace'), (t.textAlign = "center"));
-  const d = t.measureText(i).width + 18;
+  const d = t.measureText(i).width + 18,
+    cw = AR.cssW || AR.w;
   ((t.fillStyle = "#000b"),
-    t.fillRect(AR.w / 2 - d / 2, 34, d, 20),
+    t.fillRect(cw / 2 - d / 2, 34, d, 20),
     (t.fillStyle = o < 20 ? "#ff7a6a" : "#f3d88a"),
-    t.fillText(i, AR.w / 2, 48));
+    t.fillText(i, cw / 2, 48));
 }
 function dungeonBody() {
   const t = R.dg

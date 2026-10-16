@@ -500,13 +500,16 @@ const UI_SCALE_MOBILE = 0.8,
 function resizeArena() {
   const i = $("#battle"),
     t = { width: i.offsetWidth, height: i.offsetHeight };
+  const z = typeof getArenaZoom == "function" ? getArenaZoom() : 1;
   ((DPR = Math.min(2, window.devicePixelRatio || 1) * uiScale()),
     (CV.width = Math.round(t.width * DPR)),
     (CV.height = Math.round(t.height * DPR)),
-    (AR.w = t.width),
-    (AR.h = t.height),
+    (AR.cssW = t.width),
+    (AR.cssH = t.height),
+    (AR.w = Math.round(t.width / z)),
+    (AR.h = Math.round(t.height / z)),
     (AR.top = 58),
-    (AR.bot = t.height - 12),
+    (AR.bot = AR.h - 12),
     snapCamera());
 }
 const CAM = { x: 0, y: 0 },
@@ -561,7 +564,7 @@ const MINI = { s: 92, m: 8, top: 26 };
 function drawMinimap(i) {
   if (R.town || S.miniMap === !1 || document.body.classList.contains("zflip")) return;
   const t = MINI.s,
-    n = AR.w - t - MINI.m,
+    n = (AR.cssW || AR.w) - t - MINI.m,
     o = MINI.top,
     e = t / Math.max(WORLD.w, WORLD.h);
   (i.save(), (i.globalAlpha = 0.9), (i.fillStyle = "#000c"), i.fillRect(n - 2, o - 2, t + 4, t + 4));
@@ -972,10 +975,12 @@ function drawHeroEnt(t, i, k) {
 }
 function draw(i) {
   const t = CX;
+  const z = typeof getArenaZoom == "function" ? getArenaZoom() : 1;
+  const worldScale = DPR * z;
   (t.setTransform(DPR, 0, 0, DPR, 0, 0),
-    t.clearRect(0, 0, AR.w, AR.h),
+    t.clearRect(0, 0, AR.cssW || AR.w, AR.cssH || AR.h),
     updateCamera(i),
-    t.setTransform(DPR, 0, 0, DPR, -Math.round(CAM.x) * DPR, -Math.round(CAM.y) * DPR));
+    t.setTransform(worldScale, 0, 0, worldScale, -Math.round(CAM.x) * worldScale, -Math.round(CAM.y) * worldScale));
   const n = R.bgImg;
   (drawTiledBg(t, n), (t.textAlign = "center"));
   for (const e of R.town ? [] : R.ground) {
@@ -1198,12 +1203,12 @@ function draw(i) {
       ((R.banner.t -= i),
       (t.globalAlpha = clamp(R.banner.t, 0, 1)),
       (t.fillStyle = "#000a"),
-      t.fillRect(0, AR.h * 0.36, AR.w, 54),
+      t.fillRect(0, (AR.cssH || AR.h) * 0.36, AR.cssW || AR.w, 54),
       (t.font = '20px "IBM Plex Mono", monospace'),
       (t.fillStyle = "#f3d88a"),
-      t.fillText(R.banner.text, AR.w / 2, AR.h * 0.36 + 26),
+      t.fillText(R.banner.text, (AR.cssW || AR.w) / 2, (AR.cssH || AR.h) * 0.36 + 26),
       (t.font = '12px "IBM Plex Mono", monospace'),
       (t.fillStyle = "#d8ccb4"),
-      t.fillText(R.banner.sub, AR.w / 2, AR.h * 0.36 + 44),
+      t.fillText(R.banner.sub, (AR.cssW || AR.w) / 2, (AR.cssH || AR.h) * 0.36 + 44),
       (t.globalAlpha = 1)));
 }

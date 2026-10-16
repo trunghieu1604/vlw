@@ -644,14 +644,18 @@ body.zflip #t-skill .u2mainbar .btn {
   padding: 0 6px !important;
 }
 
+body.zflip #t-skill .u2mnote {
+  display: none !important;
+}
+
 body.zflip #t-skill .u2kg {
   display: flex !important;
   flex-direction: row !important;
   gap: 4px !important;
   overflow-x: auto !important;
-  overflow-y: hidden !important;
+  overflow-y: visible !important;
   -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-x !important;
+  touch-action: pan-x pan-y !important;
   width: 100% !important;
   max-width: 100% !important;
   padding: 6px 4px 10px !important;
@@ -667,6 +671,121 @@ body.zflip #t-skill .u2kc {
   display: flex !important;
   flex-direction: column !important;
   gap: 3px !important;
+}
+
+body.zflip #t-skill .u2sk-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+  padding: 4px 4px 60px !important;
+}
+
+body.zflip #t-skill .u2sk-list .skl {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 8px !important;
+  min-height: 52px !important;
+  background: rgba(18, 26, 22, 0.9) !important;
+  border: 1px solid #3d5244 !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+}
+
+body.zflip #t-skill .u2sk-list .skl.main {
+  border-color: #ffd24a !important;
+  background: rgba(45, 35, 12, 0.92) !important;
+  box-shadow: 0 0 8px rgba(255, 210, 74, 0.25) !important;
+}
+
+body.zflip #t-skill .u2sk-list .sic {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  flex: none !important;
+  border-radius: 4px !important;
+  border: 1px solid #4a4430 !important;
+  background: #000 !important;
+}
+
+body.zflip #t-skill .u2sk-list .info {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 2px !important;
+}
+
+body.zflip #t-skill .u2sk-list .info b {
+  font-size: 13.5px !important;
+  font-weight: bold !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.zflip #t-skill .u2sk-list .info small {
+  font-size: 11px !important;
+  color: #a49c86 !important;
+}
+
+body.zflip #t-skill .u2sk-list .lvl {
+  font-size: 14.5px !important;
+  font-weight: bold !important;
+  color: #8fe34a !important;
+  margin-right: 4px !important;
+  flex: none !important;
+  min-width: 44px !important;
+  text-align: right !important;
+}
+
+body.zflip #t-skill .u2sk-list .lvl b.skb {
+  color: #ffd24a !important;
+  font-size: 15px !important;
+}
+
+body.zflip #t-skill .u2sk-list .pm {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex: none !important;
+}
+
+body.zflip #t-skill .u2sk-list .pm button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  font-size: 17px !important;
+  font-weight: bold !important;
+  padding: 0 !important;
+  line-height: 28px !important;
+  text-align: center !important;
+  border-radius: 4px !important;
+}
+
+body.zflip #t-skill .u2sk-list .pm button.plus {
+  background: linear-gradient(#2d7a3e, #1b4d27) !important;
+  border: 1px solid #4ade80 !important;
+  color: #fff !important;
+}
+
+body.zflip #t-skill .u2sk-list .pm button.minus {
+  background: linear-gradient(#5a2522, #381614) !important;
+  border: 1px solid #7a3530 !important;
+  color: #fca5a5 !important;
+}
+
+body.zflip #t-skill .u2sk-list .pm button.skinfo {
+  background: linear-gradient(#2d4a44, #1b302c) !important;
+  border: 1px solid #44685e !important;
+  color: #93c5fd !important;
+  font-size: 14px !important;
+  font-style: italic !important;
 }
 
 body.zflip #t-skill .u2kh {

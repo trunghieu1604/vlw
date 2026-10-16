@@ -170,7 +170,7 @@ function bmInstall() {
       const b = CV.getBoundingClientRect(),
         x = e.clientX - b.left,
         y = e.clientY - b.top,
-        l = AR.w - MINI.s - MINI.m;
+        l = (AR.cssW || AR.w) - MINI.s - MINI.m;
       if (x >= l - 2 && x <= l + MINI.s + 2 && y >= MINI.top - 2 && y <= MINI.top + MINI.s + 2)
         (e.stopImmediatePropagation(), e.preventDefault(), bmOpen());
     },

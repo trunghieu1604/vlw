@@ -762,7 +762,7 @@ function skillModal(n) {
     }
     <div class="sl"><b>${a ? "Cấp hiện tại " + a : "Nếu học (cấp 1)"}</b>${u(i)}</div>
     ${d && a ? `<div class="sl"><b>Cấp kế tiếp ${d}</b>${u(d)}</div>` : ""}
-    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}${!e && t.exp && (t.req === 120 || t.learn === "120") ? `<button class="btn on" id="skLearn120" ${matHave("misc", "bk120") > 0 && (S.lvl >= 120 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 120)</button>` : !e && t.exp && (t.req >= 150 || t.learn === "150") ? `<button class="btn on" id="skLearn150" ${matHave("misc", "bk150") > 0 && (S.lvl >= 150 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 150)</button>` : !t.exp ? `<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button>` : ""}<button class="btn red" id="skMinus" ${!t.exp && a ? "" : "disabled"}>− Rút điểm</button></div>`,
+    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}${!e && t.exp && (t.req === 120 || t.learn === "120") ? `<button class="btn on" id="skLearn120" ${matHave("misc", "bk120") > 0 && (S.lvl >= 120 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 120)</button>` : !e && t.exp && (t.req >= 150 || t.learn === "150") ? `<button class="btn on" id="skLearn150" ${matHave("misc", "bk150") > 0 && (S.lvl >= 150 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 150)</button>` : !t.exp ? `<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button>${canLearn(t) && S.skPts >= 2 ? `<button class="btn gold" id="skMax" title="Cộng tối đa điểm vào chiêu này">+ Tối đa (${Math.min(S.skPts, t.max - (S.sk[t.id] || 0))})</button>` : ""}` : ""}<button class="btn red" id="skMinus" ${!t.exp && a ? "" : "disabled"}>− Rút điểm</button></div>`,
     () => {
       bindSkState($("#mBody"));
       const o = $("#skMain");
@@ -780,6 +780,23 @@ function skillModal(n) {
       p &&
         (p.onclick = () => {
           canLearn(t) && (skLearn(n), uiSfx("learn"), (R.dirty = true), recalc(), renderSkill(), save(), skillModal(n));
+        });
+      const pMax = $("#skMax");
+      pMax &&
+        (pMax.onclick = () => {
+          const cur = S.sk[t.id] || 0;
+          const add = Math.min(S.skPts, t.max - cur);
+          if (add > 0) {
+            S.skPts -= add;
+            S.sk[t.id] = cur + add;
+            uiSfx("learn");
+            R.dirty = true;
+            recalc();
+            renderSkill();
+            save();
+            skillModal(n);
+            toast(`Đã cộng ${add} điểm vào ${t.n}`);
+          }
         });
       const minus = $("#skMinus");
       minus &&
@@ -1285,9 +1302,23 @@ function renderMore() {
     <h3>Trợ năng</h3><div class="card lootf">
       <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
       <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (vẽ 30 khung/giây, ngừng vẽ khi ẩn tab)</label><br>
-      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> 📱 Chế độ màn ngoài Z Flip / Màn vuông mini (Auto toàn màn hình, thanh phím gọn, bảng full screen)</label>
+      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> 📱 Chế độ màn vuông mini</label>
       <small class="dim">Tay cầm: cần analog / D-pad để đi, A B X Y dùng chiêu 1–4, LB / RB uống thuốc HP / MP. Phím Esc đóng hộp thoại.<br>Phím tắt (như Võ Lâm 1): F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–5 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
-    <h3>Điều khiển & Hiển thị</h3><div class="card"><div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
+    <h3>Điều khiển & Hiển thị</h3><div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <b>🔍 Thu phóng sân đấu:</b> <span id="lblArenaZoom" style="color:#f3d88a;font-weight:bold">${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}%</span>
+        <input type="range" id="slArenaZoom" min="40" max="140" step="5" value="${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}" style="flex:1; margin:0 8px; cursor:pointer">
+      </div>
+      <div class="btnrow" id="grpArenaZoom" style="margin-bottom:8px">
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 0.5) < 0.04 ? " on" : ""}" data-zoom="0.5">50%</button>
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 0.65) < 0.04 ? " on" : ""}" data-zoom="0.65">65%</button>
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 0.75) < 0.04 ? " on" : ""}" data-zoom="0.75">75%</button>
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 0.85) < 0.04 ? " on" : ""}" data-zoom="0.85">85%</button>
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 1.0) < 0.04 ? " on" : ""}" data-zoom="1.0">100%</button>
+        <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 1.25) < 0.04 ? " on" : ""}" data-zoom="1.25">125%</button>
+      </div>
+      <small class="dim" style="display:block;margin-bottom:10px">Giảm % xuống để nhân vật nhỏ lại, bao quát sân đấu rộng hơn.</small>
+      <div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
       <label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
       <label><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
     <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (bản fan chơi offline, phi thương mại).</div>
@@ -1391,9 +1422,17 @@ function renderMore() {
       ($("#cZflip").onchange = (e) => {
         S.zflipMode = e.target.checked;
         save();
+        if (S.zflipMode && (typeof uiPrefs != "function" || !uiPrefs().arenaZoom)) {
+          typeof setArenaZoom == "function" && setArenaZoom(0.7);
+        }
         typeof zflipApply == "function" && zflipApply();
-        toast(S.zflipMode ? "Đã bật giao diện Z Flip / Màn vuông" : "Đã tắt giao diện Z Flip");
+        toast(S.zflipMode ? "Đã bật giao diện Màn vuông" : "Đã tắt giao diện Màn vuông");
       }));
+  const slZ = $("#slArenaZoom");
+  slZ && (slZ.oninput = (e) => typeof setArenaZoom == "function" && setArenaZoom(+e.target.value / 100));
+  document.querySelectorAll("#grpArenaZoom button[data-zoom]").forEach((b) => {
+    b.onclick = () => typeof setArenaZoom == "function" && setArenaZoom(+b.dataset.zoom);
+  });
 }
 function showTab(n) {
   ((curTab = n),

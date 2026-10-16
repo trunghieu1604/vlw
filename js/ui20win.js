@@ -232,9 +232,11 @@ function u2MainBind() {
         }),
     ));
 }
+let u2skView = "list";
 function renderSkill20() {
   const n = FAC[S.fac];
   if (n.novice) return U2_ORIG.skill();
+  const isList = u2skView !== "grid";
   const a = {};
   for (const e of n.skills) {
     const l = SK[e],
@@ -265,11 +267,39 @@ function renderSkill20() {
           `<div class="u2kc"><div class="u2kh">${i(e)}</div>${Array.from({ length: s }, (l, r) => t(a[e][r])).join("")}</div>`,
       )
       .join("");
+
+  const listHtml = isList
+    ? `<div class="u2sk-list">${n.skills.map((e) => {
+        const l = SK[e];
+        if (!l) return "";
+        const r = S.sk[e] || 0,
+          b = r ? skillBonusLv(e) : 0,
+          f = canLearn(l),
+          mn = R.P.main.id === +e;
+        return `<div class="skl${skReqOk(l) ? "" : " lock"}${mn ? " main" : ""}" data-id="${e}">
+          <img class="sic" src="${esc(l.ic || "")}" alt="">
+          <div class="info">
+            <b>${esc(l.n)}</b>
+            <small class="dim">Lv${l.req}${l.prop ? ` · ${l.prop}` : ""}</small>
+            ${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${e}" style="display:inline-block;padding:0 4px;font-size:10px">📕</button>` : ""}
+            ${l.tier === 90 ? sk9BarHTML(e, "r") : ""}
+            ${l.exp && r ? `<span class="sk-exp-tag" style="font-size:10px;color:#8fe34a;display:inline-block">${r}/${l.max}</span>` : ""}
+          </div>
+          <span class="lvl">${r ? `<b class="skb">${r + b}</b><small>/${l.max}</small>` : `<small class="dim">0/${l.max}</small>`}</span>
+          <span class="pm">
+            <button class="plus" data-id="${e}" title="Cộng 1 điểm" ${f ? "" : "disabled"}>+</button>
+            <button class="minus" data-id="${e}" title="Rút điểm" ${r > 0 ? "" : "disabled"}>−</button>
+            <button class="skinfo" data-id="${e}" title="Chi tiết">i</button>
+          </span>
+        </div>`;
+      }).join("")}</div>`
+    : `<div class="u2kg">${u}${m}</div>`;
+
   (($("#t-skill").innerHTML =
-    `<div class="u2tabs"><button class="on">${esc(n.n)}</button><button id="u2skOpt">› Trợ Thủ Kiếm Hiệp</button></div>
+    `<div class="u2tabs"><button class="on">${esc(n.n)}</button><button id="u2skToggleView" class="btn sm" style="font-size:11px;padding:2px 8px">${isList ? "⊞ Xem Lưới" : "📋 Xem Danh Sách"}</button><button id="u2skOpt">› Trợ Thủ</button></div>
     ${u2MainBar()}
     ${typeof sk9MainHTML == "function" ? sk9MainHTML() : ""}
-    <div class="u2kg">${u}${m}</div>
+    ${listHtml}
     <div class="u2foot"><span class="dim small">Mật Tịch 90 ×${matHave("misc", "bk90")} · Bí Kíp 120 ×${matHave("misc", "bk120")} · Bí Kíp 150 ×${matHave("misc", "bk150")} · Đại Thành ×${matHave("misc", "dtbk")}${S.mainLock ? ' · <a id="bAutoMain">bỏ khóa chiêu chính</a>' : ""}</span><span class="sp"></span><button class="btn sm" id="bSugSk">Gợi ý</button><button class="btn sm" id="bTT">Tẩy Tủy</button><span class="u2pts">Điểm kỹ năng còn: <b>${S.skPts}</b></span></div>
     <p class="dim small u2tip">Bấm biểu tượng: xem chi tiết, chọn chiêu chính, rút điểm. Bấm <b class="plusd">+</b> để cộng điểm.</p>`),
     document.querySelectorAll("#t-skill .plus").forEach(
@@ -280,6 +310,27 @@ function renderSkill20() {
           canLearn(r) && (skLearn(r.id), uiSfx("learn"), (R.dirty = !0), recalc(), renderSkill(), save());
         }),
     ),
+    document.querySelectorAll("#t-skill .minus").forEach(
+      (e) =>
+        (e.onclick = (l) => {
+          l.stopPropagation();
+          unlearnSkill(+e.dataset.id) && renderSkill();
+        }),
+    ),
+    document.querySelectorAll("#t-skill .skinfo").forEach(
+      (e) =>
+        (e.onclick = (l) => {
+          l.stopPropagation();
+          skillModal(+e.dataset.id);
+        }),
+    ),
+    document.querySelectorAll("#t-skill .skl[data-id]").forEach(
+      (e) =>
+        (e.onclick = (l) => {
+          if (l.target.closest("button")) return;
+          skillModal(+e.dataset.id);
+        }),
+    ),
     document.querySelectorAll("#t-skill [data-dt]").forEach(
       (e) =>
         (e.onclick = (l) => {
@@ -288,7 +339,11 @@ function renderSkill20() {
     ),
     document.querySelectorAll("#t-skill .u2k[data-id]").forEach((e) => (e.onclick = () => skillModal(+e.dataset.id))),
     u2MainBind(),
-    ($("#u2basic").onclick = () => {
+    ($("#u2skToggleView") && ($("#u2skToggleView").onclick = () => {
+      u2skView = u2skView === "list" ? "grid" : "list";
+      renderSkill20();
+    })),
+    ($("#u2basic") && ($("#u2basic").onclick = () => {
       (S.mainLock && S.main === "basic" ? (S.mainLock = !1) : ((S.main = "basic"), (S.mainLock = !0)),
         (R.dirty = !0),
         recalc(),
@@ -296,7 +351,7 @@ function renderSkill20() {
         renderPad(),
         save(),
         toast(S.mainLock && S.main === "basic" ? "Chiêu chính: Đánh thường" : "Bỏ khóa đánh thường"));
-    }));
+    })));
   const h = $("#bAutoMain");
   (h &&
     (h.onclick = () => {

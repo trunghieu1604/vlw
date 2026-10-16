@@ -18,9 +18,43 @@ function uiPrefs() {
     (UIP.fs = Number.isInteger(UIP.fs) && UIP.fs >= 0 && UIP.fs < UI_FS.length ? UIP.fs : 1),
     (UIP.saver = !!UIP.saver),
     (UIP.compact = !!UIP.compact),
+    (UIP.arenaZoom = typeof UIP.arenaZoom === "number" && UIP.arenaZoom >= 0.35 && UIP.arenaZoom <= 2 ? UIP.arenaZoom : null),
     UIP
   );
 }
+function getArenaZoom() {
+  const p = typeof uiPrefs == "function" ? uiPrefs().arenaZoom : null;
+  if (typeof p === "number" && p >= 0.35 && p <= 2) return p;
+  if (typeof S !== "undefined" && S && typeof S.arenaZoom === "number" && S.arenaZoom >= 0.35 && S.arenaZoom <= 2) {
+    return S.arenaZoom;
+  }
+  if (typeof zflipOn == "function" && zflipOn()) return 0.7;
+  return 1;
+}
+function setArenaZoom(z) {
+  z = Math.max(0.4, Math.min(1.5, Math.round(z * 100) / 100));
+  if (typeof setUiPref == "function") setUiPref({ arenaZoom: z });
+  if (typeof S !== "undefined" && S) {
+    S.arenaZoom = z;
+    typeof save == "function" && save();
+  }
+  if (typeof resizeArena == "function") resizeArena();
+  updateArenaZoomUI();
+}
+function updateArenaZoomUI() {
+  const z = getArenaZoom();
+  const pct = Math.round(z * 100);
+  const lbl = document.getElementById("lblArenaZoom");
+  if (lbl) lbl.textContent = pct + "%";
+  const sl = document.getElementById("slArenaZoom");
+  if (sl && +sl.value !== pct) sl.value = pct;
+  document.querySelectorAll("#grpArenaZoom button[data-zoom]").forEach((b) => {
+    b.classList.toggle("on", Math.abs(+b.dataset.zoom - z) < 0.04);
+  });
+}
+window.getArenaZoom = getArenaZoom;
+window.setArenaZoom = setArenaZoom;
+window.updateArenaZoomUI = updateArenaZoomUI;
 function applyUiPrefs() {
   const n = uiPrefs();
   (document.documentElement.style.setProperty("--fs", UI_FS[n.fs]),

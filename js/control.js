@@ -39,7 +39,7 @@ function refreshInputBtn() {
   const o = $("#inBtn");
   o && (o.textContent = mouseMode() ? "🖱 Chuột" : "🕹 Joystick");
 }
-const joyAnchor = () => ({ x: JOY_R + 14, y: AR.h - JOY_R - 14 }),
+const joyAnchor = () => ({ x: JOY_R + 14, y: (AR.cssH || AR.h) - JOY_R - 14 }),
   GP = { v: [0, 0], prev: [] };
 function gamepadPoll() {
   const t = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [],
@@ -332,15 +332,20 @@ function updatePadCd() {
 function bindControls() {
   const t = (e) => {
     const n = CV.getBoundingClientRect(),
-      sx = (AR.w || n.width) / (n.width || 1),
-      sy = (AR.h || n.height) / (n.height || 1);
+      sx = (AR.cssW || n.width) / (n.width || 1),
+      sy = (AR.cssH || n.height) / (n.height || 1);
     return [(e.clientX - n.left) * sx, (e.clientY - n.top) * sy];
+  };
+  const toWorld = (sx, sy) => {
+    const cw = AR.cssW || 1, ch = AR.cssH || 1;
+    return [sx * (AR.w / cw) + CAM.x, sy * (AR.h / ch) + CAM.y];
   };
   (CV.addEventListener("pointerdown", (e) => {
     if (INPUT.active) return;
     if (mouseMode() && e.pointerType !== "touch") {
       const [l, f] = t(e),
-        u = groundAt(l + CAM.x, f + CAM.y);
+        [wx, wy] = toWorld(l, f),
+        u = groundAt(wx, wy);
       if (
         (Object.assign(INPUT, { active: !0, id: e.pointerId, fromJoy: !1, mouse: !0, moved: !1, x: l, y: f }),
         CV.setPointerCapture && CV.setPointerCapture(e.pointerId),
@@ -352,13 +357,13 @@ function bindControls() {
         return;
       }
       manual() || setCtrl("manual");
-      const [p, c] = inWorld(l + CAM.x, f + CAM.y);
+      const [p, c] = inWorld(wx, wy);
       ((INPUT.target = { x: p, y: c }), (R.pickTarget = null));
       return;
     }
     const [n, i] = t(e),
       s = joyAnchor(),
-      isLeftHalf = n < (AR.w ? AR.w * 0.48 : 340),
+      isLeftHalf = n < ((AR.cssW || AR.w) ? (AR.cssW || AR.w) * 0.48 : 340),
       isNearAnchor = Math.hypot(n - s.x, i - s.y) <= JOY_R * 2.2,
       r = !joyFixed() || isLeftHalf || isNearAnchor;
     (Object.assign(INPUT, {
@@ -377,7 +382,8 @@ function bindControls() {
       if (!INPUT.active || e.pointerId !== INPUT.id) return;
       const [n, i] = t(e);
       if (((INPUT.x = n), (INPUT.y = i), INPUT.mouse)) {
-        const [s, r] = inWorld(n + CAM.x, i + CAM.y);
+        const [wx, wy] = toWorld(n, i);
+        const [s, r] = inWorld(wx, wy);
         INPUT.target = { x: s, y: r };
         return;
       }
@@ -394,13 +400,14 @@ function bindControls() {
     const [n, i] = t(e),
       s = !INPUT.moved && !INPUT.mouse;
     if (((INPUT.mouse = !1), (INPUT.active = !1), (INPUT.id = null), (INPUT.moved = !1), !s)) return;
-    const r = groundAt(n + CAM.x, i + CAM.y);
+    const [wx, wy] = toWorld(n, i);
+    const r = groundAt(wx, wy);
     if (r) {
       ((R.pickTarget = R.pickTarget === r ? null : r), R.pickTarget && toast(`Đi nhặt: ${r.it.n}`));
       return;
     }
     manual() || setCtrl("manual");
-    const [l, f] = inWorld(n + CAM.x, i + CAM.y);
+    const [l, f] = inWorld(wx, wy);
     INPUT.target = { x: l, y: f };
   };
   (CV.addEventListener("pointerup", o),
