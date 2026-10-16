@@ -239,7 +239,7 @@ const CAMP = {
       "Đặc biệt",
       5,
       () => !!(typeof RW == "function" && RW().titles && RW().titles.vlmc),
-      "Vòng Sáng Quyền Lực · Mở Admin Panel tại NPC Trung Hiếu",
+      "Vòng sáng Quyền Lực - ADMIN",
       null,
       true,
     ],
