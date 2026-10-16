@@ -15,7 +15,8 @@ function zflipOn() {
   }
   const w = window.innerWidth,
     h = window.innerHeight;
-  return w <= 460 && h <= 460 && w >= 260 && h >= 260 && Math.abs(w - h) < 110;
+  const ratio = w / (h || 1);
+  return w <= 480 && h <= 480 && w >= 200 && h >= 200 && ratio >= 0.75 && ratio <= 1.35;
 }
 
 function zflipApply() {
@@ -27,11 +28,23 @@ function zflipApply() {
     zflipInit();
     zflipSyncDock();
     zflipSyncPanel();
-    if (typeof MINI !== "undefined") {
-      MINI.s = 56;
-      MINI.top = 46;
-      MINI.m = 4;
-    }
+    const tabs = document.getElementById("tabs");
+    if (tabs) tabs.style.setProperty("display", "none", "important");
+    const u20r = document.getElementById("u20r");
+    if (u20r) u20r.style.setProperty("display", "none", "important");
+    const u20zb = document.getElementById("u20zb");
+    if (u20zb) u20zb.style.setProperty("display", "none", "important");
+    const topCtl = document.getElementById("topCtl");
+    if (topCtl) topCtl.style.setProperty("display", "none", "important");
+  } else if (changed) {
+    const tabs = document.getElementById("tabs");
+    if (tabs) tabs.style.removeProperty("display");
+    const u20r = document.getElementById("u20r");
+    if (u20r) u20r.style.removeProperty("display");
+    const u20zb = document.getElementById("u20zb");
+    if (u20zb) u20zb.style.removeProperty("display");
+    const topCtl = document.getElementById("topCtl");
+    if (topCtl) topCtl.style.removeProperty("display");
   }
 
   if (changed) {
@@ -56,16 +69,7 @@ function zflipInit() {
   `;
   document.body.appendChild(dock);
 
-  // 2. Thanh tieu de top cho panel full screen
-  const pbar = document.createElement("div");
-  pbar.id = "zflipPanelBar";
-  pbar.innerHTML = `
-    <span class="zftit" id="zflipPanelTit">Hành trang</span>
-    <button class="zfclose" id="zflipPanelClose">✕ Về Sân Đấu</button>
-  `;
-  document.body.appendChild(pbar);
-
-  // 3. Man hinh treo may tiet kiem pin AMOLED Black
+  // 2. Man hinh treo may tiet kiem pin AMOLED Black
   const afk = document.createElement("div");
   afk.id = "zflipAfk";
   afk.innerHTML = `
@@ -105,17 +109,34 @@ function zflipInit() {
     if (typeof toast === "function") toast(h ? "Đã ẩn cụm phím điều khiển" : "Đã hiện cụm phím điều khiển");
   };
 
-  document.getElementById("zfbInv").onclick = () => zflipOpenTab("inv", "Hành trang");
-  document.getElementById("zfbChar").onclick = () => zflipOpenTab("char", "Nhân vật");
-  document.getElementById("zfbMap").onclick = () => {
-    if (typeof u20ZoneList === "function") u20ZoneList(!0);
-    else if (typeof openMapTravel === "function") openMapTravel();
+  document.getElementById("zfbInv").onclick = () => {
+    const a = document.getElementById("u20zl");
+    if (a) a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+    if (typeof u20Toggle === "function" && typeof U20W !== "undefined" && U20W.on) u20Toggle("inv");
+    else if (typeof showTab === "function") showTab("inv");
   };
-  document.getElementById("zfbAfk").onclick = () => zflipAfkStart();
-  document.getElementById("zfbMenu").onclick = () => zflipOpenTab("more", "Hệ thống");
-
-  // Dong panel ve san dau
-  document.getElementById("zflipPanelClose").onclick = () => zflipClosePanel();
+  document.getElementById("zfbChar").onclick = () => {
+    const a = document.getElementById("u20zl");
+    if (a) a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+    if (typeof u20Toggle === "function" && typeof U20W !== "undefined" && U20W.on) u20Toggle("char");
+    else if (typeof showTab === "function") showTab("char");
+  };
+  document.getElementById("zfbMap").onclick = () => zflipToggleMap();
+  document.getElementById("zfbAfk").onclick = () => {
+    const a = document.getElementById("u20zl");
+    if (a) a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+    zflipAfkStart();
+  };
+  document.getElementById("zfbMenu").onclick = () => {
+    const a = document.getElementById("u20zl");
+    if (a) a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+    if (typeof u20Toggle === "function" && typeof U20W !== "undefined" && U20W.on) u20Toggle("more");
+    else if (typeof showTab === "function") showTab("more");
+  };
 
   // Danh thuc AFK
   afk.onclick = () => {
@@ -142,34 +163,81 @@ function zflipSyncDock() {
   if (bPad) {
     bPad.classList.toggle("on", !document.body.classList.contains("pad-hide"));
   }
+  const bInv = document.getElementById("zfbInv");
+  if (bInv) bInv.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("inv") : (typeof curTab !== "undefined" && curTab === "inv"));
+  const bChar = document.getElementById("zfbChar");
+  if (bChar) bChar.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("char") : (typeof curTab !== "undefined" && curTab === "char"));
+  const bMap = document.getElementById("zfbMap");
+  if (bMap) {
+    const a = document.getElementById("u20zl");
+    const isOpen = !!(a && !a.classList.contains("hidden"));
+    bMap.classList.toggle("on", isOpen);
+    document.body.classList.toggle("map-open", isOpen);
+  }
+  const bMenu = document.getElementById("zfbMenu");
+  if (bMenu) bMenu.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("more") : (typeof curTab !== "undefined" && curTab === "more"));
+}
+
+function zflipToggleMap() {
+  const a = document.getElementById("u20zl");
+  if (!a) {
+    if (typeof openMapTravel === "function") openMapTravel();
+    return;
+  }
+  const isOpen = !a.classList.contains("hidden");
+  if (isOpen) {
+    a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+  } else {
+    if (typeof u20Close === "function") u20Close();
+    if (typeof u20ZoneList === "function") u20ZoneList(!0);
+    document.body.classList.add("map-open");
+    const zx = document.getElementById("u20zx");
+    if (zx) {
+      zx.onclick = (e) => {
+        e.stopPropagation();
+        a.classList.add("hidden");
+        document.body.classList.remove("map-open");
+        zflipSyncDock();
+      };
+    }
+  }
+  zflipSyncDock();
 }
 
 function zflipOpenTab(tab, title) {
+  const a = document.getElementById("u20zl");
+  if (a) a.classList.add("hidden");
+  document.body.classList.remove("map-open");
+  if (typeof u20Open === "function" && typeof U20W !== "undefined" && U20W.on) {
+    u20Open(tab);
+    return;
+  }
   const panel = document.getElementById("panel");
-  const tit = document.getElementById("zflipPanelTit");
-  if (tit) tit.textContent = title || tab;
   if (panel) panel.classList.add("active");
   if (typeof showTab === "function") showTab(tab);
 }
 
 function zflipClosePanel() {
+  const a = document.getElementById("u20zl");
+  if (a) a.classList.add("hidden");
+  document.body.classList.remove("map-open");
+  if (typeof u20Close === "function") u20Close();
   const panel = document.getElementById("panel");
   if (panel) panel.classList.remove("active");
   if (typeof showTab === "function") showTab("log");
+  zflipSyncDock();
 }
 
 function zflipSyncPanel() {
   const panel = document.getElementById("panel");
-  if (!panel) return;
-  if (typeof curTab !== "undefined") {
-    panel.classList.toggle("active", curTab !== "log");
-  }
+  const isPanel = typeof curTab !== "undefined" && curTab !== "log";
+  if (panel) panel.classList.toggle("active", isPanel);
 }
 
 // AFK Screen Saver
 function zflipAfkStart() {
   ZFLIP_AFK = !0;
-  window.ZFLIP_AFK = !0;
   afkStartTime = Date.now();
   afkStartExp = S ? (S.exp || 0) : 0;
   afkStartGold = S ? (S.gold || 0) : 0;
@@ -195,7 +263,6 @@ function zflipAfkStart() {
 
 function zflipAfkStop() {
   ZFLIP_AFK = !1;
-  window.ZFLIP_AFK = !1;
   clearInterval(afkTimer);
   const afk = document.getElementById("zflipAfk");
   if (afk) afk.classList.remove("on");
@@ -250,5 +317,5 @@ function zflipAfkTick() {
 window.addEventListener("resize", zflipApply);
 window.addEventListener("orientationchange", zflipApply);
 document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(zflipApply, 300);
+  setTimeout(zflipApply, 200);
 });

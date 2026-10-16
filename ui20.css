@@ -367,7 +367,8 @@ body.u20 #u20ct {
   margin-left: 0;
   flex-wrap: wrap;
 }
-body.u20 #chatBox.open {
+body.u20 #chatBox.open,
+body.u2m #chatBox.open {
   left: 6px !important;
   bottom: 10px !important;
   top: auto !important;
@@ -2643,6 +2644,23 @@ body.u20 #npcDlg {
 body.u2s #skBuffs {
   top: 56px !important;
   left: 4px !important;
+}
+
+/* An nut thu phong tren PC, dien thoai quay ngang va Z Flip */
+body.u20 #bCompactSys,
+body.u2s #bCompactSys,
+body.zflip #bCompactSys,
+body.u20 #compactExitBtn,
+body.u2s #compactExitBtn,
+body.zflip #compactExitBtn {
+  display: none !important;
+}
+
+@media (orientation: landscape) {
+  #bCompactSys,
+  #compactExitBtn {
+    display: none !important;
+  }
 }
 
 

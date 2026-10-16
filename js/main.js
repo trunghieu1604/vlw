@@ -140,7 +140,6 @@ function frame(n) {
     S.fac &&
       !document.hidden &&
       ((typeof mgCheck != "function" || !mgCheck(!1)) && guard("mo phong", () => simulateFrame(e)),
-      (!window.ZFLIP_AFK) &&
       (!uiPrefs().saver || (drawTog = !drawTog)) &&
         (typeof mgCheck != "function" || !mgCheck(!0)) &&
         guard("ve", () => drawLerp(e))),

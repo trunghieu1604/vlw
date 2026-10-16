@@ -756,9 +756,9 @@ function u2SysTrim() {
       const s = c.nextElementSibling;
       (c.remove(), s && s.remove());
     }
-  for (const c of ["#cForge", "#cBuy"]) {
+  for (const c of ["#cForge", "#cBuy", "#bCompactSys"]) {
     const s = $(c);
-    s && s.closest("label").remove();
+    s && (s.closest("label") || s).remove();
   }
   const a = [...n.querySelectorAll("h3")].find((c) => /^Tiện ích/.test(c.textContent));
   a && (a.textContent = "Tiện ích");
@@ -866,9 +866,14 @@ function u20ZoneList(n) {
             : "";
       return `<button class="zrow${m ? " cur" : ""}${u ? "" : " lock"}" data-z="${d}" ${u ? "" : "disabled"}><b>${esc(l.n)}</b><span>${seriesDots(l)} Cấp ${o.lo}–${o.hi}</span></button>${r}`;
     }).join("");
-  ((a.innerHTML = `<div class="u2zh"><b>Bản đồ luyện công</b><label><input type="checkbox" id="u20za" ${S.autoMap !== !1 ? "checked" : ""}> Tự đổi theo cấp</label></div>
+  ((a.innerHTML = `<div class="u2zh"><b>Bản đồ luyện công</b><label><input type="checkbox" id="u20za" ${S.autoMap !== !1 ? "checked" : ""}> Tự đổi theo cấp</label><button id="u20zx" class="u20wx" title="Đóng">✕</button></div>
     <div class="u2zs">Quái hệ: ${seriesMix(c)}</div><div class="u2zr">${s}</div>`),
     a.classList.remove("hidden"));
+  const zx = $("#u20zx");
+  if (zx) zx.onclick = () => {
+    a.classList.add("hidden");
+    typeof zflipSyncDock == "function" && zflipSyncDock();
+  };
   const i = a.querySelector(".zrow.cur");
   i && !n && i.scrollIntoView({ block: "center" });
   const t = (o) => {
@@ -899,10 +904,15 @@ function u20ZoneList(n) {
     }));
 }
 document.addEventListener("pointerdown", (n) => {
+  if (n.target.closest && (n.target.closest("#zfbMap") || n.target.closest("#zflipDock"))) return;
   const a = $("#u20zone");
   if (a && !a.contains(n.target)) {
     const c = $("#u20zl");
-    c && c.classList.add("hidden");
+    if (c && !c.classList.contains("hidden")) {
+      c.classList.add("hidden");
+      document.body.classList.remove("map-open");
+      typeof zflipSyncDock == "function" && zflipSyncDock();
+    }
   }
 });
 async function rankModal20() {

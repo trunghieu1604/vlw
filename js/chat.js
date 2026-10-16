@@ -53,6 +53,7 @@ function chatToggle(t) {
   CHAT.open = t;
   const box = $("#chatBox");
   box && box.classList.toggle("open", t);
+  document.body.classList.toggle("chat-open", !!t);
   if (t) {
     CHAT.unread = 0;
     if (!CHAT.isFirebase) chatPoll(!0);

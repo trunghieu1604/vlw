@@ -14,8 +14,9 @@ let u20LogT = "sys",
   u20Cur = null;
 const u20On = () =>
     !!S &&
-    window.innerWidth > window.innerHeight &&
-    (window.innerWidth >= 900 || (window.innerWidth >= 640 && window.innerHeight <= 520)),
+    ((window.innerWidth > window.innerHeight &&
+      (window.innerWidth >= 900 || (window.innerWidth >= 640 && window.innerHeight <= 520))) ||
+      (typeof zflipOn == "function" && zflipOn())),
   u2mOn = () => !!S && !u20On();
 function u20Init() {
   if (document.getElementById("u20menu")) return;
@@ -197,7 +198,7 @@ const U20_WINS = ["char", "skill", "inv", "forge", "quest", "more"],
   U20W_KEY = "jxU20WinPos",
   u20WEl = (w) => document.querySelector(`#panel > .u20w[data-w="${w}"]`),
   u20IsOpen = (w) => U20W.on && U20W.open.includes(w),
-  u20Single = () => document.body.classList.contains("u2s");
+  u20Single = () => document.body.classList.contains("u2s") || document.body.classList.contains("zflip");
 function u20WPos() {
   if (!U20W.pos)
     try {
@@ -295,6 +296,7 @@ function u20WSync() {
     U20W.on && typeof curTab < "u" && (curTab = top || "log"));
   for (const b of document.querySelectorAll("#u20menu .u20mi:not([data-u=ride])"))
     b.classList.toggle("on", U20W.open.includes(b.dataset.u));
+  typeof zflipSyncDock == "function" && zflipSyncDock();
 }
 function u20WFront(w) {
   const el = u20WEl(w);

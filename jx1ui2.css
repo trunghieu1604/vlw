@@ -304,6 +304,11 @@ body.u2s #skBuffs {
     0 0 12px #000;
   pointer-events: auto;
   padding: 0;
+  z-index: 100;
+}
+body.chat-open #topCtl,
+body.chat-open #skBuffs {
+  display: none !important;
 }
 #chatBox.open #chatHead {
   display: flex;

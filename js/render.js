@@ -559,7 +559,7 @@ function drawTiledBg(i, t) {
 }
 const MINI = { s: 92, m: 8, top: 26 };
 function drawMinimap(i) {
-  if (R.town || S.miniMap === !1) return;
+  if (R.town || S.miniMap === !1 || document.body.classList.contains("zflip")) return;
   const t = MINI.s,
     n = AR.w - t - MINI.m,
     o = MINI.top,
