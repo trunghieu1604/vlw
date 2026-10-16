@@ -525,10 +525,7 @@
           S.stash = S.stash.filter((it) => !(it && it.d === 11));
           count += (before - S.stash.length);
         }
-        if (S.gc) {
-          delete S.gc["VUACHUA"];
-          delete S.gc["NGUYETCA"];
-        }
+        if (S.gc) delete S.gc["NGUYETCA"];
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
         typeof save === "function" && save();

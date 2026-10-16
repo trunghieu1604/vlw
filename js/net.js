@@ -587,12 +587,11 @@ async function netRedeem(t) {
   }
 
   // Giftcode NGUYETCA: Mặt nạ Nguyệt Ca Đảo Chủ (3 ngày)
-  if (t === "NGUYETCA" || t === "VUACHUA") {
+  if (t === "NGUYETCA") {
     if (S.inv.length >= INV_MAX) throw new Error("Hành trang đã đầy! Hãy dọn túi rồi nhận lại.");
     const maskItem = typeof makeMaskItem === "function" ? makeMaskItem(1, false) : null;
     if (!maskItem) throw new Error("Lỗi khởi tạo mặt nạ");
     S.inv.unshift(maskItem);
-    S.gc["NGUYETCA"] = Date.now();
     S.gc[t] = Date.now();
     R.dirty = !0;
     invDirty = !0;
