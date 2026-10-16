@@ -10,7 +10,9 @@ body.zflip {
   margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
-  background: #000 !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  --bg: #000000 !important;
 }
 
 body.zflip #app {
@@ -724,19 +726,9 @@ body.zflip #t-skill .u2tip {
 }
 
 /* ========================================================
-   KHU VỰC CAMERA VÀ DẢI ĐÁY AMOLED PURE BLACK
+   KHU VỰC ĐÁY AMOLED PURE BLACK
    ======================================================== */
-body.zflip::after {
-  content: "" !important;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  height: 80px !important;
-  background: #000000 !important;
-  z-index: 55 !important;
-  pointer-events: none !important;
-}
+
 
 /* ========================================================
    KHI CỬA SỔ, CHAT HOẶC MAP MỞ: ẨN HOÀN TOÀN CÁC NÚT CHIẾN ĐẤU / MAP ĐỂ KHÔNG BỊ ĐÈ
@@ -1010,14 +1002,15 @@ body.zflip #zflipDock {
   border-top: 1px solid #4a3e25 !important;
   z-index: 60 !important;
   justify-content: space-around !important;
-  align-items: center !important;
-  padding: 0 2px env(safe-area-inset-bottom, 0px) !important;
+  align-items: flex-start !important;
+  padding: 3px 1px env(safe-area-inset-bottom, 0px) !important;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.9) !important;
   box-sizing: border-box !important;
 }
 
 .zfb {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   height: 34px;
   margin: 0 1px;
   border-radius: 4px;
@@ -1031,9 +1024,10 @@ body.zflip #zflipDock {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
+  padding: 0 1px;
   line-height: 1;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .zfb:active {
@@ -1048,13 +1042,16 @@ body.zflip #zflipDock {
 }
 
 .zfb .ico {
-  font-size: 14px;
+  font-size: 13px;
   margin-bottom: 2px;
+  line-height: 1;
 }
 
 .zfb .txt {
-  font-size: 8.5px;
-  letter-spacing: -0.3px;
+  font-size: 8px;
+  letter-spacing: -0.4px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* ========================================================

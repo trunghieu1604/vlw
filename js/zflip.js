@@ -27,8 +27,9 @@ function zflipApply() {
   document.documentElement.style.backgroundColor = on ? "#000000" : "";
   document.body.style.backgroundColor = on ? "#000000" : "";
 
-  const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute("content", on ? "#000000" : "#0e1412");
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    m.setAttribute("content", on ? "#000000" : "#0e1412");
+  });
 
   if (on) {
     zflipInit();
@@ -68,6 +69,7 @@ function zflipInit() {
     <button class="zfb" id="zfbAuto" title="Bật / tắt Tự Đánh"><span class="ico">⚔</span><span class="txt">Auto</span></button>
     <button class="zfb" id="zfbPad" title="Ẩn / hiện phím điều khiển"><span class="ico">🎮</span><span class="txt">Phím</span></button>
     <button class="zfb" id="zfbInv" title="Hành trang"><span class="ico">🎒</span><span class="txt">Túi</span></button>
+    <button class="zfb" id="zfbSkill" title="Võ công / Kỹ năng"><span class="ico">⚡</span><span class="txt">Chiêu</span></button>
     <button class="zfb" id="zfbChar" title="Nhân vật"><span class="ico">👤</span><span class="txt">NV</span></button>
     <button class="zfb" id="zfbMap" title="Bản đồ luyện công"><span class="ico">🗺</span><span class="txt">Map</span></button>
     <button class="zfb" id="zfbAfk" title="Treo máy tiết kiệm pin (OLED)"><span class="ico">💤</span><span class="txt">Treo</span></button>
@@ -122,6 +124,13 @@ function zflipInit() {
     if (typeof u20Toggle === "function" && typeof U20W !== "undefined" && U20W.on) u20Toggle("inv");
     else if (typeof showTab === "function") showTab("inv");
   };
+  document.getElementById("zfbSkill").onclick = () => {
+    const a = document.getElementById("u20zl");
+    if (a) a.classList.add("hidden");
+    document.body.classList.remove("map-open");
+    if (typeof u20Toggle === "function" && typeof U20W !== "undefined" && U20W.on) u20Toggle("skill");
+    else if (typeof showTab === "function") showTab("skill");
+  };
   document.getElementById("zfbChar").onclick = () => {
     const a = document.getElementById("u20zl");
     if (a) a.classList.add("hidden");
@@ -171,6 +180,8 @@ function zflipSyncDock() {
   }
   const bInv = document.getElementById("zfbInv");
   if (bInv) bInv.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("inv") : (typeof curTab !== "undefined" && curTab === "inv"));
+  const bSkill = document.getElementById("zfbSkill");
+  if (bSkill) bSkill.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("skill") : (typeof curTab !== "undefined" && curTab === "skill"));
   const bChar = document.getElementById("zfbChar");
   if (bChar) bChar.classList.toggle("on", typeof u20IsOpen === "function" ? u20IsOpen("char") : (typeof curTab !== "undefined" && curTab === "char"));
   const bMap = document.getElementById("zfbMap");
@@ -323,5 +334,8 @@ function zflipAfkTick() {
 window.addEventListener("resize", zflipApply);
 window.addEventListener("orientationchange", zflipApply);
 document.addEventListener("DOMContentLoaded", () => {
+  zflipApply();
   setTimeout(zflipApply, 200);
 });
+// Chay som ngay lap tuc neu script load sau
+zflipApply();
