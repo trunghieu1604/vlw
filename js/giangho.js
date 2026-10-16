@@ -10,6 +10,7 @@ const MISC_N = Object.assign(
       dgt: "Thẻ Đổi Giới Tính",
       rngua: "Rương Ngựa",
       rmatna: "Rương Mặt Nạ",
+      rhk: "Rương Hoàng Kim",
     },
     BOOK_N,
   ),

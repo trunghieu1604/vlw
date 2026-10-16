@@ -135,6 +135,14 @@ const KNB_GOLD = 1e6,
       d: "Dùng để lĩnh ngộ 1 võ công 150 của môn phái (cần cấp 150)",
       use: () => (matAdd("misc", "bk150", 1), "Nhận 1 Bí Kíp 150 (bấm Lĩnh ngộ để chọn chiêu)"),
     },
+    {
+      k: "rhk",
+      n: "Rương Hoàng Kim",
+      ic: "img/ep/box2.png",
+      knb: 1500,
+      d: "Mở 100% ra đồ HK môn phái lv 120-180. Tỷ lệ 0.5% ra trọn bộ (full set) HK.",
+      use: () => (matAdd("misc", "rhk", 1), "Nhận 1 Rương Hoàng Kim (bấm Dùng để mở)"),
+    },
   ];
 function useDaiThanh(i) {
   const n = SK[i];
@@ -195,7 +203,7 @@ function ktcBuy(i, n = 1) {
     (R.dirty = !0),
     (invDirty = !0),
     save(),
-    ktcModal());
+    ktcModal(ktcTab));
 }
 let ktcTab = "item";
 
@@ -235,10 +243,156 @@ function buyMask(maskKey) {
 }
 window.buyMask = buyMask;
 
+function hkBoxHave() {
+  return typeof matHave === "function" ? matHave("misc", "rhk") : 0;
+}
+window.hkBoxHave = hkBoxHave;
+
+function getHkBoxPool() {
+  if (!S || !S.fac || (typeof isNovice === "function" && isNovice()) || !FAC[S.fac] || FAC[S.fac].id < 0) return null;
+  const facId = FAC[S.fac].id;
+  const pool = (typeof J !== "undefined" && J.sets && J.sets.gold ? J.sets.gold : []).filter((r) => {
+    const fid = (r.req.find((l) => l[0] === 39) || [0, -1])[1];
+    const lvl = (r.req.find((l) => l[0] === 36) || [0, 0])[1];
+    return fid === facId && lvl >= 120 && lvl <= 180 && (typeof setRowOk !== "function" || setRowOk(r)) && (typeof sexReqOk !== "function" || sexReqOk(r.req));
+  });
+  if (!pool.length) return null;
+
+  const grpMap = new Map();
+  pool.forEach((r) => {
+    if (!grpMap.has(r.grp)) grpMap.set(r.grp, []);
+    grpMap.get(r.grp).push(r);
+  });
+
+  const properSets = [];
+  for (const [grp, rows] of grpMap) {
+    const setRows = rows.length === 20 ? rows.slice(10, 20) : rows;
+    const distinct = [];
+    const seenSid = new Set();
+    for (const item of setRows) {
+      if (!seenSid.has(item.sid)) {
+        seenSid.add(item.sid);
+        distinct.push(item);
+      }
+    }
+    if (distinct.length >= 4) {
+      const name = (typeof admGetSetName === "function" ? admGetSetName(distinct, grp, false) : null) || (typeof SET_GRP_NAME !== "undefined" && SET_GRP_NAME[grp]) || distinct[0].n.split(" ").slice(0, 4).join(" ");
+      properSets.push({ grp, name, items: distinct });
+    }
+  }
+
+  return { pool, properSets };
+}
+window.getHkBoxPool = getHkBoxPool;
+
+function giveHkItem(it) {
+  if (S.inv.length < INV_MAX) {
+    S.inv.unshift(it);
+  } else if (typeof epBox === "function" && epBox().length < (typeof EP_BOX_MAX === "number" ? EP_BOX_MAX : 120)) {
+    epBox().push(it);
+    toast("Hành trang đầy: trang bị đã chuyển vào Kho Rèn");
+  } else if (typeof makeRoom === "function" && makeRoom(it, true)) {
+    S.inv.unshift(it);
+  } else {
+    S.inv.push(it);
+  }
+  if (typeof recItem === "function") recItem(it);
+  if (typeof dtItemGot === "function") dtItemGot(it);
+}
+
+function hkBoxUse(n = 1) {
+  if (hkBoxHave() < 1) {
+    toast("Không có Rương Hoàng Kim trong túi");
+    return;
+  }
+  if (!S || !S.fac || (typeof isNovice === "function" && isNovice()) || !FAC[S.fac] || FAC[S.fac].id < 0) {
+    toast("Cần gia nhập môn phái để mở Rương Hoàng Kim!");
+    return;
+  }
+  if (S.inv.length >= INV_MAX) {
+    toast("Hành trang đã đầy, hãy dọn túi trước");
+    return;
+  }
+  const data = getHkBoxPool();
+  if (!data || !data.pool.length) {
+    toast("Không tìm thấy dữ liệu Hoàng Kim môn phái!");
+    return;
+  }
+
+  let opened = 0;
+  const fullSetHits = [];
+  const singleItems = [];
+
+  for (let i = 0; i < n; i++) {
+    if (hkBoxHave() < 1) break;
+    if (S.inv.length >= INV_MAX) {
+      toast("Hành trang đã đầy!");
+      break;
+    }
+    matAdd("misc", "rhk", -1);
+    opened++;
+
+    // Tỷ lệ 0.5% (0.005) mở ra trọn bộ (full set) Hoàng Kim
+    const isFullSet = Math.random() < 0.005 && data.properSets.length > 0;
+    if (isFullSet) {
+      const chosenSet = pick(data.properSets);
+      const setPieces = [];
+      for (const row of chosenSet.items) {
+        const it = makeSetItem("gold", row, 5);
+        giveHkItem(it);
+        setPieces.push(it);
+      }
+      fullSetHits.push({ set: chosenSet, items: setPieces });
+    } else {
+      const row = pick(data.pool);
+      const it = makeSetItem("gold", row, 5);
+      giveHkItem(it);
+      singleItems.push(it);
+    }
+  }
+
+  if (!opened) return;
+
+  if (fullSetHits.length > 0) {
+    uiSfx("levelup");
+    for (const hit of fullSetHits) {
+      log(`🎉 <b style="color:#ff3333">[TỶ LỆ 0.5% CỰC HIẾM]</b> Mở Rương Hoàng Kim nhận <b>TRỌN BỘ HOÀNG KIM ${esc(hit.set.name)}</b> (${hit.items.length} món)!`);
+      toast(`🎉 [0.5%] Nhận TRỌN BỘ ${hit.set.name} (${hit.items.length} món)!`);
+    }
+  } else {
+    uiSfx("learn");
+  }
+
+  if (singleItems.length > 0) {
+    if (singleItems.length === 1 && fullSetHits.length === 0) {
+      const it = singleItems[0];
+      const lvl = (it.req.find(l => l[0] === 36) || [0, 0])[1];
+      log(`🎁 Mở Rương Hoàng Kim: nhận <b style="color:#ffd24a">${esc(it.n)}</b> (cấp ${lvl})`);
+      toast(`Nhận: ${it.n} (cấp ${lvl})`);
+    } else {
+      log(`🎁 Mở ${opened} Rương Hoàng Kim: nhận ${singleItems.length} món Hoàng Kim${fullSetHits.length ? ` + ${fullSetHits.length} TRỌN BỘ` : ""}`);
+      if (fullSetHits.length === 0) {
+        toast(`Mở ${opened} Rương Hoàng Kim: nhận ${singleItems.length} món`);
+      }
+    }
+  }
+
+  R.dirty = !0;
+  invDirty = !0;
+  save();
+  refresh();
+  if (document.getElementById("mBody")) {
+    ktcModal(ktcTab);
+  }
+}
+window.hkBoxUse = hkBoxUse;
+
 function ktcModal(tab) {
   if (typeof migrateMasks == "function") migrateMasks();
   if (tab === "mask" || tab === "Mặt nạ" || tab === "ruongtb" || tab === "Rương TB") {
     ktcTab = "ruongtb";
+  } else if (tab === "ruonghk" || tab === "Rương HK" || tab === "rhk") {
+    ktcTab = "ruonghk";
   } else if (tab) {
     ktcTab = tab;
   }
@@ -246,11 +400,51 @@ function ktcModal(tab) {
   const KTC_TABS = [
     ["item", "Vật phẩm"],
     ["ruongtb", "Rương TB"],
+    ["ruonghk", "Rương HK"],
   ];
   const tabHeader = `<div class="dtabs" id="ktcTabs" style="margin-bottom:10px">${KTC_TABS.map(([k, l]) => `<button data-kt="${k}" class="${k === ktcTab ? "on" : ""}">${l}</button>`).join("")}</div>`;
 
   let contentHtml = "";
-  if (ktcTab === "ruongtb" || ktcTab === "mask") {
+  if (ktcTab === "ruonghk") {
+    const hasHkBox = typeof matHave === "function" ? matHave("misc", "rhk") : 0;
+    const canBuyHk = (S.knb || 0) >= 1500;
+    const canBuyHk10 = (S.knb || 0) >= 15000;
+    const facName = FAC[S.fac] ? FAC[S.fac].n : "Môn Phái";
+    const isNov = typeof isNovice === "function" && isNovice();
+
+    contentHtml = `
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
+        <!-- Rương Hoàng Kim Môn Phái -->
+        <div style="background:linear-gradient(135deg, rgba(255,210,74,0.18), rgba(40,25,10,0.8));border:1px solid #ffd24a;border-radius:6px;padding:14px;display:flex;align-items:center;gap:14px">
+          <img src="img/ep/box2.png" alt="" style="width:54px;height:54px;image-rendering:pixelated">
+          <div style="flex:1">
+            <div style="font-size:15px;color:#ffd24a;font-weight:bold">Rương Hoàng Kim ${esc(facName)} · <span style="color:#ff9e42">1500 KNB</span></div>
+            <div style="font-size:12px;color:#eee;margin:6px 0;line-height:1.5">
+              Mở <b>100% nhận ngẫu nhiên 1 trang bị Hoàng Kim môn phái ${esc(facName)} (cấp 120–180)</b>.<br>
+              <span style="color:#ff5555;font-weight:bold">★ Chú thích: Có tỷ lệ 0.5% mở ra TRỌN BỘ (FULL SET) Hoàng Kim môn phái!</span><br>
+              <span class="dim">Cất vào túi, bấm Dùng để mở. ${isNov ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</span>
+            </div>
+            ${hasHkBox ? `<div style="color:#ffd24a;font-size:13px;font-weight:bold">🎁 Đang có <b>${hasHkBox} Rương Hoàng Kim</b> trong túi!</div>` : ""}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <button class="btn sm knb" id="ktcBuyHkTab" ${canBuyHk ? "" : "disabled"} style="padding:7px 16px;font-weight:bold;font-size:13px">Mua 1500 KNB</button>
+            ${canBuyHk10 ? `<button class="btn sm knb" id="ktcBuyHkTab10" style="padding:4px 10px;font-size:11px">Mua ×10 (15000 KNB)</button>` : ""}
+            ${hasHkBox ? `<button class="btn sm on" id="ktcRhkTab" style="background:#ffd24a;color:#000;font-weight:bold;padding:6px 14px;font-size:13px">Mở Rương (${hasHkBox})</button>` : ""}
+            ${hasHkBox > 1 ? `<button class="btn sm on" id="ktcRhkTab10" style="background:#ff9e42;color:#000;font-weight:bold;padding:4px 10px;font-size:11px">Mở ×${Math.min(10, hasHkBox)}</button>` : ""}
+          </div>
+        </div>
+      </div>
+      <div class="card small" style="background:rgba(255,210,74,0.06);border:1px solid rgba(255,210,74,0.3);padding:10px;border-radius:6px">
+        <div style="color:#ffd24a;font-weight:bold;margin-bottom:4px">📜 Quy tắc Rương Hoàng Kim:</div>
+        <div class="dim small" style="line-height:1.5">
+          • Giá cố định: <b>1500 Kim Nguyên Bảo</b> 1 rương.<br>
+          • Mở <b>100% ra trang bị Hoàng Kim môn phái</b> của nhân vật (${esc(facName)}), cấp yêu cầu <b>120–180</b>.<br>
+          • <b>Tỷ lệ 0.5% (1/200)</b> nhận trọn vẹn 10 món của cả bộ set Hoàng Kim môn phái!<br>
+          • Cất vào túi, bấm Dùng để mở hoặc mở trực tiếp tại Kỳ Trân Các.
+        </div>
+      </div>
+    `;
+  } else if (ktcTab === "ruongtb" || ktcTab === "mask") {
     const hasHorseBox = typeof matHave === "function" ? matHave("misc", "rngua") : 0;
     const hasMaskBox = typeof maskBoxHave === "function" ? maskBoxHave() : 0;
     const canBuyHorse = (S.knb || 0) >= 20;
@@ -315,6 +509,8 @@ function ktcModal(tab) {
                         ? matHave("misc", "rngua")
                         : n.k === "rmatna"
                           ? matHave("misc", "rmatna")
+                          : n.k === "rhk"
+                            ? matHave("misc", "rhk")
                         : n.k === "bk120"
                           ? matHave("misc", "bk120")
                           : n.k === "bk150"
@@ -323,7 +519,7 @@ function ktcModal(tab) {
                               ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
                               : null;
         return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "rhk" && c ? '<button class="btn sm on" id="ktcRhk">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRhk10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
       }).join("")}</div>
       <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>
     `;
@@ -337,6 +533,18 @@ function ktcModal(tab) {
       document.querySelectorAll("#mBody [data-kt]").forEach((b) => {
         b.onclick = () => ktcModal(b.dataset.kt);
       });
+      if (ktcTab === "ruonghk") {
+        const buyHkTab = $("#ktcBuyHkTab");
+        buyHkTab && (buyHkTab.onclick = () => { ktcBuy("rhk", 1); ktcModal("ruonghk"); });
+        const buyHkTab10 = $("#ktcBuyHkTab10");
+        buyHkTab10 && (buyHkTab10.onclick = () => { ktcBuy("rhk", 10); ktcModal("ruonghk"); });
+        const rhkTab = $("#ktcRhkTab");
+        rhkTab && (rhkTab.onclick = () => { typeof hkBoxUse === "function" && hkBoxUse(1); ktcModal("ruonghk"); });
+        const rhkTab10 = $("#ktcRhkTab10");
+        rhkTab10 && (rhkTab10.onclick = () => { typeof hkBoxUse === "function" && hkBoxUse(10); ktcModal("ruonghk"); });
+        return;
+      }
+
       if (ktcTab === "ruongtb" || ktcTab === "mask") {
         const buyHorseTab = $("#ktcBuyHorseTab");
         buyHorseTab && (buyHorseTab.onclick = () => { ktcBuy("rngua", 1); ktcModal("ruongtb"); });
@@ -390,6 +598,16 @@ function ktcModal(tab) {
       rmb &&
         (rmb.onclick = () => {
           (maskBoxUse(1), ktcModal());
+        });
+      const rhkBtn = $("#ktcRhk");
+      rhkBtn &&
+        (rhkBtn.onclick = () => {
+          (hkBoxUse(1), ktcModal());
+        });
+      const rhk10Btn = $("#ktcRhk10");
+      rhk10Btn &&
+        (rhk10Btn.onclick = () => {
+          (hkBoxUse(10), ktcModal());
         });
       const s = $("#ktcLdt");
       s &&
