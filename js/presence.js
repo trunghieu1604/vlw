@@ -375,6 +375,7 @@ function presCleanChar(c) {
     k: presNum(c.k, 0, 99999),
     r: [0, 1, 2, 3].map((i) => presNum(r[i] ?? -1, -1, 255)),
     m: c.m ? 1 : 0,
+    mask: c.mask ? String(c.mask).slice(0, 30) : "",
     tk: c.tk ? String(c.tk).slice(0, 30) : "",
     tn: c.tn ? String(c.tn).slice(0, 30) : "",
     tc: c.tc ? String(c.tc).slice(0, 20) : "",
@@ -405,6 +406,7 @@ function presSetSnap(p, s) {
   c.tn = s.tn || "";
   c.tc = s.tc || "";
   c.hk = s.hk || "";
+  c.mask = c.mask || (s.mask ? String(s.mask).slice(0, 30) : "");
   c.pc = typeof PT_CAMP < "u" && PT_CAMP[s.pc] ? s.pc : ""; // party colour ("" = older client: per-character colours)
   c.d = (Array.isArray(s.d) ? s.d : []).slice(0, 6).map(presCleanChar);
   p.s = c;

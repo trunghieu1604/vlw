@@ -739,7 +739,7 @@ function admTabEq() {
   <div class="btnrow">
     <button class="btn sm red" data-a="mask_reset" title="Xóa toàn bộ mặt nạ trong túi/người và reset thời hạn 3 ngày ở Kỳ Trân Các để mua test">🗑️ Reset / Xóa Hết Mặt Nạ</button>
     <button class="btn sm on" data-a="mask_refresh" title="Cập nhật tất cả mặt nạ trong túi sang icon và model người mới nhất">🔄 Cập Nhật Mặt Nạ Mới</button>
-    <button class="btn sm" data-a="mask_all" title="Nhận trọn bộ 11 mặt nạ Võ Lâm vào túi để test">🎁 Nhận 11 Mặt Nạ (Test)</button>
+    <button class="btn sm" data-a="mask_all" title="Nhận trọn bộ 13 mặt nạ Võ Lâm vào túi để test">🎁 Nhận 13 Mặt Nạ (Test)</button>
   </div>`;
 }
 
