@@ -1266,8 +1266,8 @@ function renderMore() {
   const n = typeof netOn == "function" && netOn() && !NET.offline;
   $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">🔄 Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">🎟 Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
     <h3>Lưu game</h3><div class="card">
-    <div class="btnrow"><button class="btn" id="bDl">Tải file lưu</button><button class="btn" id="bFile">Nạp từ file</button></div>
-    <p class="dim small" style="margin-top:8px">File có chữ ký, sửa tay sẽ bị từ chối. Nên tải file định kỳ để sao lưu.</p></div>
+    <div class="btnrow"><button class="btn" id="bDl">Tải Save</button><button class="btn" id="bFile">Nạp Save</button></div>
+    <p class="dim small" style="margin-top:8px">File save có mã hóa, Không được chỉnh sửa.</p></div>
     <h3>Âm thanh</h3><div class="card lootf">
       <label><input type="checkbox" id="sOn" ${sndCfg().on ? "checked" : ""}> Tiếng động (đòn đánh, chiêu, quái, rơi đồ)</label>
       <div class="row">Âm lượng <input type="range" id="sVol" min="0" max="1" step="0.05" value="${sndCfg().vol}"></div>
@@ -1289,12 +1289,12 @@ function renderMore() {
 
       <label><input type="checkbox" id="cBuy" ${S.autoBuy === !1 ? "" : "checked"}> Tự mua vũ khí đúng loại ở Biện Kinh khi mạnh hơn ≥ 25% (tối đa 60% ngân lượng)</label>
       <div class="btnrow">
-        <button class="btn" id="bWbSys">👹 Boss Thế Giới</button>
+        <button class="btn" id="bWbSys">Boss Thế Giới</button>
         <button class="btn" id="bGiftSys">🎁 Phần thưởng</button>
         <button class="btn" id="bCompactSys">⊟ Thu gọn sân đấu</button>
       </div>
       <div class="btnrow" style="margin-top:6px">
-        <button class="btn" id="bKtc">🏮 Kỳ Trân Các</button>
+        <button class="btn" id="bKtc">Kỳ Trân Các</button>
         <button class="btn" id="bStashM">Kho chung</button>
         <button class="btn" id="bTut">Hướng dẫn</button>
         <button class="btn" id="bCodex">Bách khoa</button>
@@ -1322,7 +1322,7 @@ function renderMore() {
       <div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
       <label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
       <label><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
-    <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (bản fan chơi offline, phi thương mại).</div>
+    <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (phi thương mại).</div>
 `;
   const t = (e, s) => {
     const a = $(e);
@@ -1568,7 +1568,7 @@ function importFlow(n, t, e) {
     c = `${esc(a.n)} cấp ${Math.max(1, Math.min(MAX_LEVEL, s.lvl | 0))}`,
     hasSave = !!slotInfo(0);
   modal(
-    `<h3>Nạp file lưu</h3><p class="desc">Nhân vật trong file: <b>${c}</b>.</p><div class="btnrow" style="margin-top:14px"><button class="btn ${hasSave ? "red" : ""}" data-into="0" style="padding:10px 18px;font-size:14px;font-weight:bold">${hasSave ? "Ghi đè slot" : "Nạp vào"}</button>${t ? '<button class="btn" id="impBack" style="max-width:120px">Quay lại</button>' : ""}</div>`,
+    `<h3>Nạp file lưu</h3><p class="desc">Nhân vật trong file: <b>${c}</b>.</p><div class="btnrow" style="margin-top:14px"><button class="btn ${hasSave ? "green" : ""}" data-into="0" style="padding:10px 18px;font-size:14px;font-weight:bold">${hasSave ? "Nạp Save" : "Nạp vào"}</button>${t ? '<button class="btn" id="impBack" style="max-width:120px">Quay lại</button>' : ""}</div>`,
     () => {
       const b = document.querySelector("#mBody [data-into]");
       b &&
