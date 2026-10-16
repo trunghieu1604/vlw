@@ -442,7 +442,7 @@ function maskPickModal() {
 
   modal(
     `<h3>🎭 Mặt Nạ Ngoại Trang</h3>
-    <p class="desc">Đeo mặt nạ để biến hóa diện mạo nhân vật sang hình mẫu Kiếm Thế. Có thể đổi qua lại giữa các mặt nạ đang có.</p>
+    <p class="desc">Đeo mặt nạ để biến hóa diện mạo nhân vật sang ngoại trang Võ Lâm. Có thể đổi qua lại giữa các mặt nạ đang có.</p>
     ${
       m
         ? `<div class="card" style="margin-bottom:10px;border:1px solid #c9a04a;background:#1e1a12">

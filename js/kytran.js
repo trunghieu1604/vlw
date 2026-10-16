@@ -104,6 +104,14 @@ const KNB_GOLD = 1e6,
       use: () => (matAdd("misc", "rngua", 1), "Nhận 1 Rương Ngựa (bấm Dùng để mở)"),
     },
     {
+      k: "rmatna",
+      n: "Rương Mặt Nạ",
+      ic: "img/ep/box3.png",
+      knb: 10,
+      d: "Cất vào túi, bấm Dùng để mở ra ngẫu nhiên 1 trong 10 Mặt nạ Ngoại Trang Võ Lâm (hạn sử dụng 3 ngày). Mua rồi cần chờ sau 3 ngày hết hạn mới được mua tiếp.",
+      use: () => (matAdd("misc", "rmatna", 1), "Nhận 1 Rương Mặt Nạ (bấm Dùng để mở)"),
+    },
+    {
       k: "dtbk",
       n: "Đại Thành Bí Kíp",
       ic: "img/ep/dtbk.png",
@@ -159,12 +167,33 @@ const ktcLim = (i) => (i.lim != null ? i.lim : i.k === "ldt" ? LDT_BUY_DAY : -1)
   ktcDayN = (i) => (i.k === "knb" ? knbDay().n : i.k === "ldt" ? ldtDay().n : ktcDay().n[i.k] || 0),
   ktcOk = (i) => !i.vio || verVio(),
   ktcCost = (i) => (i.knb ? `${i.knb} KNB` : fmtL(i.gold)),
-  ktcCan = (i, n = 1) =>
-    (i.knb ? (S.knb || 0) >= i.knb * n : S.gold >= i.gold * n) &&
-    (ktcLim(i) < 0 || ktcDayN(i) + n <= ktcLim(i));
+  ktcCan = (i, n = 1) => {
+    if (i.k === "rmatna") {
+      if (typeof getActive3DayMask == "function" && getActive3DayMask()) return false;
+      if (typeof maskBoxHave == "function" && maskBoxHave() > 0) return false;
+      return (S.knb || 0) >= 10;
+    }
+    return (i.knb ? (S.knb || 0) >= i.knb * n : S.gold >= i.gold * n) &&
+      (ktcLim(i) < 0 || ktcDayN(i) + n <= ktcLim(i));
+  };
 function ktcBuy(i, n = 1) {
   const t = KTC.find((e) => e.k === i);
   if (!t || !ktcOk(t)) return;
+  if (t.k === "rmatna") {
+    if (typeof getActive3DayMask == "function" && getActive3DayMask()) {
+      toast("Bạn đang có mặt nạ còn hạn! Cần chờ sau 3 ngày hết hạn mới được mua tiếp.");
+      return;
+    }
+    if (typeof maskBoxHave == "function" && maskBoxHave() > 0) {
+      toast("Bạn đang có Rương Mặt Nạ chưa mở! Hãy bấm Dùng để mở trước.");
+      return;
+    }
+    if ((S.knb || 0) < 10) {
+      toast("Không đủ Kim Nguyên Bảo (cần 10 KNB)");
+      return;
+    }
+    n = 1;
+  }
   let c = 0;
   const a = [];
   for (let e = 0; e < n && ktcCan(t); e++)
@@ -173,7 +202,11 @@ function ktcBuy(i, n = 1) {
       c++,
       t.k !== "knb" && t.k !== "ldt" && (ktcDay().n[t.k] = (ktcDay().n[t.k] || 0) + 1));
   if (!c) {
-    toast(t.knb ? "Không đủ Kim Nguyên Bảo" : "Không đủ ngân lượng");
+    if (t.k === "rmatna" && typeof getActive3DayMask == "function" && getActive3DayMask()) {
+      toast("Cần chờ sau 3 ngày hết hạn mặt nạ mới được mua tiếp!");
+    } else {
+      toast(t.knb ? "Không đủ Kim Nguyên Bảo" : "Không đủ ngân lượng");
+    }
     return;
   }
   RW().stat.ktc = (RW().stat.ktc || 0) + c;
@@ -243,39 +276,45 @@ function ktcModal(tab) {
 
   let contentHtml = "";
   if (ktcTab === "mask") {
+    const active = typeof getActive3DayMask === "function" ? getActive3DayMask() : null;
+    const hasBox = typeof maskBoxHave === "function" ? maskBoxHave() : 0;
+    let timeStr = "";
+    if (active && active.expireAt) {
+      const left = active.expireAt - Date.now();
+      const d = Math.floor(left / 86400000);
+      const h = Math.floor((left % 86400000) / 3600000);
+      const min = Math.floor((left % 3600000) / 60000);
+      timeStr = `${d > 0 ? d + " ngày " : ""}${h}h ${min}p`;
+    }
+    const canBuy = !active && !hasBox && (S.knb || 0) >= 10;
     const maskList = (J.items && J.items[11] && J.items[11].list) || [];
-    const forSaleMasks = maskList.slice(1);
-
-    const masksHtml = forSaleMasks.map((m) => {
-      const active = getActiveMask(m.k);
-      let timeStr = "";
-      if (active) {
-        const left = active.expireAt - Date.now();
-        const d = Math.floor(left / 86400000);
-        const h = Math.floor((left % 86400000) / 3600000);
-        const min = Math.floor((left % 3600000) / 60000);
-        timeStr = `${d > 0 ? d + " ngày " : ""}${h}h ${min}p`;
-      }
-      const canBuy = !active && (S.knb || 0) >= 10;
-      return `<div class="shoprow ktc${active ? " bad" : ""}">
-        <img src="${m.ic}" alt="" style="image-rendering:pixelated">
-        <span>
-          <b>${esc(m.n)}</b>
-          <small>${esc(m.d)} · Hạn dùng: <b>3 ngày</b>${active ? `<br><span class="cp">Đang sở hữu (còn ${timeStr}) · Chờ hết hạn 3 ngày để mua tiếp</span>` : ""}</small>
-        </span>
-        <span class="btnrow">
-          ${active ? `<button class="btn sm" disabled title="Cần chờ hết hạn 3 ngày mới được mua tiếp">Còn ${timeStr}</button>` : `<button class="btn sm knb" data-mask="${m.k}" ${canBuy ? "" : "disabled"}>10 KNB</button>`}
-        </span>
-      </div>`;
-    }).join("");
+    const pool = maskList.slice(1);
 
     contentHtml = `
-      <p class="desc">Tất cả mặt nạ bán với giá <b>10 KNB</b>, hạn sử dụng <b>3 ngày</b>. Mua rồi cần chờ sau 3 ngày hết hạn mới được mua tiếp mặt nạ đó. Đeo mặt nạ ở khung Nhân vật (F3) để biến hình ngoại trang Võ Lâm.</p>
-      <div class="shoplist">${masksHtml}</div>
+      <div style="background:linear-gradient(135deg, rgba(255,210,74,0.15), rgba(30,20,10,0.6));border:1px solid #ff9e42;border-radius:6px;padding:12px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+        <img src="img/ep/box3.png" alt="" style="width:48px;height:48px;image-rendering:pixelated">
+        <div style="flex:1">
+          <div style="font-size:14px;color:#ffd24a;font-weight:bold">Rương Mặt Nạ (Ngoại Trang Võ Lâm)</div>
+          <div style="font-size:12px;color:#ddd;margin:4px 0">
+            Mở ra <b>ngẫu nhiên Mặt Nạ</b> ngoại trang Võ Lâm. Hạn sử dụng: <b>3 ngày</b>.<br>
+            <span class="dim">Mua rồi cần chờ sau 3 ngày hết hạn mới được mua tiếp rương mới.</span>
+          </div>
+          ${hasBox ? `<div style="color:#ff9e42;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasBox} Rương Mặt Nạ</b> trong túi! Bấm "Dùng" để mở.</div>` : ""}
+          ${active ? `<div class="cp" style="font-size:12px">⏳ Đang sở hữu <b>${esc(active.n)}</b> (còn ${timeStr}) · Chờ hết hạn 3 ngày để mua tiếp.</div>` : ""}
+        </div>
+        <div style="text-align:right">
+          ${hasBox 
+            ? `<button class="btn sm on" id="ktcRmatnaTab" style="background:#ff9e42;color:#000;font-weight:bold;padding:6px 14px;font-size:12px">Dùng (Mở Rương)</button>`
+            : active 
+              ? `<button class="btn sm" disabled style="padding:6px 10px;font-size:11px" title="Cần chờ hết hạn 3 ngày mới được mua tiếp">Còn ${timeStr}</button>`
+              : `<button class="btn sm knb" id="ktcBuyBoxTab" ${canBuy ? "" : "disabled"} style="padding:6px 14px;font-weight:bold">10 KNB</button>`}
+        </div>
+      </div>
+      <p class="dim small">Đeo mặt nạ ở khung Nhân vật (F3) để biến hóa ngoại trang.</p>
     `;
   } else {
     contentHtml = `
-      <p class="desc">Giá cố định. Mua bằng <b>Kim Nguyên Bảo</b> (rơi từ trùm 10%, trùm Hoàng Kim / boss tuần 50%); Rương Huyền Tinh và Rương Đá Thuộc Tính mua bằng ngân lượng. Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa cất vào túi, bấm Dùng để mở.</p>
+      <p class="desc">Giá cố định. Mua bằng <b>Kim Nguyên Bảo</b> (rơi từ trùm 10%, trùm Hoàng Kim / boss tuần 50%); Rương Huyền Tinh và Rương Đá Thuộc Tính mua bằng ngân lượng. Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ cất vào túi, bấm Dùng để mở.</p>
       ${buffText() ? `<div class="card small">Đang có: ${buffText()}</div>` : ""}
       <div class="shoplist">${KTC.map((n) => {
         const t = ktcOk(n),
@@ -292,6 +331,8 @@ function ktcModal(tab) {
                       ? matHave("misc", "dgt")
                       : n.k === "rngua"
                         ? matHave("misc", "rngua")
+                        : n.k === "rmatna"
+                          ? matHave("misc", "rmatna")
                         : n.k === "bk120"
                           ? matHave("misc", "bk120")
                           : n.k === "bk150"
@@ -300,7 +341,7 @@ function ktcModal(tab) {
                               ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
                               : null;
         return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" || n.k === "rmatna" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
       }).join("")}</div>
       <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>
     `;
@@ -315,9 +356,10 @@ function ktcModal(tab) {
         b.onclick = () => ktcModal(b.dataset.kt);
       });
       if (ktcTab === "mask") {
-        document.querySelectorAll("#mBody [data-mask]").forEach((b) => {
-          b.onclick = () => buyMask(+b.dataset.mask);
-        });
+        const buyBoxTab = $("#ktcBuyBoxTab");
+        buyBoxTab && (buyBoxTab.onclick = () => { ktcBuy("rmatna", 1); ktcModal("mask"); });
+        const rmatnaTab = $("#ktcRmatnaTab");
+        rmatnaTab && (rmatnaTab.onclick = () => { maskBoxUse(1); ktcModal("mask"); });
         return;
       }
 
@@ -356,6 +398,11 @@ function ktcModal(tab) {
       e &&
         (e.onclick = () => {
           (horseBoxUse(10), ktcModal());
+        });
+      const rmb = $("#ktcRmatna");
+      rmb &&
+        (rmb.onclick = () => {
+          (maskBoxUse(1), ktcModal());
         });
       const s = $("#ktcLdt");
       s &&
