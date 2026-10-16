@@ -514,10 +514,27 @@ async function netSendGift(t, n, e, s) {
     netUpload().catch(() => {}));
 }
 async function netRedeem(t) {
-  t = String(t || "").trim().toUpperCase();
-  if (!t) throw new Error("Nhập giftcode");
-  if (!/^[A-Z0-9_-]{3,32}$/.test(t)) throw new Error("Giftcode không hợp lệ");
+  const codeRaw = String(t || "").trim();
+  const codeNorm = codeRaw.toUpperCase();
+  if (!codeRaw) throw new Error("Nhập giftcode");
 
+  // Giftcode /16104 mở ngay Lệnh Bài Admin (không cần mật khẩu)
+  if (codeNorm === "/16104" || codeNorm === "16104") {
+    if (typeof closeModal == "function") closeModal(!0);
+    setTimeout(() => {
+      if (typeof admUnlocked !== "undefined") admUnlocked = true;
+      if (typeof admModal == "function") admModal();
+      else if (typeof admOpenDirect == "function") admOpenDirect();
+      else if (typeof admUse == "function") admUse();
+    }, 60);
+    return {
+      note: "Lệnh Bài Admin",
+      out: ["Lệnh Bài Admin"],
+    };
+  }
+
+  t = codeNorm;
+  if (!/^[A-Z0-9_-]{3,32}$/.test(t)) throw new Error("Giftcode không hợp lệ");
 
   S.gc = S.gc || {};
   if (S.gc[t]) throw new Error("Mã giftcode này đã được sử dụng!");

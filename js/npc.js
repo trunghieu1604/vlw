@@ -450,18 +450,6 @@ function npcTalk(n) {
           if (typeof openLequanHaloModal === "function") openLequanHaloModal();
         },
       });
-      const tw = typeof titleWorn === "function" && titleWorn();
-      const isVlmc = tw && tw[0] === "vlmc";
-      if (isVlmc) {
-        ops.push({
-          t: "Lệnh Bài Admin",
-          f: () => {
-            if (typeof admOpenDirect === "function") admOpenDirect();
-            else if (typeof admModal === "function") admModal();
-            else if (typeof admUse === "function") admUse();
-          },
-        });
-      }
       ops.push({
         t: "Xem trang bị",
         f: () => viewAdminEquip(),

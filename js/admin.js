@@ -32,7 +32,7 @@ let admTab = "lv",
   admSetFac = "mine",
   admHorse = "";
 const ADM_PASS = "16104";
-let admUnlocked = false;
+let admUnlocked = true;
 
 // Logged in to our own server with an account flagged is_admin (sent by /api/auth/*).
 function admHostOk() {
@@ -46,7 +46,7 @@ function admOk() {
 }
 // Run an admin action: gate, tag the save, log "[Admin] …", save, refresh UI.
 function admDo(fn) {
-  if (!admOk() || !admUnlocked) {
+  if (!admOk()) {
     toast(ADM_DENY);
     $("#mBody .admbox") && closeModal(!0);
     return;
@@ -1058,7 +1058,6 @@ function admTabPlayers() {
 
 function admModal() {
   if (!admOk()) return toast(ADM_DENY);
-  if (!admUnlocked) return admPromptPass(() => admModal());
   const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld, players: admTabPlayers }[admTab] || admTabLv,
     body = () => admInCh(admTab, body0),
     old = $("#mBody .admbody"),
@@ -1476,12 +1475,10 @@ function admPromptPass(onSuccess) {
 function admUse() {
   if (!S || !S.fac) return;
   if (!admOk()) return toast(ADM_DENY);
-  if (!admUnlocked) return admPromptPass(() => admModal());
   admModal();
 }
 function admOpenDirect() {
   if (!S || !S.fac) return toast("Chưa tạo nhân vật");
-  if (!admUnlocked) return admPromptPass(() => admModal());
   admModal();
 }
 window.admOpenDirect = admOpenDirect;

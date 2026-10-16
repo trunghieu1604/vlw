@@ -209,15 +209,6 @@ async function chatSend(t) {
     !t)
   )
     return;
-  if (t === "/16104") {
-    const inp = $("#chatTxt");
-    if (inp) inp.value = "";
-    if (typeof chatToggle == "function") chatToggle(!1);
-    if (typeof admUnlocked !== "undefined") admUnlocked = true;
-    if (typeof admModal == "function") admModal();
-    else if (typeof admOpenDirect == "function") admOpenDirect();
-    return;
-  }
   if (chatIsCode(t)) return toast("Không gửi được tin dạng câu lệnh / mã lệnh");
   if (!CHAT.sb) return toast(CHAT.state === "load" ? "Chat đang kết nối, thử lại sau giây lát" : "Chat chưa kết nối");
   if (typeof hasRealName == "function" && !hasRealName())
