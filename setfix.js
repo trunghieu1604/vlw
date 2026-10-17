@@ -46,8 +46,8 @@ if (typeof JX != "undefined" && JX.sets) {
   if (JX.sets.gold) JX.sets.gold = dedupSetList(JX.sets.gold);
   if (JX.sets.platina) JX.sets.platina = dedupSetList(JX.sets.platina);
 }
-if (typeof window != "undefined" && window.RCP && RCP.shards) {
-  for (const t of Object.keys(RCP.shards)) setBanned(t) && delete RCP.shards[t];
+if (typeof window != "undefined" && window.RCP && window.RCP.shards) {
+  for (const t of Object.keys(window.RCP.shards)) setBanned(t) && delete window.RCP.shards[t];
 }
 (function () {
   const t = JX.sets.gold,
