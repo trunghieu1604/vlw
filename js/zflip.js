@@ -2,9 +2,10 @@
 
 let ZFLIP_AFK = !1,
   afkStartTime = 0,
-  afkStartExp = 0,
   afkStartGold = 0,
-  afkStartKnb = 0,
+  afkLastLvl = 1,
+  afkLastXp = 0,
+  afkTotalGainedXp = 0,
   afkTimer = null,
   afkTapCount = 0,
   afkTapTimer = null;
@@ -83,7 +84,7 @@ function zflipInit() {
   afk.innerHTML = `
     <div class="afk-head">
       <div class="afk-char" id="afkChar">Đang cắm auto</div>
-      <div class="afk-sub" id="afkSub">Màn hình ngoài Galaxy Z Flip · Chế độ tiết kiệm pin</div>
+      <div class="afk-sub" id="afkSub">Chế độ treo</div>
       <div class="afk-bars">
         <div class="afk-bar hp"><i id="afkHp" style="width:100%"></i></div>
         <div class="afk-bar mp"><i id="afkMp" style="width:100%"></i></div>
@@ -93,8 +94,7 @@ function zflipInit() {
       <div class="afk-row"><span>Thời gian treo:</span><b id="afkTime">00:00:00</b></div>
       <div class="afk-row"><span>Kinh nghiệm:</span><b id="afkExp" style="color:#ffd24a">+0</b></div>
       <div class="afk-row"><span>Bạc nhặt:</span><b id="afkGold" style="color:#ffd24a">+0</b></div>
-      <div class="afk-row"><span>KNB nhặt:</span><b id="afkKnb" style="color:#ffd24a">+0</b></div>
-      <div class="afk-row"><span>Trạng thái:</span><b id="afkSt" style="color:#2ecc71">Auto diệt quái</b></div>
+      <div class="afk-row"><span>Trạng thái:</span><b id="afkSt" style="color:#2ecc71">Đang Hoạt Động</b></div>
     </div>
     <div class="afk-tip">Chạm 2 lần để đánh thức màn hình</div>
   `;
@@ -256,9 +256,10 @@ function zflipSyncPanel() {
 function zflipAfkStart() {
   ZFLIP_AFK = !0;
   afkStartTime = Date.now();
-  afkStartExp = S ? (S.exp || 0) : 0;
+  afkLastLvl = S ? (S.lvl || 1) : 1;
+  afkLastXp = S ? (S.xp || 0) : 0;
+  afkTotalGainedXp = 0;
   afkStartGold = S ? (S.gold || 0) : 0;
-  afkStartKnb = S ? (S.knb || 0) : 0;
 
   const afk = document.getElementById("zflipAfk");
   if (afk) afk.classList.add("on");
@@ -275,7 +276,7 @@ function zflipAfkStart() {
   clearInterval(afkTimer);
   afkTimer = setInterval(zflipAfkTick, 1000);
 
-  if (typeof toast === "function") toast("Đã bật chế độ treo máy tiết kiệm pin AMOLED");
+  if (typeof toast === "function") toast("Đã bật chế độ treo máy");
 }
 
 function zflipAfkStop() {
@@ -305,29 +306,46 @@ function zflipAfkTick() {
   if (cEl) cEl.textContent = `${S.name || "Hiệp Khách"} · Lv.${S.lvl || 1}`;
 
   // 3. Máu và Mana
-  const maxHp = typeof maxHpVal === "function" ? maxHpVal() : (S.maxHp || 100);
-  const hpPct = Math.max(0, Math.min(100, Math.round(((S.hp || 0) / (maxHp || 1)) * 100)));
+  const curHp = typeof R !== "undefined" && R && typeof R.life === "number" ? R.life : 0;
+  const maxHp = typeof R !== "undefined" && R && R.P && typeof R.P.life === "number" ? R.P.life : 100;
+  const hpPct = Math.max(0, Math.min(100, Math.round((curHp / Math.max(1, maxHp)) * 100)));
   const hpBar = document.getElementById("afkHp");
   if (hpBar) hpBar.style.width = hpPct + "%";
 
-  const maxMp = typeof maxMpVal === "function" ? maxMpVal() : (S.maxMp || 100);
-  const mpPct = Math.max(0, Math.min(100, Math.round(((S.mp || 0) / (maxMp || 1)) * 100)));
+  const curMp = typeof R !== "undefined" && R && typeof R.mana === "number" ? R.mana : 0;
+  const maxMp = typeof R !== "undefined" && R && R.P && typeof R.P.mana === "number" ? R.P.mana : 100;
+  const mpPct = Math.max(0, Math.min(100, Math.round((curMp / Math.max(1, maxMp)) * 100)));
   const mpBar = document.getElementById("afkMp");
   if (mpBar) mpBar.style.width = mpPct + "%";
 
-  // 4. Thong so EXP, Bạc, KNB
-  const diffExp = Math.max(0, (S.exp || 0) - afkStartExp);
+  // 4. Tính toán EXP nhận được (dùng S.xp và hỗ trợ tăng cấp)
+  const curLvl = S.lvl || 1;
+  const curXp = S.xp || 0;
+  if (curLvl === afkLastLvl) {
+    if (curXp >= afkLastXp) {
+      afkTotalGainedXp += (curXp - afkLastXp);
+    }
+  } else if (curLvl > afkLastLvl) {
+    for (let l = afkLastLvl; l < curLvl; l++) {
+      const need = typeof lvNeed === "function" ? lvNeed(l) : 0;
+      afkTotalGainedXp += Math.max(0, need - (l === afkLastLvl ? afkLastXp : 0));
+    }
+    afkTotalGainedXp += curXp;
+  }
+  afkLastLvl = curLvl;
+  afkLastXp = curXp;
+
+  // 5. Thông số EXP, Bạc
   const diffGold = Math.max(0, (S.gold || 0) - afkStartGold);
-  const diffKnb = Math.max(0, (S.knb || 0) - afkStartKnb);
 
   const eEl = document.getElementById("afkExp");
-  if (eEl) eEl.textContent = "+" + (diffExp >= 10000 ? (diffExp / 10000).toFixed(1) + " vạn" : diffExp);
+  if (eEl) {
+    const xpVal = Math.floor(afkTotalGainedXp);
+    eEl.textContent = "+" + (xpVal >= 100000000 ? (xpVal / 100000000).toFixed(2) + " ức" : xpVal >= 10000 ? (xpVal / 10000).toFixed(1) + " vạn" : xpVal);
+  }
 
   const gEl = document.getElementById("afkGold");
   if (gEl) gEl.textContent = "+" + (typeof fmtVan === "function" ? fmtVan(diffGold) : diffGold + " lượng");
-
-  const kEl = document.getElementById("afkKnb");
-  if (kEl) kEl.textContent = "+" + diffKnb;
 }
 
 // Hook su kien khoi dong va resize
