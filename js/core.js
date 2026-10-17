@@ -108,15 +108,21 @@ function skPlusText(n) {
 function attrText(n, t) {
   if (((n = attrReal(n)), n === "allskill_v")) return skPlusText(t);
   const e = J.attrDesc[n];
+  if (!e) return n + ": " + t.filter((s) => s).join(" / ");
   return e
-    ? e
-        .replace(/#([a-zA-Z])([123A])([-+~%]?)/g, (s, o, a, c) => {
-          const r = a === "A" ? Math.floor((t[0] || 0) / 256) : t[+a - 1] || 0;
-          return o === "l" ? (J.skills[r] ? J.skills[r].n : "#" + r) : (c === "+" && r > 0 ? "+" : "") + r;
-        })
-        .replace(/#[a-zA-Z][123A][-+~]?/g, "")
-        .replace(/Kỹ năng (\d+)/, (s, o) => (J.skills[o] ? "Kỹ năng " + J.skills[o].n : s))
-    : n + ": " + t.filter((s) => s).join(" / ");
+    .replace(/#([a-zA-Z])([123A])([-+~%]?)/g, (s, o, a, c) => {
+      const r = a === "A" ? Math.floor((t[0] || 0) / 256) : t[+a - 1] || 0;
+      return o === "l" ? (J.skills[r] ? J.skills[r].n : "#" + r) : (c === "+" && r > 0 ? "+" : "") + r;
+    })
+    .replace(/#[a-zA-Z][123A][-+~]?/g, "")
+    .replace(/Kỹ năng (\d+)/, (s, o) => (J.skills[o] ? "Kỹ năng " + J.skills[o].n : s))
+    .replace(/<enter>/gi, " ")
+    .replace(/<color(?:=[^>]+)?>/gi, " ")
+    .replace(/<\/color>|<color>/gi, "")
+    .replace(/<<未翻译>/gi, "")
+    .replace(/\s+([,.:])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 const FACTIONS = J.factions.filter((n) => n.skills && n.skills.length),
   FAC = Object.fromEntries(FACTIONS.map((n) => [n.key, n])),

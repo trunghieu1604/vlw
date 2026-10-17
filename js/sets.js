@@ -183,5 +183,15 @@ function goldEnhance(n, t) {
     : 0;
 }
 function setMembers(n) {
-  return J.sets[n.set.kind].filter((t) => t.grp === n.set.grp);
+  const list = (J.sets[n.set.kind] || []).filter((t) => t.grp === n.set.grp && t.d <= 10);
+  const seen = new Set();
+  const res = [];
+  for (const t of list) {
+    const k = t.d + "_" + bareName(t.n);
+    if (!seen.has(k)) {
+      seen.add(k);
+      res.push(t);
+    }
+  }
+  return res;
 }

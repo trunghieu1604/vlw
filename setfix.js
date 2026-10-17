@@ -5,16 +5,50 @@ const SET_BAN =
     /^\s*\[|\((\s*mới\s*|kỳ hạn)\)|[ÄĐẫãệđ´óằð]{4}|^Dương Thần|^(Định Quốc Thanh sa Trường sam|An Bang Cúc hoa Thạch chỉ hoàn|An Bang Điền Hoàng thạch ngọc bội)$/,
   setBanned = (t) => (
     (t = String(t || "")),
-    SET_BAN.test(t.replace(/^\[[^\]]*\]\s*/, "")) || SET_VARIANT.test(t.replace(/^\[Bạch Kim\]\s*/, ""))
+    SET_BAN.test(t.replace(/^\[[^\]]*\]\s*/, "")) ||
+      SET_VARIANT.test(t.replace(/^\[Bạch Kim\]\s*/, "")) ||
+      /^Đồ phổ/i.test(t)
   ),
   eqBanned = (t) => !!t && typeof t == "object" && !!t.set && t.set.kind !== "platina" && setBanned(t.n);
-if (
-  (JX.sets.gold && (JX.sets.gold = JX.sets.gold.filter((t) => !setBanned(t.n))),
-  JX.sets.platina &&
-    (JX.sets.platina = JX.sets.platina.filter((t) => !SET_BAN.test(String(t.n || "").replace(/^\[[^\]]*\]\s*/, "")))),
-  window.RCP && RCP.shards)
-)
+
+function fixItemName(n) {
+  return String(n || "")
+    .replace("Xích Lân Phù Dung #Nhẫn", "Xích Lân Phù Dung Song Nhẫn")
+    .replace("Đằng Long Tịch Địa #?Chỉ Hoàn", "Đằng Long Tịch Địa Đàn Hương Chỉ Hoàn")
+    .replace("Đằng Long Hỗn Nguyên ??Chỉ Hoàn", "Đằng Long Hỗn Nguyên Long Đảm Chỉ Hoàn")
+    .replace("Kim Ô Vô ý ?Ngoa", "Kim Ô Vô ý Ngoa")
+    .replace("Bạch Hổ Thước Kim ?Tiêu", "Bạch Hổ Thước Kim Phi Tiêu")
+    .replace("Bạch Hổ Đạo Minh ?", "Bạch Hổ Đạo Minh Đạo Bào")
+    .replace("Xích Lân Tụ Thần ?Tiêu", "Xích Lân Tụ Thần Phi Tiêu")
+    .replace("Kim Phượng Phương Hoa #Đao", "Kim Phượng Phương Hoa Song Đao")
+    .replace("Kim Phượng Thiên Kiêu ?Tiêu", "Kim Phượng Thiên Kiêu Phi Tiêu")
+    .replace(/[?#]+/g, "")
+    .trim();
+}
+
+function dedupSetList(list) {
+  if (!list || !Array.isArray(list)) return [];
+  const seen = new Set();
+  const res = [];
+  for (const it of list) {
+    if (!it || it.d > 10 || setBanned(it.n)) continue;
+    it.n = fixItemName(it.n);
+    const bare = it.n.replace(/^\[[^\]]*\]\s*/, "").toLowerCase().replace(/\s+/g, " ");
+    const key = it.grp + "_" + it.d + "_" + bare;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    res.push(it);
+  }
+  return res;
+}
+
+if (typeof JX != "undefined" && JX.sets) {
+  if (JX.sets.gold) JX.sets.gold = dedupSetList(JX.sets.gold);
+  if (JX.sets.platina) JX.sets.platina = dedupSetList(JX.sets.platina);
+}
+if (typeof window != "undefined" && window.RCP && RCP.shards) {
   for (const t of Object.keys(RCP.shards)) setBanned(t) && delete RCP.shards[t];
+}
 (function () {
   const t = JX.sets.gold,
     a = JX.sets.platina,
