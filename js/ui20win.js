@@ -604,7 +604,7 @@ const KTC_CAT = [
   ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Rương Thần Bí", ["rngua", "rmatna"]],
-  ["Rương Hoàn Kim", ["rhk"]],
+  ["Rương Hoàng Kim", ["rhk"]],
 ];
 let u2KtcCat = 0;
 function ktcModal20(cat) {
@@ -612,14 +612,14 @@ function ktcModal20(cat) {
   if (cat === "mask" || cat === "Mặt nạ" || cat === "ruongthanbi" || cat === "Rương Thần Bí" || cat === "Thú cưỡi") {
     const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Thần Bí" || (Array.isArray(val) && (val.includes("rmatna") || val.includes("rngua"))));
     if (idx >= 0) u2KtcCat = idx;
-  } else if (cat === "ruonghoankim" || cat === "Rương Hoàn Kim" || cat === "rhk") {
-    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàn Kim" || (Array.isArray(val) && val.includes("rhk")));
+  } else if (cat === "ruonghoankim" || cat === "Rương Hoàng Kim" || cat === "Rương Hoàng Kim" || cat === "rhk") {
+    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàng Kim" || t === "Rương Hoàng Kim" || (Array.isArray(val) && val.includes("rhk")));
     if (idx >= 0) u2KtcCat = idx;
   } else if (typeof cat === "number" && cat >= 0 && cat < KTC_CAT.length) {
     u2KtcCat = cat;
   }
   const isRuongTb = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Rương Thần Bí";
-  const isRuongHk = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Rương Hoàn Kim";
+  const isRuongHk = KTC_CAT[u2KtcCat] && (KTC_CAT[u2KtcCat][0] === "Rương Hoàng Kim" || KTC_CAT[u2KtcCat][0] === "Rương Hoàn Kim");
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")

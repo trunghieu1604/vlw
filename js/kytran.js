@@ -139,7 +139,7 @@ const KNB_GOLD = 1e6,
       k: "rhk",
       n: "Rương Hoàng Kim",
       ic: "img/ep/box2.png",
-      knb: 1500,
+      knb: 500,
       d: "Mở 100% ra đồ HK môn phái lv 120-180. Tỷ lệ 0.5% ra trọn bộ (full set) HK.",
       use: () => (matAdd("misc", "rhk", 1), "Nhận 1 Rương Hoàng Kim (bấm Dùng để mở)"),
     },
@@ -407,8 +407,8 @@ function ktcModal(tab) {
   let contentHtml = "";
   if (ktcTab === "ruonghk") {
     const hasHkBox = typeof matHave === "function" ? matHave("misc", "rhk") : 0;
-    const canBuyHk = (S.knb || 0) >= 1500;
-    const canBuyHk10 = (S.knb || 0) >= 15000;
+    const canBuyHk = (S.knb || 0) >= 500;
+    const canBuyHk10 = (S.knb || 0) >= 5000;
     const facName = FAC[S.fac] ? FAC[S.fac].n : "Môn Phái";
     const isNov = typeof isNovice === "function" && isNovice();
 
@@ -418,7 +418,7 @@ function ktcModal(tab) {
         <div style="background:linear-gradient(135deg, rgba(255,210,74,0.18), rgba(40,25,10,0.8));border:1px solid #ffd24a;border-radius:6px;padding:14px;display:flex;align-items:center;gap:14px">
           <img src="img/ep/box2.png" alt="" style="width:54px;height:54px;image-rendering:pixelated">
           <div style="flex:1">
-            <div style="font-size:15px;color:#ffd24a;font-weight:bold">Rương Hoàng Kim ${esc(facName)} · <span style="color:#ff9e42">1500 KNB</span></div>
+            <div style="font-size:15px;color:#ffd24a;font-weight:bold">Rương Hoàng Kim ${esc(facName)} · <span style="color:#ff9e42">500 KNB</span></div>
             <div style="font-size:12px;color:#eee;margin:6px 0;line-height:1.5">
               Mở <b>100% nhận ngẫu nhiên 1 trang bị Hoàng Kim môn phái ${esc(facName)} (cấp 120–180)</b>.<br>
               <span style="color:#ff5555;font-weight:bold">★ Chú thích: Có tỷ lệ 0.5% mở ra TRỌN BỘ (FULL SET) Hoàng Kim môn phái!</span><br>
@@ -427,8 +427,8 @@ function ktcModal(tab) {
             ${hasHkBox ? `<div style="color:#ffd24a;font-size:13px;font-weight:bold">🎁 Đang có <b>${hasHkBox} Rương Hoàng Kim</b> trong túi!</div>` : ""}
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-            <button class="btn sm knb" id="ktcBuyHkTab" ${canBuyHk ? "" : "disabled"} style="padding:7px 16px;font-weight:bold;font-size:13px">Mua 1500 KNB</button>
-            ${canBuyHk10 ? `<button class="btn sm knb" id="ktcBuyHkTab10" style="padding:4px 10px;font-size:11px">Mua ×10 (15000 KNB)</button>` : ""}
+            <button class="btn sm knb" id="ktcBuyHkTab" ${canBuyHk ? "" : "disabled"} style="padding:7px 16px;font-weight:bold;font-size:13px">Mua 500 KNB</button>
+            ${canBuyHk10 ? `<button class="btn sm knb" id="ktcBuyHkTab10" style="padding:4px 10px;font-size:11px">Mua ×10 (5000 KNB)</button>` : ""}
             ${hasHkBox ? `<button class="btn sm on" id="ktcRhkTab" style="background:#ffd24a;color:#000;font-weight:bold;padding:6px 14px;font-size:13px">Mở Rương (${hasHkBox})</button>` : ""}
             ${hasHkBox > 1 ? `<button class="btn sm on" id="ktcRhkTab10" style="background:#ff9e42;color:#000;font-weight:bold;padding:4px 10px;font-size:11px">Mở ×${Math.min(10, hasHkBox)}</button>` : ""}
           </div>
@@ -437,7 +437,7 @@ function ktcModal(tab) {
       <div class="card small" style="background:rgba(255,210,74,0.06);border:1px solid rgba(255,210,74,0.3);padding:10px;border-radius:6px">
         <div style="color:#ffd24a;font-weight:bold;margin-bottom:4px">📜 Quy tắc Rương Hoàng Kim:</div>
         <div class="dim small" style="line-height:1.5">
-          • Giá cố định: <b>1500 Kim Nguyên Bảo</b> 1 rương.<br>
+          • Giá cố định: <b>500 Kim Nguyên Bảo</b> 1 rương.<br>
           • Mở <b>100% ra trang bị Hoàng Kim môn phái</b> của nhân vật (${esc(facName)}), cấp yêu cầu <b>120–180</b>.<br>
           • <b>Tỷ lệ 0.5% (1/200)</b> nhận trọn vẹn 10 món của cả bộ set Hoàng Kim môn phái!<br>
           • Cất vào túi, bấm Dùng để mở hoặc mở trực tiếp tại Kỳ Trân Các.
