@@ -6,13 +6,13 @@ const SET_BAN =
   setBanned = (t) => (
     (t = String(t || "")),
     SET_BAN.test(t.replace(/^\[[^\]]*\]\s*/, "")) ||
-      SET_VARIANT.test(t.replace(/^\[Bạch Kim\]\s*/, "")) ||
+      SET_VARIANT.test(t.replace(/^\[(Bạch Kim|Tống Kim)\]\s*/, "")) ||
       /^Đồ phổ/i.test(t)
   ),
   eqBanned = (t) => !!t && typeof t == "object" && !!t.set && t.set.kind !== "platina" && setBanned(t.n);
 
-function fixItemName(n) {
-  return String(n || "")
+function fixItemName(n, grp) {
+  let s = String(n || "")
     .replace("Xích Lân Phù Dung #Nhẫn", "Xích Lân Phù Dung Song Nhẫn")
     .replace("Đằng Long Tịch Địa #?Chỉ Hoàn", "Đằng Long Tịch Địa Đàn Hương Chỉ Hoàn")
     .replace("Đằng Long Hỗn Nguyên ??Chỉ Hoàn", "Đằng Long Hỗn Nguyên Long Đảm Chỉ Hoàn")
@@ -24,6 +24,10 @@ function fixItemName(n) {
     .replace("Kim Phượng Thiên Kiêu ?Tiêu", "Kim Phượng Thiên Kiêu Phi Tiêu")
     .replace(/[?#]+/g, "")
     .trim();
+  if (grp >= 60 && grp <= 82 && !s.startsWith("[Tống Kim]")) {
+    s = "[Tống Kim] " + s;
+  }
+  return s;
 }
 
 function dedupSetList(list) {
@@ -32,7 +36,7 @@ function dedupSetList(list) {
   const res = [];
   for (const it of list) {
     if (!it || it.d > 10 || setBanned(it.n)) continue;
-    it.n = fixItemName(it.n);
+    it.n = fixItemName(it.n, it.grp);
     const bare = it.n.replace(/^\[[^\]]*\]\s*/, "").toLowerCase().replace(/\s+/g, " ");
     const key = it.grp + "_" + it.d + "_" + bare;
     if (seen.has(key)) continue;
