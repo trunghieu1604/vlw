@@ -407,11 +407,16 @@ function heroHit(t, n) {
     g = counters(n.series, t.series);
   (T ? (s *= 1 + SERIES_BONUS) : g && (s *= 1 - SERIES_BONUS),
     t.parts.cold && !(n.slowT > 0) && (n.slowT = (t.coldT || ELEM_SLOW_T) * (1 - ((e && e.freezeRed) || 0) / 100)));
-  const k = (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
+  const isWb = n.wb || n.isWbBoss;
+  if (isWb) {
+    n.stun = 0;
+    n.slowT = 0;
+  }
+  const k = isWb ? 0 : (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
   if (
-    (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
+    (t.parts.light && !isWb && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
-    ((n.wb || n.isWbBoss) ? (n.hp = n.max) : (n.hp -= s)),
+    (isWb ? (n.hp = n.max) : (n.hp -= s)),
     R.tower && (R.stall = 0),
     n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
     (n.retMeleeP || n.retMelee) && !t.ranged && (() => {
@@ -420,11 +425,11 @@ function heroHit(t, n) {
       refDmg > 0 && ((R.life = Math.max(1, R.life - refDmg)), addText(H.x, H.y - 40, "-" + fmt(refDmg) + " ↩", "#ff8844", 11));
     })(),
     (n.hitT = 0.12),
-    n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid] ? MON[n.tid].anim : (heroGfx() && heroGfx().anim), "hurt", 0.3)),
-    (t.stun || R.P.stunAdd) &&
+    !isWb && n.act !== "at" && ((n.act = "hurt"), (n.actT = 0), npcSfx(MON[n.tid] ? MON[n.tid].anim : (heroGfx() && heroGfx().anim), "hurt", 0.3)),
+    !isWb && (t.stun || R.P.stunAdd) &&
       Math.random() * 100 < (t.stun || 0) + (R.P.stunAdd || 0) &&
       (n.stun = Math.max(n.stun, 0.8 * k)),
-    R.P.knock && n.cls !== "boss" && Math.random() * 100 < R.P.knock)
+    !isWb && R.P.knock && n.cls !== "boss" && Math.random() * 100 < R.P.knock)
   ) {
     const l = n.x - H.x,
       d = n.y - H.y,
@@ -446,6 +451,7 @@ function heroHit(t, n) {
   );
 }
 function enemyHit(t) {
+  if (R.invulT > 0) return;
   if (typeof isGodMode == "function" && isGodMode()) {
     addText(H.x, H.y - 30, "Bất tử", "#ffd24a", 11);
     return;
@@ -898,7 +904,10 @@ function enemyAI(t, n) {
     const drain = Math.abs(crs.regen) * (15 + (t.L || 1) * 2);
     t.hp -= drain * n;
   }
-  if (t.stun > 0) {
+  if (t.wb || t.isWbBoss) {
+    t.stun = 0;
+    t.slowT = 0;
+  } else if (t.stun > 0) {
     t.stun -= n;
     return;
   }
@@ -940,9 +949,27 @@ function tick(t) {
       autoForge(),
       checkHints()),
     R.dirty && recalc());
+  if (R.invulT > 0) R.invulT -= t;
   const n = R.P;
   if (R.deadT > 0) {
-    ((R.deadT -= t), R.deadT <= 0 && ((R.life = n.life), (R.mana = n.mana), (S.wave = 1), fieldMode() || spawnWave()));
+    R.deadT -= t;
+    if (R.deadT <= 0) {
+      R.life = n.life;
+      R.mana = n.mana;
+      if (R.dg && R.dg.kind === "worldboss") {
+        const heroPos = (typeof inWorld === "function") ? inWorld(2150, 1130) : [2150, 1130];
+        H.x = heroPos[0] - 120;
+        H.y = heroPos[1];
+        H.act = "st";
+        H.actT = 0;
+        R.invulT = 2;
+        addText(H.x, H.y - 40, "Hồi sinh tiếp tục chiến đấu!", "#ffd700", 14);
+        if (typeof toast === "function") toast("Đã hồi sinh! Hãy tiếp tục tiến vào khiêu chiến Boss!");
+      } else {
+        S.wave = 1;
+        fieldMode() || spawnWave();
+      }
+    }
     return;
   }
   if (
@@ -1234,6 +1261,15 @@ function heroDeath() {
     log('<span class="bad">Bạn đã trọng thương.</span>'),
     R.dg)
   ) {
+    if (R.dg.kind === "worldboss") {
+      R.deadT = 2.5;
+      R.life = 0;
+      H.act = "die";
+      H.actT = 0;
+      log('<span class="bad">Bạn đã bị Boss Thế Giới hạ gục! Sẽ hồi sinh sau 2.5s để tiếp tục chiến đấu...</span>');
+      addText(H.x, H.y - 40, "Trọng thương! Chờ hồi sinh...", "#ff3333", 14);
+      return;
+    }
     dgFail("Gục ngã");
     return;
   }

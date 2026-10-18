@@ -561,10 +561,12 @@ function u20Tick() {
   (s !== u20LogN && ((u20LogN = s), u20LogDraw()),
     ($("#u20g").textContent = fmtL(S.gold)),
     ($("#u20knb").textContent = fmt(S.knb || 0)));
+  const isWbArena = (typeof WB !== "undefined" && WB.arena && WB.arena.on) || (R.dg && R.dg.kind === "worldboss");
   const o =
+      !isWbArena &&
       R.enemies &&
       R.enemies
-        .filter((n) => !n.dead && n.cls === "boss" && Math.hypot(n.x - H.x, n.y - H.y) < 700)
+        .filter((n) => !n.dead && n.cls === "boss" && !n.wb && !n.isWbBoss && n.id !== "wb_boss_trunghieu" && Math.hypot(n.x - H.x, n.y - H.y) < 700)
         .sort((n, i) => Math.hypot(n.x - H.x, n.y - H.y) - Math.hypot(i.x - H.x, i.y - H.y))[0],
     e = $("#u20boss");
   if (o) {

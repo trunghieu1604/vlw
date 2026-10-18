@@ -80,7 +80,7 @@ function getWbSchedule() {
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
   const todayKey = `${y}-${m + 1}-${d}`;
   const startToday = new Date(y, m, d, 20, 0, 0, 0).getTime();
-  const endToday = startToday + 5 * 60 * 1000; // 20:05 (5 mins duration)
+  const endToday = startToday + 10 * 60 * 1000; // 20:10 (10 mins duration)
   const nowMs = now.getTime();
 
   const killedToday = !!(S && S.rw && S.rw.wbKilledDate === todayKey);
@@ -120,7 +120,7 @@ function spawnWorldBoss(isSummon = false) {
   };
 
   WB.st = "up";
-  WB.end = Date.now() + 5 * 60 * 1000;
+  WB.end = Date.now() + 10 * 60 * 1000;
   WB.playerDmg = 0;
   WB.defeatDone = false;
   WB.defeatedHandled = false;
@@ -383,9 +383,9 @@ function wbTick() {
     }
   }
 
-  // Ensure existing arena limit is 5 mins (300s)
-  if (WB.arena.on && typeof R === "object" && R && R.dg && R.dg.kind === "worldboss" && R.dg.limit > 300) {
-    R.dg.limit = 300;
+  // Ensure existing arena limit is 10 mins (600s)
+  if (WB.arena.on && typeof R === "object" && R && R.dg && R.dg.kind === "worldboss" && R.dg.limit !== 600) {
+    R.dg.limit = 600;
   }
 
   // Check boss expiration (5 mins passed)
@@ -464,9 +464,9 @@ function handleBossDefeated(isTimeout = true) {
   const top1 = (WB.top && WB.top[0]) || { name: "Hiệp Sĩ", dmg: 0 };
   const top1Name = top1.name;
 
-  showWbBanner(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới!</b> Quán quân TOP 1: <b>${top1Name}</b>.`);
+  showWbBanner(`🏆 <b>Hết 10 phút khiêu chiến Boss Thế Giới!</b> Quán quân TOP 1: <b>${top1Name}</b>.`);
   if (typeof log === "function") {
-    log(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b> (${wbNum(top1.dmg)} sát thương)!`);
+    log(`🏆 <b>Hết 10 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b> (${wbNum(top1.dmg)} sát thương)!`);
   }
 
   grantPlayerWbRewards(true);
@@ -666,7 +666,7 @@ function openWbResultModal(top1Name, isTimeout = false) {
     <div class="wbbox" style="padding:10px;color:#f3e2b3;font-size:14px;line-height:1.5">
       <h3 style="color:#ffd700;text-align:center;margin:4px 0 10px">🏆 Kết Quả Boss Thế Giới 🏆</h3>
       <p style="text-align:center;font-size:15px;margin-bottom:10px">
-        ${isTimeout ? `⏰ <b>Đã hết thời gian khiêu chiến 5 phút!</b> Quán quân sát thương: <b>${top1Name}</b>.` : `Boss <b>Trung Hiếu</b> đã bị đánh bại! TOP 1 Sát Thương: <b>${top1Name}</b>.`}
+        ${isTimeout ? `⏰ <b>Đã hết thời gian khiêu chiến 10 phút!</b> Quán quân sát thương: <b>${top1Name}</b>.` : `Boss <b>Trung Hiếu</b> đã kết thúc khiêu chiến! TOP 1 Sát Thương: <b>${top1Name}</b>.`}
       </p>
   `;
 
@@ -806,17 +806,19 @@ function joinWorldBoss() {
       max: bossHp,
       r: 60,
       series: WB_BOSS_CONFIG.series,
-      dmg: 450,
-      ar: 2500,
-      def: 1200,
-      atkCd: 1.2,
-      cd: 1.5,
-      spd: 50,
-      reach: 80,
+      dmg: 4500,
+      ar: 25000,
+      def: 2500,
+      atkCd: 0.8,
+      cd: 0.8,
+      spd: 85,
+      reach: 100,
       hitT: 0,
       animKey: "pl_gaibang",
       heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook),
-      res: { phys: 50, fire: 80, cold: 65, light: 65, poison: 65 },
+      res: { phys: 85, fire: 85, cold: 85, light: 85, poison: 85 },
+      stunRed: 100,
+      freezeRed: 100,
       shOk: true
     };
 
@@ -828,7 +830,7 @@ function joinWorldBoss() {
       d: { n: "Boss Thế Giới: Trung Hiếu" },
       room: 1,
       rooms: 1,
-      limit: 300,
+      limit: 600,
       t: 0,
       boss: b
     };

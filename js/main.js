@@ -410,7 +410,7 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-let APP_V = 446;
+let APP_V = 457;
 function getAppV() {
   try {
     const s = document.querySelector('script[src*="main.js"]');
@@ -419,7 +419,7 @@ function getAppV() {
       if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 449;
+  return APP_V || 457;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
@@ -428,10 +428,11 @@ function appVerCheck() {
     .then((n) => {
       if (!n || !n.v) return;
       const cur = getAppV();
-      const lastSeen = sessionStorage.getItem("jxidle_seen_ver");
+      const lastSeen = sessionStorage.getItem("jxidle_seen_ver") || localStorage.getItem("jxidle_seen_ver");
       if (lastSeen && +lastSeen >= +n.v) return;
       if (+n.v > cur) {
         sessionStorage.setItem("jxidle_seen_ver", String(n.v));
+        try { localStorage.setItem("jxidle_seen_ver", String(n.v)); } catch {}
         APP_V = +n.v;
         try {
           save();
