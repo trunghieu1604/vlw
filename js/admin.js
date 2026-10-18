@@ -137,6 +137,7 @@ function admTabLv() {
   <div class="admh">Điểm</div><div class="btnrow"><button class="btn sm" data-a="ap:10">+10 tiềm năng</button><button class="btn sm" data-a="ap:100">+100 tiềm năng</button><button class="btn sm" data-a="sp:5">+5 kỹ năng</button><button class="btn sm" data-a="sp:50">+50 kỹ năng</button><button class="btn sm on" data-a="spend">Tự cộng hết điểm</button></div>
   <div class="admh">Chuyển Sinh (CS ${typeof rebGet == "function" ? rebGet() : (S && S.rw && S.rw.stat ? S.rw.stat.reborn : 0)})</div><div class="btnrow"><button class="btn sm" data-a="reb:1">+1 CS</button><button class="btn sm" data-a="reb:-1">-1 CS (Giảm CS)</button><button class="btn sm" data-a="reb:0">Về CS 0</button><button class="btn sm on" data-a="reb:5">CS 5 (Tối đa)</button></div>
   <div class="admh">Danh Hiệu Giang Hồ</div><div class="btnrow"><button class="btn sm on" data-a="titleall">🎖 Mở khóa mọi Danh Hiệu</button><button class="btn sm" data-a="titlemodal">Xem & Đeo Danh Hiệu</button></div>
+  <div class="admh">Tiện Ích Nhanh</div><div class="btnrow"><button class="btn sm red" data-a="clearchat">💬 Xóa Sạch Kênh Chat</button><button class="btn sm" data-a="cd">Đặt lại hồi chiêu</button><button class="btn sm on" data-a="full">Hồi đầy máu/mana</button></div>
   ${typeof isNovice == "function" && isNovice() && S.lvl >= NOVICE_LV ? `<div class="btnrow"><button class="btn sm on" data-a="join">Gia nhập môn phái</button></div>` : ""}
   <p class="dim small">Lên cấp đi theo đường lên cấp của game (cộng tiềm năng / kỹ năng mỗi cấp, tự cộng điểm nếu bật, tự đổi bãi, mốc quà cấp).</p>`;
 }
@@ -842,9 +843,10 @@ function admGo(k) {
 // Same destination list as the Thần Hành Phù picker (thanhanh.js thListHTML), rows act via data-a="go:<key>".
 function admTabWorld() {
   return `
-  <div class="admh">🏆 Bảng Xếp Hạng Online</div>
+  <div class="admh">🏆 Bảng Xếp Hạng & Kênh Chat Online</div>
   <div class="btnrow" style="margin-bottom:8px">
     <button class="btn sm red" data-a="clearrank">🧹 Xóa Trắng Bảng Xếp Hạng</button>
+    <button class="btn sm red" data-a="clearchat">💬 Xóa Sạch Kênh Chat (Cả Server)</button>
   </div>
   <div class="admh">⚔️ Boss Thế Giới Online (Trung Hiếu)</div>
   <div class="btnrow" style="margin-bottom:8px">
@@ -1357,6 +1359,21 @@ function admAct(a) {
           }
         }
         return toast("Firebase chưa kết nối"), "";
+      }
+      case "clearchat": {
+        if (typeof chatClearAll === "function") {
+          chatClearAll();
+        } else {
+          const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+          if (db) {
+            try { db.ref("chat/msgs").remove(); } catch (e) {}
+          }
+          if (typeof CHAT !== "undefined" && CHAT) {
+            CHAT.msgs = [];
+            if (typeof chatRender === "function") chatRender();
+          }
+        }
+        return "Đã xóa toàn bộ tin nhắn kênh chat thành công!";
       }
       case "wbsummon": {
         const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);

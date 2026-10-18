@@ -344,6 +344,17 @@ async function chatInit() {
         }
       });
 
+      db.ref("chat/msgs").on("value", (snap) => {
+        if (!snap.exists() || !snap.hasChildren()) {
+          CHAT.msgs = [];
+          CHAT.unread = 0;
+          CHAT.lastH = "";
+          const a = $("#chatLines");
+          if (a) a.innerHTML = "";
+          chatRender();
+        }
+      });
+
       chatInitFirebasePresence();
       typeof syncRankFirebase == "function" && syncRankFirebase();
       typeof wbInitFirebase == "function" && wbInitFirebase();
@@ -375,6 +386,40 @@ async function chatInit() {
     chatRender();
   }
 }
+
+function chatClearAll() {
+  if (typeof CHAT !== "undefined" && CHAT) {
+    CHAT.msgs = [];
+    CHAT.unread = 0;
+    CHAT.lastH = "";
+    CHAT.last = 0;
+  }
+  const a = typeof $ === "function" ? $("#chatLines") : document.getElementById("chatLines");
+  if (a) a.innerHTML = "";
+  const n = typeof $ === "function" ? $("#chatN") : document.getElementById("chatN");
+  if (n) { n.textContent = ""; n.style.display = "none"; }
+  if (typeof chatRender === "function") chatRender();
+
+  if (typeof R !== "undefined" && R) {
+    R.logs = [];
+    R.logDirty = true;
+    const lb = typeof $ === "function" ? $("#logBox") : document.getElementById("logBox");
+    if (lb) lb.innerHTML = "";
+    const u20 = typeof $ === "function" ? $("#u20lines") : document.getElementById("u20lines");
+    if (u20) u20.innerHTML = "";
+  }
+  if (typeof u20LogDraw === "function") u20LogDraw();
+
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (db) {
+    try {
+      db.ref("chat/msgs").remove();
+    } catch (e) {
+      console.warn("chatClearAll err:", e);
+    }
+  }
+}
+window.chatClearAll = chatClearAll;
 
 const CHAT_IT_DROP = new Set(["uid", "lock", "price", "dtk"]);
 function chatItemClean(t, e = 0) {

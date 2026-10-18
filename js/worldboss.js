@@ -103,6 +103,9 @@ function getWbSchedule() {
  */
 function spawnWorldBoss(force = false) {
   const sched = getWbSchedule();
+  if (force && S && S.rw && S.rw.wbKilledDate) {
+    delete S.rw.wbKilledDate;
+  }
   WB.boss = {
     name: WB_BOSS_CONFIG.name,
     title: WB_BOSS_CONFIG.title,
@@ -119,8 +122,28 @@ function spawnWorldBoss(force = false) {
   WB.end = Date.now() + 5 * 60 * 1000;
   WB.playerDmg = 0;
   WB.defeatDone = false;
+  WB.defeatedHandled = false;
   WB.rewardClaimed = false;
   WB.resultModalShown = false;
+
+  // Đồng bộ reset máu Boss trên Firebase lên tối đa 120M và xóa bảng damage cũ
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+  if (db && (force || sched.st === "up")) {
+    try {
+      db.ref("worldboss/state").set({
+        st: "up",
+        hp: WB_BOSS_CONFIG.hpMax,
+        hpMax: WB_BOSS_CONFIG.hpMax,
+        name: WB_BOSS_CONFIG.name,
+        startedAt: Date.now(),
+        end: WB.end,
+        killer: ""
+      });
+      db.ref("worldboss/damage").remove();
+    } catch (e) {
+      console.warn("spawnWorldBoss fb err:", e);
+    }
+  }
 
   WB.bots = WB_BOT_POOL.map((b) => ({
     name: b.n,
@@ -161,7 +184,6 @@ function spawnWorldBoss(force = false) {
       ts: Date.now()
     });
   }
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
   if (db) {
     try {
       db.ref("chat/msgs").push({
@@ -202,11 +224,17 @@ function wbSyncHitFirebase() {
       updated: Date.now()
     });
     db.ref("worldboss/state/hp").transaction((curr) => {
-      if (curr == null) return WB_BOSS_CONFIG.hpMax - d;
+      // Nếu Firebase chưa có hoặc đang lưu số 0 từ trước nhưng boss đang được bật
+      if (curr == null || curr <= 0) {
+        if (WB.st === "up" && WB.boss && WB.boss.hp > 0) {
+          return Math.max(0, WB.boss.hp - d);
+        }
+        return 0;
+      }
       const next = curr - d;
       return next <= 0 ? 0 : next;
     }, (err, committed, snap) => {
-      if (committed && snap && snap.val() === 0) {
+      if (committed && snap && snap.val() === 0 && WB.boss && WB.boss.hp <= 0) {
         db.ref("worldboss/state").update({
           st: "dead",
           hp: 0,
@@ -246,29 +274,38 @@ function wbInitFirebase() {
         }
       }
       if (typeof val.hp === "number") {
-        if (!WB.boss) {
-          WB.boss = {
-            name: WB_BOSS_CONFIG.name,
-            title: WB_BOSS_CONFIG.title,
-            mapName: WB_BOSS_CONFIG.mapName,
-            mapImg: WB_BOSS_CONFIG.mapImg,
-            lvl: WB_BOSS_CONFIG.lvl,
-            hp: val.hp,
-            hpMax: val.hpMax || WB_BOSS_CONFIG.hpMax,
-            series: WB_BOSS_CONFIG.series,
-            heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-          };
+        // Tránh tình trạng Firebase vừa sync về 0 trong khi người chơi đang trong trận đấu
+        if (val.hp <= 0 && WB.arena.on && WB.boss && WB.boss.hp > 1000) {
+          // Bỏ qua giá trị 0 cũ
         } else {
-          WB.boss.hp = val.hp;
-          if (val.hpMax) WB.boss.hpMax = val.hpMax;
-        }
-        if (WB.arena.bossInst) {
-          WB.arena.bossInst.hp = val.hp;
+          if (!WB.boss) {
+            WB.boss = {
+              name: WB_BOSS_CONFIG.name,
+              title: WB_BOSS_CONFIG.title,
+              mapName: WB_BOSS_CONFIG.mapName,
+              mapImg: WB_BOSS_CONFIG.mapImg,
+              lvl: WB_BOSS_CONFIG.lvl,
+              hp: val.hp,
+              hpMax: val.hpMax || WB_BOSS_CONFIG.hpMax,
+              series: WB_BOSS_CONFIG.series,
+              heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+            };
+          } else {
+            WB.boss.hp = val.hp;
+            if (val.hpMax) WB.boss.hpMax = val.hpMax;
+          }
+          if (WB.arena.bossInst) {
+            WB.arena.bossInst.hp = val.hp;
+          }
         }
       }
       if (val.st === "dead" && !WB.defeatDone) {
-        WB.defeatedHandled = true;
-        handleBossDefeated(false, val.killer);
+        if (WB.arena.on && WB.boss && WB.boss.hp > 1000) {
+          // Chưa chết thực sự trong trận đấu của client
+        } else {
+          WB.defeatedHandled = true;
+          handleBossDefeated(false, val.killer);
+        }
       }
       if (val.st === "up" && WB.st !== "up") {
         WB.defeatedHandled = false;
@@ -703,8 +740,23 @@ function hideWbBanner() {
  * Player enters Combat Arena: map img/z/337.jpg exclusively with ONLY Boss Trung Hiếu
  */
 function joinWorldBoss() {
-  if (WB.st !== "up" || !WB.boss) {
+  if (WB.st !== "up" || !WB.boss || WB.boss.hp <= 0) {
     spawnWorldBoss(true);
+  }
+  if (!WB.boss || WB.boss.hp <= 0) {
+    WB.boss = {
+      name: WB_BOSS_CONFIG.name,
+      title: WB_BOSS_CONFIG.title,
+      mapName: WB_BOSS_CONFIG.mapName,
+      mapImg: WB_BOSS_CONFIG.mapImg,
+      lvl: WB_BOSS_CONFIG.lvl,
+      hp: WB_BOSS_CONFIG.hpMax,
+      hpMax: WB_BOSS_CONFIG.hpMax,
+      series: WB_BOSS_CONFIG.series,
+      heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+    };
+    WB.st = "up";
+    WB.defeatDone = false;
   }
   if (typeof closeModal === "function") closeModal(true);
 
@@ -737,6 +789,7 @@ function joinWorldBoss() {
     // Create the Boss Trung Hiếu entity cleanly as a hero-boss NPC
     const spawnX = H.x + 130;
     const spawnY = H.y - 30;
+    const bossHp = Math.max(10000000, (WB.boss && WB.boss.hp > 0) ? WB.boss.hp : WB_BOSS_CONFIG.hpMax);
     const b = {
       id: "wb_boss_trunghieu",
       tid: 9999,
@@ -753,8 +806,8 @@ function joinWorldBoss() {
       dir: 5,
       act: "st",
       actT: 0,
-      hp: WB.boss.hp,
-      max: WB.boss.hpMax,
+      hp: bossHp,
+      max: WB_BOSS_CONFIG.hpMax,
       r: 60,
       series: WB_BOSS_CONFIG.series,
       dmg: 450,
