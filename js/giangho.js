@@ -11,6 +11,7 @@ const MISC_N = Object.assign(
       rngua: "Rương Ngựa",
       rmatna: "Rương Mặt Nạ",
       rhk: "Rương Hoàng Kim",
+      rfullhk: "Rương Trọn Bộ HKMP",
     },
     BOOK_N,
   ),

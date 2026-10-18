@@ -260,11 +260,11 @@ function renderSkill20() {
     },
     o = R.P && R.P.basic,
     d = S.mainLock && S.main === "basic",
-    u = `<div class="u2kc"><div class="u2kh">Cơ bản</div><div class="u2k on${R.P.main === o ? " main" : ""}${d ? " lockm" : ""}" id="u2basic" title="Đánh thường · bấm để ${d ? "bỏ khóa" : "khóa làm chiêu chính"}"><img src="img/s/8.png" alt=""><i>1</i></div>${'<div class="u2k empty"></div>'.repeat(s - 1)}</div>`,
+    u = `<div class="u2kc"><div class="u2kh" title="Cơ bản">Cơ bản</div><div class="u2k on${R.P.main === o ? " main" : ""}${d ? " lockm" : ""}" id="u2basic" title="Đánh thường · bấm để ${d ? "bỏ khóa" : "khóa làm chiêu chính"}"><img src="img/s/8.png" alt=""><i>1</i></div>${'<div class="u2k empty"></div>'.repeat(s - 1)}</div>`,
     m = c
       .map(
         (e) =>
-          `<div class="u2kc"><div class="u2kh">${i(e)}</div>${Array.from({ length: s }, (l, r) => t(a[e][r])).join("")}</div>`,
+          `<div class="u2kc"><div class="u2kh" title="${i(e)}">${i(e)}</div>${Array.from({ length: s }, (l, r) => t(a[e][r])).join("")}</div>`,
       )
       .join("");
 
@@ -604,7 +604,7 @@ const KTC_CAT = [
   ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Rương Thần Bí", ["rngua", "rmatna"]],
-  ["Rương Hoàng Kim", ["rhk"]],
+  ["Rương Hoàng Kim", ["rfullhk", "rhk"]],
 ];
 let u2KtcCat = 0;
 function ktcModal20(cat) {
@@ -612,8 +612,8 @@ function ktcModal20(cat) {
   if (cat === "mask" || cat === "Mặt nạ" || cat === "ruongthanbi" || cat === "Rương Thần Bí" || cat === "Thú cưỡi") {
     const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Thần Bí" || (Array.isArray(val) && (val.includes("rmatna") || val.includes("rngua"))));
     if (idx >= 0) u2KtcCat = idx;
-  } else if (cat === "ruonghoankim" || cat === "Rương Hoàng Kim" || cat === "Rương Hoàng Kim" || cat === "rhk") {
-    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàng Kim" || t === "Rương Hoàng Kim" || (Array.isArray(val) && val.includes("rhk")));
+  } else if (cat === "ruonghoankim" || cat === "Rương Hoàng Kim" || cat === "rhk" || cat === "rfullhk") {
+    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàng Kim" || (Array.isArray(val) && (val.includes("rhk") || val.includes("rfullhk"))));
     if (idx >= 0) u2KtcCat = idx;
   } else if (typeof cat === "number" && cat >= 0 && cat < KTC_CAT.length) {
     u2KtcCat = cat;
@@ -623,18 +623,18 @@ function ktcModal20(cat) {
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
-        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "bk120", "bk150"].includes(t)
+        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150"].includes(t)
           ? matHave("misc", t)
           : null,
-    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk" },
+    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk" },
     c = !1,
     s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
       const o = ktcOk(t),
         d = n(t.k);
-      const titleName = t.k === "rhk" ? `Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}` : t.n;
+      const titleName = t.k === "rhk" ? `Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}` : t.k === "rfullhk" ? `Rương Trọn Bộ HK ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}` : t.n;
       return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(titleName)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
-      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}${t.k === "rhk" && d > 1 ? `<button class="u2buy x on" id="ktcRhk10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
+      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" || t.k === "rfullhk" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}${t.k === "rhk" && d > 1 ? `<button class="u2buy x on" id="ktcRhk10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
     };
 
   const cardsHtml = s.map(i).join("");
@@ -642,7 +642,7 @@ function ktcModal20(cat) {
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
     <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${cardsHtml}</div>`}
-    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• Mở <b style="color:#ffd24a">100% nhận ngẫu nhiên 1 trang bị Hoàng Kim</b> đúng môn phái (cấp 120–180).<br>• <b style="color:#ff5555">Chú thích: Có tỷ lệ 0.5% mở ra TRỌN BỘ (FULL SET) Hoàng Kim môn phái!</b><br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (50 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (100 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày (có tỷ lệ 3% mở ra VĨNH VIỄN). Cất vào túi, bấm Dùng để mở.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
+    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• <b style="color:#ffd24a">Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% TRỌN BỘ CÁC MÓN Hoàng Kim theo đúng môn phái (gồm cả bộ Tống Kim, phẩm cấp 10/10), tự do chọn bộ phù hợp.<br>• <b style="color:#ffd24a">Rương Hoàng Kim (500 KNB)</b>: Mở 100% nhận ngẫu nhiên 1 trang bị Hoàng Kim (cấp 120–180), tỷ lệ 0.5% ra trọn bộ.<br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (50 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày (có tỷ lệ 3% mở ra VĨNH VIỄN). Cất vào túi, bấm Dùng để mở.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
     () => {
       (document.querySelectorAll("#mBody [data-kc]").forEach(
         (o) =>
@@ -695,6 +695,9 @@ function ktcModal20(cat) {
         }),
         t("ktcRhk10", () => {
           (hkBoxUse(10), ktcModal());
+        }),
+        t("ktcRfullhk", () => {
+          if (typeof fullHkBoxUse === "function") fullHkBoxUse(1);
         }));
     },
   ),

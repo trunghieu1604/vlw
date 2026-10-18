@@ -129,6 +129,11 @@ const FACTIONS = J.factions.filter((n) => n.skills && n.skills.length),
   NOVICE_LV = 10;
 for (let n = 0; n < 5; n++)
   FAC["vo" + n] = { key: "vo" + n, n: "Vô Môn Phái", series: n, skills: [], wcode: -1, id: -1, novice: !0 };
+for (const n of FACTIONS) FAC[n.id] = n;
+if (typeof window !== "undefined") {
+  window.FACTIONS = FACTIONS;
+  window.FAC = FAC;
+}
 const isNovice = () => !!(S && FAC[S.fac] && FAC[S.fac].novice),
   FAC_SEX = { shaolin: 0, emei: 1, cuiyan: 1 },
   facAllowed = (n, t) => !(n.key in FAC_SEX) || FAC_SEX[n.key] === (t || 0);

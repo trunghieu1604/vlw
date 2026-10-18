@@ -464,7 +464,7 @@ function maskPickModal() {
     <h4 style="margin:10px 0 6px">Mặt nạ trong Hành trang (${list.length})</h4>
     ${list.length ? list.map(itemRow).join("") : '<p class="dim small">Chưa có mặt nạ nào trong túi đồ. Bạn có thể mua tại tab Rương TB trong Kỳ Trân Các.</p>'}
     <div class="btnrow" style="margin-top:14px">
-      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Rương TB (100 KNB)</button>
+      <button class="btn on" id="bOpenKtcMask">🏮 Kỳ Trân Các › Rương TB (50 KNB)</button>
     </div>`,
     () => {
       const bUn = $("#mMaskUn");
@@ -1302,11 +1302,11 @@ function renderMore() {
         <button class="btn" id="bCodex">Bách khoa</button>
         <button class="btn" id="bSug">Gợi ý cộng điểm</button>
       </div></div>
-    <h3>Trợ năng</h3><div class="card lootf">
-      <div class="row">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
-      <label><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (30FPS)</label><br>
-      <label><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> Chế độ màn vuông</label>
-      <small class="dim">Phím tắt: F1 hướng dẫn · F2 hệ thống · F3 nhân vật · F4 hành trang · F5 võ công · F6 giang hồ online · F11 nhiệm vụ · Tab bản đồ · Enter chat · Q W E A chiêu 1–4 · 1–4 vật phẩm · M ngựa · R xoay chiêu · F tự đánh · U Kỳ Trân Các · Y phần thưởng · Esc đóng cửa sổ / mở hệ thống · phím mũi tên đi lại.</small></div>
+    <h3>Trợ năng</h3><div class="card">
+      <div class="row" style="margin-bottom:8px">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
+      <label style="display:block;margin-bottom:6px"><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (30FPS)</label>
+      <label style="display:block"><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> Chế độ màn vuông</label>
+    </div>
     <h3>Điều khiển & Hiển thị</h3><div class="card">
       <div class="row" style="margin-bottom:6px">
         <b>🔍 Thu phóng sân đấu:</b> <span id="lblArenaZoom" style="color:#f3d88a;font-weight:bold">${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}%</span>
@@ -1322,8 +1322,8 @@ function renderMore() {
       </div>
       <small class="dim" style="display:block;margin-bottom:10px">Giảm % xuống để nhân vật nhỏ lại, bao quát sân đấu rộng hơn.</small>
       <div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
-      <label><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label><br>
-      <label><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
+      <label style="display:block;margin-bottom:6px"><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label>
+      <label style="display:block"><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
     <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (phi thương mại).</div>
 `;
   const t = (e, s) => {
