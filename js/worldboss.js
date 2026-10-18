@@ -700,8 +700,9 @@ function openWbResultModal(top1Name, isTimeout = false) {
           </ul>
         </div>
       </div>
-      <div class="btnrow" style="text-align:center;margin-top:12px;display:flex;gap:8px;justify-content:center">
-        <button class="btn on" onclick="closeModal(true)">Xác nhận (Trở về)</button>
+      <div class="btnrow" style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn on" onclick="exitWorldBoss(true); closeModal(true);" style="font-size:15px;padding:8px 24px;font-weight:bold;background:#2d882d;color:#fff;border:1px solid #5cd65c">🚪 Quay Lại Bãi Luyện Công</button>
+        <button class="btn" onclick="closeModal(true)">Đóng</button>
       </div>
     </div>
   `;
@@ -843,17 +844,39 @@ function joinWorldBoss() {
     R.ground = [];
     WB.arena.bossInst = b;
 
+    showWbExitButton();
     if (typeof snapCamera === "function") snapCamera();
     if (typeof toast === "function") toast(`⚔ Đã tiến vào chiến thuyền Phong Lăng Độ khiêu chiến Boss Thế Giới Trung Hiếu!`);
     if (typeof log === "function") log(`⚔ Tiến vào chiến trường khiêu chiến <b>Boss Thế Giới Trung Hiếu</b> tại <b>Phong Lăng Độ</b>!`);
   }
 }
 
+function showWbExitButton() {
+  let btn = document.getElementById("wbExitBtn");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "wbExitBtn";
+    btn.innerHTML = "🚪 Quay Lại Bãi";
+    btn.title = "Rời chiến trường Boss Thế Giới quay lại bãi luyện công";
+    btn.onclick = () => exitWorldBoss(true);
+    document.body.appendChild(btn);
+  }
+  btn.style.display = "flex";
+}
+
+function hideWbExitButton() {
+  const btn = document.getElementById("wbExitBtn");
+  if (btn) btn.style.display = "none";
+}
+window.showWbExitButton = showWbExitButton;
+window.hideWbExitButton = hideWbExitButton;
+
 /**
  * Exit Combat Arena back to normal training stage
  */
 function exitWorldBoss(notify = true) {
   WB.arena.on = false;
+  hideWbExitButton();
   const dpsEl = document.getElementById("wbDpsMeter");
   if (dpsEl) dpsEl.style.display = "none";
   if (typeof R === "object" && R) {
@@ -861,14 +884,27 @@ function exitWorldBoss(notify = true) {
     R.enemies = [];
     R.corpses = [];
     R.zoneShown = null;
-    if (typeof onZoneChange === "function" && typeof zoneOf === "function" && S) {
-      onZoneChange(zoneOf(Math.min(S.stage || 1, (typeof STAGES !== "undefined" ? STAGES : 30))));
+    R.stall = 0;
+    R.spawnT = 0.8;
+    const stage = (S && S.stage) || 1;
+    const maxStages = (typeof STAGES !== "undefined" ? STAGES : 30);
+    const targetStage = Math.min(stage, maxStages);
+    const z = typeof zoneOf === "function" ? zoneOf(targetStage) : null;
+    if (z && typeof onZoneChange === "function") {
+      onZoneChange(z);
+    }
+    if (typeof fieldInit === "function") {
+      fieldInit();
+    }
+    if (typeof inWorld === "function" && typeof H !== "undefined" && H) {
+      [H.x, H.y] = inWorld(H.x || 1500, H.y || 1000);
     }
     if (typeof snapCamera === "function") snapCamera();
   }
-  if (notify && typeof toast === "function") toast("Đã rời chiến trường Boss Thế Giới.");
+  if (notify && typeof toast === "function") toast("Đã rời chiến trường Boss Thế Giới, quay lại bãi luyện công.");
   if (typeof refresh === "function") refresh();
 }
+window.exitWorldBoss = exitWorldBoss;
 
 /**
  * Damage hook from player combat
@@ -938,8 +974,8 @@ function openWorldBossModal() {
           </p>
 
           <div class="btnrow" style="margin:12px 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-            ${WB.arena.on ? `
-              <button class="btn on" onclick="exitWorldBoss(); closeModal(true);">Rời chiến trường (Về bãi)</button>
+            ${(WB.arena.on || (typeof R === "object" && R && R.dg && R.dg.kind === "worldboss")) ? `
+              <button class="btn on red" onclick="exitWorldBoss(true); closeModal(true);" style="font-size:14px;padding:6px 18px;font-weight:bold">🚪 Quay Lại Bãi Luyện Công</button>
             ` : `
               <button class="btn on" onclick="joinWorldBoss()">Tham chiến</button>
             `}
@@ -954,6 +990,10 @@ function openWorldBossModal() {
               Lần tiếp theo: <b>${new Date(sched.next).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</b> (còn <b class="wbt" style="color:#ffd700">${wbFormatTime(remSec)}</b>)
             </p>
           </div>
+          ${(WB.arena.on || (typeof R === "object" && R && R.dg && R.dg.kind === "worldboss")) ? `
+          <div class="btnrow" style="text-align:center;margin:12px 0;display:flex;gap:8px;justify-content:center">
+            <button class="btn on red" onclick="exitWorldBoss(true); closeModal(true);" style="font-size:14px;padding:6px 18px;font-weight:bold">🚪 Quay Lại Bãi Luyện Công</button>
+          </div>` : ''}
           ${isWbHeroVlmc() ? `
           <div class="btnrow" style="text-align:center;margin:12px 0;display:flex;gap:8px;justify-content:center">
             <button class="btn on" onclick="spawnWorldBoss(true); openWorldBossModal();">⚡ Triệu hồi thử nghiệm (Võ Lâm Minh Chủ)</button>
@@ -1441,8 +1481,30 @@ function injectWbStyles() {
         width: 185px;
         left: 6px;
         top: 54px;
-        font-size: 10.5px;
       }
+    }
+    #wbExitBtn {
+      position: fixed;
+      top: 60px;
+      right: 14px;
+      z-index: 9999;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 68, 68, 0.4);
+      border: 1.5px solid #ff4444;
+      background: linear-gradient(180deg, #8b1111 0%, #4a0000 100%);
+      color: #ffd700;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s, filter 0.15s;
+    }
+    #wbExitBtn:hover {
+      transform: scale(1.05);
+      filter: brightness(1.2);
     }
   `;
   document.head.appendChild(style);
@@ -1469,9 +1531,12 @@ function renderWbDpsMeter() {
 
   if (isCollapsed) {
     el.innerHTML = `
-      <div class="wbdps-mini" onclick="toggleWbDpsMeter()">
+      <div class="wbdps-mini" onclick="toggleWbDpsMeter()" style="display:flex;align-items:center;justify-content:space-between;gap:4px">
         <span>⚔ <b>#${me.rank}</b> Bạn (${((me.share || 0) * 100).toFixed(1)}%)</span>
-        <button class="wbdps-btn" title="Mở rộng BXH">▸</button>
+        <span style="display:inline-flex;gap:4px;align-items:center">
+          <button class="wbdps-btn" title="Mở rộng BXH">▸</button>
+          <button class="btn sm red" onclick="event.stopPropagation(); exitWorldBoss(true);" title="Rời Boss về bãi" style="font-size:11px;padding:1px 6px">🚪 Về bãi</button>
+        </span>
       </div>
     `;
     return;
@@ -1516,6 +1581,9 @@ function renderWbDpsMeter() {
     </div>
     <div class="wbdps-body">
       ${rowsHtml}
+      <div style="padding:6px;text-align:center;border-top:1px solid rgba(255,215,0,0.25);margin-top:6px">
+        <button class="btn sm red" onclick="exitWorldBoss(true)" style="width:100%;font-size:12px;padding:5px 8px;font-weight:bold;cursor:pointer">🚪 Rời Khỏi / Quay Lại Bãi</button>
+      </div>
     </div>
   `;
 }
