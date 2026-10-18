@@ -1347,9 +1347,10 @@ function admAct(a) {
       }
       case "clearrank": {
         if (!confirm("CẢNH BÁO: Bạn có chắc chắn muốn XÓA TOÀN BỘ dữ liệu Bảng Xếp Hạng trên server không?")) return "";
-        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+        const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+        if (db) {
           try {
-            firebase.database().ref("ranking/players").remove();
+            db.ref("ranking/players").remove();
             return "Đã xóa trắng Bảng Xếp Hạng thành công!";
           } catch (e) {
             return "Lỗi xóa BXH: " + e.message;
@@ -1358,9 +1359,9 @@ function admAct(a) {
         return toast("Firebase chưa kết nối"), "";
       }
       case "wbsummon": {
-        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+        const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+        if (db) {
           try {
-            const db = firebase.database();
             const hpMax = (typeof WB_BOSS_CONFIG !== "undefined" ? WB_BOSS_CONFIG.hpMax : 120000000);
             db.ref("worldboss/state").set({
               st: "up",
@@ -1380,25 +1381,26 @@ function admAct(a) {
               msg: "📢 [BOSS THẾ GIỚI]: Boss Trung Hiếu đã xuất hiện tại Phong Lăng Độ (Thuyền 337)! Anh em mau vào săn!",
               ts: Date.now()
             });
-            if (typeof spawnWorldBoss === "function") spawnWorldBoss(true);
-            return "Đã triệu hồi Boss Thế Giới cho toàn server!";
           } catch (e) {
-            return "Lỗi triệu hồi: " + e.message;
+            console.warn("wbsummon firebase err:", e);
           }
         }
         if (typeof spawnWorldBoss === "function") spawnWorldBoss(true);
-        return "Đã triệu hồi Boss Thế Giới (Offline)";
+        return db ? "Đã triệu hồi Boss Thế Giới cho toàn server!" : "Đã triệu hồi Boss Thế Giới (Offline)";
       }
       case "wbkill": {
-        if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+        const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+        if (db) {
           try {
-            firebase.database().ref("worldboss/state").update({
+            db.ref("worldboss/state").update({
               st: "dead",
               hp: 0,
               killer: S.name || "Admin",
               endedAt: Date.now()
             });
-          } catch {}
+          } catch (e) {
+            console.warn("wbkill firebase err:", e);
+          }
         }
         if (typeof handleBossDefeated === "function") handleBossDefeated();
         return "Đã kết thúc Boss Thế Giới!";

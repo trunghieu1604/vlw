@@ -159,8 +159,9 @@ function drawShadows(c) {
   for (const e of R.enemies)
     !e.dead &&
       ok(e.x, e.y) &&
-      MON[e.tid] &&
-      (e.shOk = !!shAnim(c, MON[e.tid].anim, e.act || "st", e.dir || 0, e.actT || 0, e.x, e.y, MON_SCALE));
+      (e.heroLook
+        ? (e.shOk = true)
+        : MON[e.tid] && (e.shOk = !!shAnim(c, MON[e.tid].anim, e.act || "st", e.dir || 0, e.actT || 0, e.x, e.y, MON_SCALE)));
   H.shOk = shHero(c);
   typeof partyEach == "function" && partyEach(() => (H.shOk = shHero(c)), !0);
   typeof othShadows == "function" && othShadows(c); // other players in a shared town (js/presence.js)

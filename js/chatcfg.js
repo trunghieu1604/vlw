@@ -11,3 +11,16 @@ window.CHAT_CFG = {
   mapBase: "https://cdn.kuku.vn/volam/maps/v1",
   label: ""
 };
+
+window.getFirebaseDb = function() {
+  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return null;
+  try {
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: CHAT_CFG.firebaseUrl });
+    }
+    return firebase.database();
+  } catch (e) {
+    console.warn("getFirebaseDb err:", e);
+    return null;
+  }
+};

@@ -710,7 +710,9 @@ function skillModal(n) {
   let m = "";
   if (c) {
     const o = activeInfo(R.P, t, i + 0);
-    m = `<div class="card stats"><span>Sát thương mỗi đòn</span><span>${fmt(o.tot)}</span><span>DPS ước tính</span><span>${fmt(o.dps)}</span><span>${o.costLife ? "Sinh lực" : "Nội lực"} tiêu hao</span><span>${Math.round(o.cost)}</span><span>Hút sinh lực / nội lực</span><span>${o.wpn ? "Có (trang bị)" : "Không (trang bị)"}${o.skLeech || o.skMLeech ? ` · chiêu: ${o.skLeech ? `+${o.skLeech}% sinh lực` : ""}${o.skLeech && o.skMLeech ? ", " : ""}${o.skMLeech ? `+${o.skMLeech}% nội lực` : ""}` : ""}</span><span>Tầm đánh</span><span>${Math.round(o.rad)}</span></div>`;
+    const nHit = (o.childN > 1) ? o.childN : (t.childN > 1 ? t.childN : 1);
+    const dmgTxt = nHit > 1 ? `${fmt(o.tot)} <small class="dim">(x${nHit} tia: ${fmt(o.tot * nHit)})</small>` : fmt(o.tot);
+    m = `<div class="card stats"><span>Sát thương mỗi đòn</span><span>${dmgTxt}</span><span>DPS ước tính</span><span>${fmt(o.dps)}</span><span>${o.costLife ? "Sinh lực" : "Nội lực"} tiêu hao</span><span>${Math.round(o.cost)}</span><span>Hút sinh lực / nội lực</span><span>${o.wpn ? "Có (trang bị)" : "Không (trang bị)"}${o.skLeech || o.skMLeech ? ` · chiêu: ${o.skLeech ? `+${o.skLeech}% sinh lực` : ""}${o.skLeech && o.skMLeech ? ", " : ""}${o.skMLeech ? `+${o.skMLeech}% nội lực` : ""}` : ""}</span><span>Tầm đánh</span><span>${Math.round(o.rad)}</span></div>`;
   }
   let expBox = "";
   if (t.exp) {

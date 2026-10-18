@@ -134,6 +134,45 @@ function spawnWorldBoss(force = false) {
   updateWbLeaderboard();
   showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã xuất hiện tại <b>Phong Lăng Độ</b>!`);
   updateWbButtonState();
+
+  // Thông báo toàn diện: Log, Toast, Banner màn hình, Âm thanh, Kênh Chat
+  if (typeof log === "function") {
+    log(`<b style="color:#ff3333">📢 [BOSS THẾ GIỚI]:</b> Boss <b>Trung Hiếu</b> đã xuất hiện tại <b>Phong Lăng Độ</b>! Mau vào tham chiến!`);
+  }
+  if (typeof toast === "function") {
+    toast("⚔ BOSS THẾ GIỚI TRUNG HIẾU ĐÃ XUẤT HIỆN TẠI PHONG LĂNG ĐỘ!");
+  }
+  if (typeof R === "object" && R) {
+    R.banner = {
+      t: 6,
+      text: "⚔ Boss Thế Giới: Trung Hiếu đã xuất hiện!",
+      sub: "Phong Lăng Độ · Bấm vào Boss Thế Giới để tham chiến"
+    };
+  }
+  if (typeof uiSfx === "function") uiSfx("gold");
+
+  const msgText = "📢 [BOSS THẾ GIỚI]: Boss Trung Hiếu đã xuất hiện tại Phong Lăng Độ! Anh em mau vào săn!";
+  if (typeof chatPush === "function") {
+    chatPush({
+      cid: "system",
+      sys: true,
+      name: "Hệ Thống",
+      msg: msgText,
+      ts: Date.now()
+    });
+  }
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (db) {
+    try {
+      db.ref("chat/msgs").push({
+        cid: "system",
+        sys: true,
+        name: "Hệ Thống",
+        msg: msgText,
+        ts: Date.now()
+      });
+    } catch (e) {}
+  }
 }
 
 let wbPendingDmg = 0;
@@ -151,7 +190,8 @@ function wbSyncHitFirebase() {
   wbPendingDmg = 0;
   wbLastSyncT = Date.now();
   try {
-    const db = firebase.database();
+    const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+    if (!db) return;
     const cid = typeof chatCid === "function" ? chatCid() : "anon";
     db.ref("worldboss/damage/" + cid).set({
       cid: cid,
@@ -192,8 +232,9 @@ function wbSyncHitFirebase() {
 function wbInitFirebase() {
   if (!wbFirebaseOn() || wbFbInitialized) return;
   try {
+    const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+    if (!db) return;
     wbFbInitialized = true;
-    const db = firebase.database();
     db.ref("worldboss/state").on("value", (snap) => {
       const val = snap.val();
       if (!val) return;
@@ -201,7 +242,7 @@ function wbInitFirebase() {
         const prevSt = WB.st;
         WB.st = val.st;
         if (val.st === "up" && prevSt !== "up" && !WB.arena.on) {
-          showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã xuất hiện tại <b>Phong Lăng Độ</b>!`);
+          spawnWorldBoss(false);
         }
       }
       if (typeof val.hp === "number") {
@@ -380,12 +421,15 @@ function handleBossDefeated(isTimeout = false) {
   // Cập nhật Firebase ngay lập tức để đồng bộ và chấm dứt spam
   if (wbFirebaseOn()) {
     try {
-      firebase.database().ref("worldboss/state").update({
-        st: "dead",
-        hp: 0,
-        killer: (S && S.name) || "Hiệp Sĩ",
-        endedAt: Date.now()
-      });
+      const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+      if (db) {
+        db.ref("worldboss/state").update({
+          st: "dead",
+          hp: 0,
+          killer: (S && S.name) || "Hiệp Sĩ",
+          endedAt: Date.now()
+        });
+      }
     } catch (e) {}
   }
 
@@ -690,40 +734,42 @@ function joinWorldBoss() {
     H.y = heroPos[1];
     H.dir = 1;
 
-    // Create the Boss Trung Hiếu entity
+    // Create the Boss Trung Hiếu entity cleanly as a hero-boss NPC
     const spawnX = H.x + 130;
     const spawnY = H.y - 30;
-    const b = (typeof makeEnemy === "function") 
-      ? makeEnemy(1, WB_BOSS_CONFIG.lvl, "boss", spawnX, spawnY)
-      : {};
-    b.id = "wb_boss_trunghieu";
-    b.tid = 1;
-    b.n = "Trung Hiếu";
-    b.wb = true;
-    b.isWbBoss = true;
-    b.cls = "boss";
-    b.goldBoss = true;
-    b.aggro = true;
-    b.L = WB_BOSS_CONFIG.lvl;
-    b.lvl = WB_BOSS_CONFIG.lvl;
-    b.x = spawnX;
-    b.y = spawnY;
-    b.dir = 5;
-    b.act = "st";
-    b.actT = 0;
-    b.hp = WB.boss.hp;
-    b.max = WB.boss.hpMax;
-    b.r = 60;
-    b.series = WB_BOSS_CONFIG.series;
-    b.dmg = 200;
-    b.atkCd = 1.2;
-    b.cd = 1.5;
-    b.spd = 50;
-    b.reach = 80;
-    b.hitT = 0;
-    b.animKey = "gaibang_lion";
-    b.heroLook = Object.assign({}, WB_BOSS_CONFIG.heroLook);
-    b.res = b.res || { phys: 40, fire: 75, cold: 60, light: 60, poison: 60 };
+    const b = {
+      id: "wb_boss_trunghieu",
+      tid: 9999,
+      n: WB_BOSS_CONFIG.name,
+      wb: true,
+      isWbBoss: true,
+      cls: "boss",
+      goldBoss: true,
+      aggro: true,
+      L: WB_BOSS_CONFIG.lvl,
+      lvl: WB_BOSS_CONFIG.lvl,
+      x: spawnX,
+      y: spawnY,
+      dir: 5,
+      act: "st",
+      actT: 0,
+      hp: WB.boss.hp,
+      max: WB.boss.hpMax,
+      r: 60,
+      series: WB_BOSS_CONFIG.series,
+      dmg: 450,
+      ar: 2500,
+      def: 1200,
+      atkCd: 1.2,
+      cd: 1.5,
+      spd: 50,
+      reach: 80,
+      hitT: 0,
+      animKey: "pl_gaibang",
+      heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook),
+      res: { phys: 50, fire: 80, cold: 65, light: 65, poison: 65 },
+      shOk: true
+    };
 
     R.spawnT = 0;
     R.stall = 0;
@@ -835,14 +881,14 @@ function openWorldBossModal() {
             <span>${wbNum(b.hp)} / ${wbNum(b.hpMax)} (${hpPct.toFixed(1)}%)</span>
           </div>
           <p class="small" style="color:#bbb;margin:4px 0">
-            Chiến trường: <b>Map riêng 337</b> (Chỉ có Boss) · Bạn: hạng <b>#${me.rank}</b>, ${wbNum(me.dmg)} sát thương (${(me.share * 100).toFixed(1)}%)
+            Chiến trường: <b>Map riêng</b> (Chỉ có Boss) · Bạn: hạng <b>#${me.rank}</b>, ${wbNum(me.dmg)} sát thương (${(me.share * 100).toFixed(1)}%)
           </p>
 
           <div class="btnrow" style="margin:12px 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
             ${WB.arena.on ? `
               <button class="btn on" onclick="exitWorldBoss(); closeModal(true);">Rời chiến trường (Về bãi)</button>
             ` : `
-              <button class="btn on" onclick="joinWorldBoss()">Tham chiến (Map 337)</button>
+              <button class="btn on" onclick="joinWorldBoss()">Tham chiến</button>
             `}
             ${isWbHeroVlmc() ? '<button class="btn" onclick="spawnWorldBoss(true); openWorldBossModal();">Làm mới Boss</button>' : ''}
           </div>

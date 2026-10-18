@@ -948,12 +948,12 @@ async function netAccBody(t) {
 }
 let lastRankSync = 0;
 function syncRankFirebase(force) {
-  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return;
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (!db) return;
   if (!S || !S.fac || !hasRealName()) return;
   if (!force && Date.now() - lastRankSync < 180000) return;
   lastRankSync = Date.now();
   try {
-    const db = firebase.database();
     const cid = chatCid();
     const n = (typeof RW == "function" && RW().stat) || (S.rw && S.rw.stat) || {};
     const data = {
@@ -976,9 +976,9 @@ function syncRankFirebase(force) {
 }
 
 async function getRankFirebase(col, fac) {
-  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return [];
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (!db) return [];
   try {
-    const db = firebase.database();
     const snap = await db.ref("ranking/players").once("value");
     const val = snap.val();
     if (!val) return [];
@@ -1001,9 +1001,9 @@ async function getRankFirebase(col, fac) {
 }
 
 async function getProfileFirebase(name) {
-  if (typeof firebase === "undefined" || !window.CHAT_CFG || !CHAT_CFG.firebaseUrl) return null;
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (!db) return null;
   try {
-    const db = firebase.database();
     const snap = await db.ref("ranking/players").once("value");
     const val = snap.val();
     if (val) {

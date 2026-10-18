@@ -691,8 +691,10 @@ function activeInfo(t, n, e) {
   const i = skVal(n, "physicsenhance_p", e),
     o = (1 + ((t.skillBonus[n.id] || 0) + t.seriesSkill + (t.skillEnh || 0)) / 100) * (t.dmgMul || 1),
     c = {};
+  const wAvg = (t.wmin + t.wmax) / 2;
   if (i) {
-    c.phys = ((t.wmin + t.wmax) / 2) * (1 + (i[0] + t.physPct) / 100);
+    const basePhysP = (n.req === 150) ? (i[0] + 60 + Math.round(e * 3)) : i[0];
+    c.phys = wAvg * (1 + (basePhysP + t.physPct) / 100);
     for (const l in t.add) t.add[l] && (c[l] = (c[l] || 0) + t.add[l]);
   }
   for (const l of ELEM) {
@@ -703,9 +705,20 @@ function activeInfo(t, n, e) {
   }
   if (!i && t.magAdd)
     for (const l of ELEM) t.magAdd[l] && (c[l] = (c[l] || 0) + t.magAdd[l] * (1 + (t.enh[l] || 0) / 100));
-  if (!i && ENG_MODE) {
-    const l = 1 + (t.eng || 0) / 500;
-    for (const p in c) c[p] *= l;
+  if (!i) {
+    // Magic / nội công skill: weapons and internal energy empower elemental skills
+    const elem = Object.keys(c)[0] || (n.series != null && ELEM[n.series]) || "phys";
+    const magScale = 1 + (t.eng || 0) / 200 + (t.physPct || 0) / 250;
+    const baseMagBonus = (n.req === 150) ? (0.75 + 0.55 * (e / n.max)) : 0.85;
+    c[elem] = ((c[elem] || 0) + wAvg * magScale) * baseMagBonus;
+    if (ENG_MODE) {
+      const l = 1 + (t.eng || 0) / 500;
+      for (const p in c) c[p] *= l;
+    }
+  }
+  if (n.req === 150 && i) {
+    const boost150 = 1 + 0.1 + 0.25 * (e / n.max);
+    for (const k in c) c[k] *= boost150;
   }
   let f = 0;
   for (const l in c) ((c[l] *= o), (f += c[l]));
@@ -1169,7 +1182,8 @@ const NORM_TIERS = [
   MELEE_UPTIME = 0.82;
 function expectedHits(t) {
   const n = Math.min(4, t.targets);
-  return t.around ? 1 + (n - 1) * 0.12 : 1 + (n - 1) * 0.55;
+  const misMult = t.childN > 1 ? (1 + (t.childN - 1) * 0.4) : 1;
+  return (t.around ? 1 + (n - 1) * 0.12 : 1 + (n - 1) * 0.55) * misMult;
 }
 function masteryPct(t) {
   let n = 0;

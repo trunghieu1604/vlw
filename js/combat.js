@@ -412,6 +412,7 @@ function heroHit(t, n) {
     (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
     (n.hp -= s),
+    R.tower && (R.stall = 0),
     n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
     (n.retMeleeP || n.retMelee) && !t.ranged && (() => {
       const retP = Math.max(0, (n.retMeleeP || 0) * (1 - (R.P.returnRes || 0) / 100));
@@ -1005,11 +1006,13 @@ function tick(t) {
           (R.stunT > 0 || obsSteer(H, R.moveTo.x, R.moveTo.y, 150 * curSpeed() * (R.slowT > 0 ? ELEM_SLOW : 1) * t))),
       R.stunT > 0 || ((R.atkT -= t * (R.slowT > 0 ? ELEM_SLOW : 1)), R.atkT <= 0 && !heroWantsMove() && (R.atkT = heroAttack()))));
   for (const o of alive()) enemyAI(o, t);
-  (killCheck(), (R.stall += t), R.stall > 45 && stallOut(), R.life <= 0 && heroDeath());
+  (killCheck(), (R.stall += t), (R.tower ? R.stall > 180 : R.stall > 45) && stallOut(), R.life <= 0 && heroDeath());
 }
 function stallOut() {
   if (((R.stall = 0), R.dg)) return;
   if (R.tower) {
+    log(`<span class="bad">Hết thời gian khiêu chiến tháp tầng ${R.tower.floor} (3 phút).</span>`);
+    typeof toast === "function" && toast(`Hết thời gian khiêu chiến tháp tầng ${R.tower.floor}`);
     towerExit(!1);
     return;
   }
