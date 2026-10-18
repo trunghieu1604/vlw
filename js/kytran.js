@@ -478,10 +478,17 @@ function openFullHkSetPicker() {
       return `<span style="display:inline-block;background:rgba(0,0,0,0.5);border:1px solid ${isTk ? '#ff9e42' : 'rgba(255,210,74,0.4)'};padding:2px 7px;border-radius:3px;font-size:11px;color:${isTk ? '#ffb86c' : '#ffd24a'}">${esc(r.n)} <small class="dim" style="font-size:10px">(cấp ${lvl})</small></span>`;
     }).join("");
 
+    const hasShoes = st.rows.some((r) => r.d === 5);
+    const hasBelt = st.rows.some((r) => r.d === 6);
+    const missingBadges = [];
+    if (!hasShoes) missingBadges.push(`<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Giày)</span>`);
+    if (!hasBelt) missingBadges.push(`<span style="color:#ff9e42;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Đai)</span>`);
+    const missingHtml = missingBadges.join(" ");
+
     return `
       <div style="background:linear-gradient(135deg, rgba(255,210,74,0.12), rgba(20,15,10,0.85));border:1px solid #ffd24a;border-radius:6px;padding:12px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:15px;color:#ffd24a;font-weight:bold">★ Bộ ${esc(st.name)} · <span style="color:#8fe34a">${st.itemCount} món</span> <span style="font-size:12px;color:#ddd">(Cấp ${st.lvlStr})</span></div>
+          <div style="font-size:15px;color:#ffd24a;font-weight:bold">★ Bộ ${esc(st.name)}${missingHtml} · <span style="color:#8fe34a">${st.itemCount} món</span> <span style="font-size:12px;color:#ddd">(Cấp ${st.lvlStr})</span></div>
           <button class="btn on" data-choose-set="${st.grp}" style="background:linear-gradient(135deg, #ffd24a, #ff9e42);color:#000;font-weight:bold;padding:6px 14px;font-size:12px;border:none;cursor:pointer">🎁 Nhận Trọn Bộ</button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
@@ -526,9 +533,17 @@ function openFullHkSetPicker() {
             giveHkItem(it);
           }
 
+          const hasShoes = chosen.rows.some((r) => r.d === 5);
+          const hasBelt = chosen.rows.some((r) => r.d === 6);
+          const missingNotes = [];
+          if (!hasShoes) missingNotes.push("(Thiếu Giày)");
+          if (!hasBelt) missingNotes.push("(Thiếu Đai)");
+          const missingStr = missingNotes.join(" ");
+          const displayName = missingStr ? `${chosen.name} ${missingStr}` : chosen.name;
+
           uiSfx("levelup");
-          log(`🎉 <b style="color:#ffd24a">[RƯƠNG TRỌN BỘ HKMP]</b> Nhận <b>TRỌN BỘ ${esc(chosen.name)}</b> (${items.length} món Hoàng Kim Môn Phái cấp ${chosen.lvlStr})!`);
-          toast(`🎉 Nhận TRỌN BỘ ${chosen.name} (${items.length} món)!`);
+          log(`🎉 <b style="color:#ffd24a">[RƯƠNG TRỌN BỘ HKMP]</b> Nhận <b>TRỌN BỘ ${esc(displayName)}</b> (${items.length} món Hoàng Kim Môn Phái cấp ${chosen.lvlStr})!`);
+          toast(`🎉 Nhận TRỌN BỘ ${displayName} (${items.length} món)!`);
 
           R.dirty = !0;
           invDirty = !0;
