@@ -485,7 +485,6 @@ function openFullHkSetPicker() {
     if (isBigSet) {
       if (!hasShoes) missingBadges.push(`<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Giày)</span>`);
       if (!hasBelt) missingBadges.push(`<span style="color:#ff9e42;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Đai)</span>`);
-      if (hasShoes && hasBelt) missingBadges.push(`<span style="color:#8fe34a;font-size:12px;font-weight:bold;margin-left:4px">(Đầy đủ)</span>`);
     }
     const missingHtml = missingBadges.join(" ");
 
@@ -545,7 +544,6 @@ function openFullHkSetPicker() {
             const notes = [];
             if (!hasShoes) notes.push("(Thiếu Giày)");
             if (!hasBelt) notes.push("(Thiếu Đai)");
-            if (hasShoes && hasBelt) notes.push("(Đầy đủ)");
             tag = notes.join(" ");
           }
           const displayName = tag ? `${chosen.name} ${tag}` : chosen.name;
