@@ -453,6 +453,29 @@ function getFullHkSetsForFaction(facId) {
 }
 window.getFullHkSetsForFaction = getFullHkSetsForFaction;
 
+function getSetMissingSlots(rows, itemCount) {
+  if (!rows || itemCount < 9) return [];
+  const requiredSlots = [
+    { d: [0, 1], label: "Thiếu Vũ Khí" },
+    { d: [2], label: "Thiếu Áo" },
+    { d: [7], label: "Thiếu Mũ" },
+    { d: [6], label: "Thiếu Đai" },
+    { d: [8], label: "Thiếu Hộ Uyển" },
+    { d: [5], label: "Thiếu Giày" },
+    { d: [4], label: "Thiếu Dây Chuyền" },
+    { d: [9], label: "Thiếu Ngọc Bội" },
+    { d: [3], label: "Thiếu Nhẫn" },
+  ];
+  const missing = [];
+  for (const slot of requiredSlots) {
+    if (!rows.some((r) => slot.d.includes(r.d))) {
+      missing.push(slot.label);
+    }
+  }
+  return missing;
+}
+window.getSetMissingSlots = getSetMissingSlots;
+
 function openFullHkSetPicker() {
   const hasBox = fullHkBoxHave();
   if (hasBox < 1) {
@@ -478,15 +501,8 @@ function openFullHkSetPicker() {
       return `<span style="display:inline-block;background:rgba(0,0,0,0.5);border:1px solid ${isTk ? '#ff9e42' : 'rgba(255,210,74,0.4)'};padding:2px 7px;border-radius:3px;font-size:11px;color:${isTk ? '#ffb86c' : '#ffd24a'}">${esc(r.n)} <small class="dim" style="font-size:10px">(cấp ${lvl})</small></span>`;
     }).join("");
 
-    const isBigSet = st.itemCount >= 9;
-    const hasShoes = st.rows.some((r) => r.d === 5);
-    const hasBelt = st.rows.some((r) => r.d === 6);
-    const missingBadges = [];
-    if (isBigSet) {
-      if (!hasShoes) missingBadges.push(`<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Giày)</span>`);
-      if (!hasBelt) missingBadges.push(`<span style="color:#ff9e42;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Đai)</span>`);
-    }
-    const missingHtml = missingBadges.join(" ");
+    const missing = getSetMissingSlots(st.rows, st.itemCount);
+    const missingHtml = missing.map((m) => `<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(${m})</span>`).join(" ");
 
     return `
       <div style="background:linear-gradient(135deg, rgba(255,210,74,0.12), rgba(20,15,10,0.85));border:1px solid #ffd24a;border-radius:6px;padding:12px;margin-bottom:10px">
@@ -536,16 +552,8 @@ function openFullHkSetPicker() {
             giveHkItem(it);
           }
 
-          const isBigSet = chosen.rows.length >= 9;
-          const hasShoes = chosen.rows.some((r) => r.d === 5);
-          const hasBelt = chosen.rows.some((r) => r.d === 6);
-          let tag = "";
-          if (isBigSet) {
-            const notes = [];
-            if (!hasShoes) notes.push("(Thiếu Giày)");
-            if (!hasBelt) notes.push("(Thiếu Đai)");
-            tag = notes.join(" ");
-          }
+          const missing = getSetMissingSlots(chosen.rows, chosen.rows.length);
+          const tag = missing.map((m) => `(${m})`).join(" ");
           const displayName = tag ? `${chosen.name} ${tag}` : chosen.name;
 
           uiSfx("levelup");
