@@ -4,7 +4,7 @@ const dayKey = (t) => `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`,
   GB_EVERY = 1800,
   GB_RETRY = 300,
   REBORN_LV = 200,
-  REBORN_MAX = 5,
+  REBORN_MAX = 10,
   FD_COST = 10;
 function RW() {
   const t = S.rw || (S.rw = {});
@@ -345,14 +345,14 @@ function rebornHard() {
 }
 function rebornBonus() {
   const t = (S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0;
-  const xpPen = (typeof S < "u" && S && S.lvl < 200) ? 0 : -0.1 * t;
+  const xpPen = (typeof S < "u" && S && S.lvl < 200) ? 0 : Math.max(-0.5, -0.05 * t);
   return { xp: xpPen, dmg: 0.1 * t };
 }
 function doReborn() {
   const t = RW();
   if (
     S.lvl < 200 ||
-    t.stat.reborn >= 5 ||
+    t.stat.reborn >= REBORN_MAX ||
     !confirm(
       "Chuyển sinh: về cấp 1, giữ trang bị. Toàn bộ điểm tiềm năng và kỹ năng cũ bị tẩy (giữ nguyên võ công 90 đã luyện), nhận điểm thưởng chuyển sinh. Quái mạnh hơn. Tiếp tục?",
     )
@@ -631,8 +631,8 @@ function towerBody(t = RW()) {
 }
 function rebornBody(t = RW()) {
   const n = rebornBonus(),
-    o = t.stat.reborn >= 5;
-  return `<p class="desc">Đạt cấp 200: về cấp 1, giữ trang bị; <b>mỗi lần chuyển sinh +${REB_EQ_LV} cấp khi xét yêu cầu trang bị</b> (vd cấp 10 chuyển sinh 1 = cấp ${10 + REB_EQ_LV}: mặc được mọi trang bị); võ công 90 học không cần Mật Tịch; mỗi lần +10% tỉ lệ rơi đồ; mốc cấp nhận lại mỗi vòng; tẩy toàn bộ điểm tiềm năng và kỹ năng cũ, nhận cố định <b>${REB_ATTR} điểm tiềm năng + ${REB_SK} điểm kỹ năng</b>; mỗi lần quái mạnh thêm (+25% máu, +15% sát thương), +10% sát thương nhưng <b>kinh nghiệm nhận được −10%</b> mỗi lần (tối đa 5 lần).</p>
+    o = t.stat.reborn >= REBORN_MAX;
+  return `<p class="desc">Đạt cấp 200: về cấp 1, giữ trang bị; <b>mỗi lần chuyển sinh +${REB_EQ_LV} cấp khi xét yêu cầu trang bị</b> (vd cấp 10 chuyển sinh 1 = cấp ${10 + REB_EQ_LV}: mặc được mọi trang bị); võ công 90 học không cần Mật Tịch; mỗi lần +10% tỉ lệ rơi đồ; mốc cấp nhận lại mỗi vòng; tẩy toàn bộ điểm tiềm năng và kỹ năng cũ, nhận cố định <b>${REB_ATTR} điểm tiềm năng + ${REB_SK} điểm kỹ năng</b>; mỗi lần quái mạnh thêm (+25% máu, +15% sát thương), +10% sát thương nhưng <b>kinh nghiệm nhận được −10%</b> mỗi lần (tối đa ${REBORN_MAX} lần).</p>
       <p>Đã chuyển sinh: <b>${t.stat.reborn}</b> lần · hiện ${Math.round(n.xp * 100)}% kinh nghiệm, +${Math.round(n.dmg * 100)}% sát thương, kháng tối đa ${PLAYER_RES_MAX + REBORN_RES * t.stat.reborn}% (+${REBORN_RES}% mỗi lần) · độ khó: quái ×${rebornHard().hp.toFixed(2)} máu, ×${rebornHard().dmg.toFixed(2)} sát thương.</p>
       <div class="btnrow"><button class="btn red" id="gReborn" ${S.lvl >= 200 && !o ? "" : "disabled"}>${o ? "Đã chuyển sinh tối đa" : S.lvl >= 200 ? "Chuyển sinh" : "Cần cấp 200"}</button></div>`;
 }
@@ -725,7 +725,7 @@ function giftModal(t) {
 }
 function rebornModal() {
   S.fac &&
-    modal(`<h3>Chuyển sinh <small>${RW().stat.reborn}/5 lần</small></h3>${rebornBody()}`, () => {
+    modal(`<h3>Chuyển sinh <small>${RW().stat.reborn}/${REBORN_MAX} lần</small></h3>${rebornBody()}`, () => {
       const t = $("#gReborn");
       t && (t.onclick = doReborn);
     });

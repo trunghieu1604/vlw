@@ -1201,7 +1201,8 @@ function gainXp(t) {
       (1 + buffP("xp")) *
       (1 + buffP("tt"))) /
     xpSlow(Math.min(BASE_CAP, S.lvl));
-  if (S.lvl >= 200) e = Math.min(2500, e);
+  const rb = typeof rebornN === "function" ? rebornN() : ((S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0);
+  if (rb >= 10 && S.lvl >= 200) e = Math.min(2500, e);
   let upCount = 0;
   for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl) && upCount < 50; upCount++) {
     const need = lvNeed(S.lvl);

@@ -135,7 +135,7 @@ function admTabLv() {
   <div class="admf"><label>Đặt cấp <input type="number" id="admLv" min="${S.lvl + 1}" max="${cap}" value="${Math.min(cap, Math.max(S.lvl + 1, 80))}"></label><button class="btn sm" data-a="lvset">Đặt</button></div>
   <div class="admh">Kinh nghiệm (theo cấp hiện tại)</div><div class="btnrow"><button class="btn sm" data-a="xp:0.1">+10%</button><button class="btn sm" data-a="xp:0.5">+50%</button><button class="btn sm" data-a="xp:1">+100%</button></div>
   <div class="admh">Điểm</div><div class="btnrow"><button class="btn sm" data-a="ap:10">+10 tiềm năng</button><button class="btn sm" data-a="ap:100">+100 tiềm năng</button><button class="btn sm" data-a="sp:5">+5 kỹ năng</button><button class="btn sm" data-a="sp:50">+50 kỹ năng</button><button class="btn sm on" data-a="spend">Tự cộng hết điểm</button></div>
-  <div class="admh">Chuyển Sinh (CS ${typeof rebGet == "function" ? rebGet() : (S && S.rw && S.rw.stat ? S.rw.stat.reborn : 0)})</div><div class="btnrow"><button class="btn sm" data-a="reb:1">+1 CS</button><button class="btn sm" data-a="reb:-1">-1 CS (Giảm CS)</button><button class="btn sm" data-a="reb:0">Về CS 0</button><button class="btn sm on" data-a="reb:5">CS 5 (Tối đa)</button></div>
+  <div class="admh">Chuyển Sinh (CS ${typeof rebGet == "function" ? rebGet() : (S && S.rw && S.rw.stat ? S.rw.stat.reborn : 0)})</div><div class="btnrow"><button class="btn sm" data-a="reb:1">+1 CS</button><button class="btn sm" data-a="reb:-1">-1 CS (Giảm CS)</button><button class="btn sm" data-a="reb:0">Về CS 0</button><button class="btn sm on" data-a="reb:10">CS 10 (Tối đa)</button></div>
   <div class="admh">Danh Hiệu Giang Hồ</div><div class="btnrow"><button class="btn sm on" data-a="titleall">🎖 Mở khóa mọi Danh Hiệu</button><button class="btn sm" data-a="titlemodal">Xem & Đeo Danh Hiệu</button></div>
   <div class="admh">Tiện Ích Nhanh</div><div class="btnrow"><button class="btn sm red" data-a="clearchat">💬 Xóa Sạch Kênh Chat</button><button class="btn sm" data-a="cd">Đặt lại hồi chiêu</button><button class="btn sm on" data-a="full">Hồi đầy máu/mana</button></div>
   ${typeof isNovice == "function" && isNovice() && S.lvl >= NOVICE_LV ? `<div class="btnrow"><button class="btn sm on" data-a="join">Gia nhập môn phái</button></div>` : ""}
@@ -144,7 +144,8 @@ function admTabLv() {
 function admReborn(x) {
   const from = typeof rebGet == "function" ? rebGet() : ((S.rw && S.rw.stat && S.rw.stat.reborn) | 0);
   let to = from;
-  if (x === "5" || x === 5) to = 5;
+  if (x === "10" || x === 10) to = 10;
+  else if (x === "5" || x === 5) to = 5;
   else if (x === "0" || x === 0) to = 0;
   else to = Math.max(0, Math.min(10, from + (+x || 0)));
   if (typeof rebSet == "function") rebSet(to);

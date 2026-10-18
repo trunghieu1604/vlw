@@ -157,7 +157,7 @@ function migrate(n) {
     ((!e.gc || !e.gc.VLMC) && e.rw && (e.rw.titles && delete e.rw.titles.vlmc, e.rw.title === "vlmc" && (e.rw.title = ""))),
     (e.gc && e.gc.ANDYTRAN && delete e.gc.ANDYTRAN),
     (e.lx = n.lx && typeof n.lx == "object" ? n.lx : (e.lx || {})),
-    (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, e.rw && e.rw.stat && e.rw.stat.reborn >= 5 ? 9999 : 200)),
+    (e.lvl = clamp(Math.floor(+e.lvl) || 1, 1, e.rw && e.rw.stat && e.rw.stat.reborn >= 10 ? 9999 : 200)),
     (e.xp = Math.max(0, +e.xp || 0)),
     (e.gold = Number.isFinite(+e.gold) ? Math.max(0, +e.gold) : 0),
     (e.skPts = Math.max(0, Math.floor(+e.skPts) || 0)),

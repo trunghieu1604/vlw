@@ -144,6 +144,11 @@ const JXCS = {
   3: { f: "fx/cs_3.webp", n: 15, w: 125, h: 128, ax: 63, ay: 90, ms: 80, pos: "foot" },
   4: { f: "fx/cs_4.webp", n: 14, w: 113, h: 61, ax: 57, ay: 31, ms: 100, pos: "foot" },
   5: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
+  6: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
+  7: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
+  8: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
+  9: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
+  10: { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot" },
 },
 JXCS_ROYAL = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", gold: true },
 JXCS_RED = { f: "fx/cs_5.webp", n: 10, w: 262, h: 153, ax: 131, ay: 94, ms: 150, pos: "foot", red: true };
@@ -170,8 +175,8 @@ function drawHeroStates(s, t, f) {
       } else if (tw && tw[0] === "admin") {
         drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
       } else if (typeof rebornN == "function") {
-        const n = Math.min(5, rebornN());
-        n > 0 && JXCS[n] && drawState(s, JXCS[n], H.x, H.y, f, c, ST_HERO_K, 0.95);
+        const n = Math.min(10, rebornN());
+        n > 0 && (JXCS[n] || JXCS[5]) && drawState(s, JXCS[n] || JXCS[5], H.x, H.y, f, c, ST_HERO_K, 0.95);
       }
     }
   }

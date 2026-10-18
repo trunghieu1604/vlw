@@ -92,6 +92,15 @@ const CAMP = {
       ["lifemax_p", 14],
     ],
     [
+      "cs10",
+      "Thập Trùng ISEKAI",
+      "Chuyển sinh",
+      5,
+      () => RW().stat.reborn >= 10,
+      "Chuyển sinh 10 lần",
+      ["lifemax_p", 20],
+    ],
+    [
       "mp1",
       () => facShort() + " Đệ Tử",
       "Môn phái",
