@@ -419,7 +419,7 @@ function getAppV() {
       if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 448;
+  return APP_V || 449;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;

@@ -343,7 +343,11 @@ function admAllCatalog() {
     const f = (allRows[0].req.find((x) => x[0] === 39) || [0, -1])[1];
     const facName = f >= 0 ? (FACTIONS.find((x) => x.id === f) || {}).n : "";
     const nm = admGetSetName(allRows, g, !1);
-    const lvl = Math.min(...allRows.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1]));
+    const minLvl = Math.min(...allRows.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1]));
+    const maxLvl = Math.max(...allRows.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1]));
+    const p1Lvl = Math.min(...r1.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1]));
+    const p2Lvl = r2.length ? Math.min(...r2.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1])) : 0;
+    const fullLvlStr = minLvl !== maxLvl ? `${minLvl}-${maxLvl}` : minLvl;
 
     if (r2.length) {
       list.push({
@@ -353,8 +357,8 @@ function admAllCatalog() {
         cat: "hkmp",
         fac: f,
         mine: f >= 0 && f === fid,
-        lv: lvl,
-        n: `${nm}${facName ? ` · ${facName}` : ""} (Trọn bộ ${allRows.length} món, cấp ${lvl})`,
+        lv: minLvl,
+        n: `${nm}${facName ? ` · ${facName}` : ""} (Trọn bộ ${allRows.length} món, cấp ${fullLvlStr})`,
         rows: allRows,
       });
       list.push({
@@ -364,8 +368,8 @@ function admAllCatalog() {
         cat: "hkmp",
         fac: f,
         mine: f >= 0 && f === fid,
-        lv: lvl,
-        n: `${nm}${facName ? ` · ${facName}` : ""} (Phần 1: ${r1.length} món, cấp ${lvl})`,
+        lv: p1Lvl,
+        n: `${nm}${facName ? ` · ${facName}` : ""} (Phần 1: ${r1.length} món, cấp ${p1Lvl})`,
         rows: r1,
       });
       list.push({
@@ -375,8 +379,8 @@ function admAllCatalog() {
         cat: "hkmp",
         fac: f,
         mine: f >= 0 && f === fid,
-        lv: Math.min(...r2.map((x) => (x.req.find((r) => r[0] === 36) || [0, 0])[1])),
-        n: `${nm}${facName ? ` · ${facName}` : ""} (Phần 2: ${r2.length} món, cấp 120)`,
+        lv: p2Lvl,
+        n: `${nm}${facName ? ` · ${facName}` : ""} (Phần 2: ${r2.length} món, cấp ${p2Lvl})`,
         rows: r2,
       });
     } else {
@@ -387,8 +391,8 @@ function admAllCatalog() {
         cat: "hkmp",
         fac: f,
         mine: f >= 0 && f === fid,
-        lv: lvl,
-        n: `${nm}${facName ? ` · ${facName}` : ""} (Trọn bộ ${allRows.length} món, cấp ${lvl})`,
+        lv: minLvl,
+        n: `${nm}${facName ? ` · ${facName}` : ""} (Trọn bộ ${allRows.length} món, cấp ${fullLvlStr})`,
         rows: allRows,
       });
     }
