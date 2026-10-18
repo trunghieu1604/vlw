@@ -411,7 +411,7 @@ function heroHit(t, n) {
   if (
     (t.parts.light && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
-    (n.hp -= s),
+    ((n.wb || n.isWbBoss) ? (n.hp = n.max) : (n.hp -= s)),
     R.tower && (R.stall = 0),
     n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
     (n.retMeleeP || n.retMelee) && !t.ranged && (() => {

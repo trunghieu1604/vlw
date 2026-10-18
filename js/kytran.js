@@ -261,13 +261,23 @@ function fullHkBoxHave() {
 }
 window.fullHkBoxHave = fullHkBoxHave;
 
+const ROUTE_PREFIXES_120_180 = [
+  "Huyền Viên", "Tinh Sương", "Tử Mãng", "Kim Ô", "Bạch Hổ", "Xích Lân", "Minh Phượng", "Đằng Long"
+];
+
+function isRouteItem120_180(n) {
+  const clean = String(n || "").replace(/^\[[^\]]*\]\s*/, "");
+  return ROUTE_PREFIXES_120_180.some((p) => clean.startsWith(p));
+}
+window.isRouteItem120_180 = isRouteItem120_180;
+
 function getHkBoxPool() {
   if (!S || !S.fac || (typeof isNovice === "function" && isNovice()) || !FAC[S.fac] || FAC[S.fac].id < 0) return null;
   const facId = FAC[S.fac].id;
   const pool = (typeof J !== "undefined" && J.sets && J.sets.gold ? J.sets.gold : []).filter((r) => {
     const fid = (r.req.find((l) => l[0] === 39) || [0, -1])[1];
     const lvl = (r.req.find((l) => l[0] === 36) || [0, 0])[1];
-    return fid === facId && lvl >= 120 && lvl <= 180 && (typeof setRowOk !== "function" || setRowOk(r)) && (typeof sexReqOk !== "function" || sexReqOk(r.req));
+    return fid === facId && lvl >= 120 && lvl <= 180 && isRouteItem120_180(r.n) && (typeof setRowOk !== "function" || setRowOk(r)) && (typeof sexReqOk !== "function" || sexReqOk(r.req));
   });
   if (!pool.length) return null;
 
@@ -641,14 +651,14 @@ function ktcModal(tab) {
           </div>
         </div>
 
-        <!-- Rương Hoàng Kim Môn Phái (500 KNB) -->
+        <!-- Rương Hoàng Kim Lộ Trình Cấp (500 KNB) -->
         <div style="background:linear-gradient(135deg, rgba(255,210,74,0.14), rgba(40,25,10,0.7));border:1px solid #ff9e42;border-radius:6px;padding:14px;display:flex;align-items:center;gap:14px">
           <img src="img/ep/box2.png" alt="" style="width:54px;height:54px;image-rendering:pixelated">
           <div style="flex:1">
-            <div style="font-size:15px;color:#ffd24a;font-weight:bold">Rương Hoàng Kim ${esc(facName)} · <span style="color:#ff9e42">500 KNB</span></div>
+            <div style="font-size:15px;color:#ffd24a;font-weight:bold">Rương Hoàng Kim (Lộ Trình Cấp) · <span style="color:#ff9e42">500 KNB</span></div>
             <div style="font-size:12px;color:#eee;margin:6px 0;line-height:1.5">
-              Mở <b>100% nhận ngẫu nhiên 1 trang bị Hoàng Kim môn phái ${esc(facName)} (cấp 120–180)</b>.<br>
-              <span style="color:#ff5555;font-weight:bold">★ Chú thích: Có tỷ lệ 0.5% mở ra TRỌN BỘ (FULL SET) Hoàng Kim môn phái!</span><br>
+              Mở <b>100% nhận 1 trang bị Hoàng Kim Lộ Trình Cấp (cấp 120–180)</b> theo môn phái ${esc(facName)} (Huyền Viên, Tinh Sương, Tử Mãng, Kim Ô, Bạch Hổ, Xích Lân, Minh Phượng, Đằng Long).<br>
+              <span style="color:#ff5555;font-weight:bold">★ Chú thích: Có tỷ lệ 0.5% mở ra TRỌN BỘ (FULL SET 10 MÓN) Lộ Trình Cấp!</span><br>
               <span class="dim">Cất vào túi, bấm Dùng để mở. ${isNov ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</span>
             </div>
             ${hasHkBox ? `<div style="color:#ffd24a;font-size:13px;font-weight:bold">🎁 Đang có <b>${hasHkBox} Rương Hoàng Kim</b> trong túi!</div>` : ""}
@@ -665,7 +675,7 @@ function ktcModal(tab) {
         <div style="color:#ffd24a;font-weight:bold;margin-bottom:4px">📜 Quy tắc Rương Hoàng Kim:</div>
         <div class="dim small" style="line-height:1.5">
           • <b>Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% đủ set các món môn phái (${esc(facName)}) gồm cả bộ Tống Kim, phẩm cấp 10 hoàn mỹ, được chọn bộ theo hướng chơi.<br>
-          • <b>Rương Hoàng Kim (500 KNB)</b>: Mở 100% ra 1 trang bị Hoàng Kim môn phái cấp 120–180. Tỷ lệ 0.5% (1/200) nhận trọn bộ.<br>
+          • <b>Rương Hoàng Kim (500 KNB)</b>: Mở 100% ra 1 trang bị Hoàng Kim Lộ Trình Cấp môn phái cấp 120–180. Tỷ lệ 0.5% (1/200) nhận trọn bộ.<br>
           • Cất vào túi, bấm Dùng để mở hoặc mở trực tiếp tại Kỳ Trân Các.
         </div>
       </div>

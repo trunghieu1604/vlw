@@ -43,12 +43,14 @@ const WB_BOT_POOL = [
 const WB = {
   boss: null,
   st: "soon", // "up" | "soon" | "dead" | "gone"
+  isSummon: false,
   end: 0,
   next: 0,
   top: [],
   bots: [],
   realPlayers: [],
   playerDmg: 0,
+  defeatDone: false,
   defeatedHandled: false,
   bannerTimer: null,
   arena: {
@@ -99,13 +101,12 @@ function getWbSchedule() {
 }
 
 /**
- * Spawns Boss instance
+ * Spawns Boss instance (isSummon = true if summoned by Võ Lâm Minh Chủ)
  */
-function spawnWorldBoss(force = false) {
+function spawnWorldBoss(isSummon = false) {
   const sched = getWbSchedule();
-  if (force && S && S.rw && S.rw.wbKilledDate) {
-    delete S.rw.wbKilledDate;
-  }
+  WB.isSummon = !!isSummon;
+
   WB.boss = {
     name: WB_BOSS_CONFIG.name,
     title: WB_BOSS_CONFIG.title,
@@ -126,14 +127,12 @@ function spawnWorldBoss(force = false) {
   WB.rewardClaimed = false;
   WB.resultModalShown = false;
 
-  // Đồng bộ reset máu Boss trên Firebase lên tối đa 120M và xóa bảng damage cũ
   const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-  if (db && (force || sched.st === "up")) {
+  if (db && (isSummon || sched.st === "up")) {
     try {
       db.ref("worldboss/state").set({
         st: "up",
-        hp: WB_BOSS_CONFIG.hpMax,
-        hpMax: WB_BOSS_CONFIG.hpMax,
+        isSummon: !!isSummon,
         name: WB_BOSS_CONFIG.name,
         startedAt: Date.now(),
         end: WB.end,
@@ -268,44 +267,30 @@ function wbInitFirebase() {
       if (!val) return;
       if (val.st) {
         const prevSt = WB.st;
+        if (val.isSummon !== undefined) {
+          WB.isSummon = !!val.isSummon;
+        }
         WB.st = val.st;
         if (val.st === "up" && prevSt !== "up" && !WB.arena.on) {
-          spawnWorldBoss(false);
+          spawnWorldBoss(!!val.isSummon);
         }
       }
-      if (typeof val.hp === "number") {
-        // Tránh tình trạng Firebase vừa sync về 0 trong khi người chơi đang trong trận đấu
-        if (val.hp <= 0 && WB.arena.on && WB.boss && WB.boss.hp > 1000) {
-          // Bỏ qua giá trị 0 cũ
-        } else {
-          if (!WB.boss) {
-            WB.boss = {
-              name: WB_BOSS_CONFIG.name,
-              title: WB_BOSS_CONFIG.title,
-              mapName: WB_BOSS_CONFIG.mapName,
-              mapImg: WB_BOSS_CONFIG.mapImg,
-              lvl: WB_BOSS_CONFIG.lvl,
-              hp: val.hp,
-              hpMax: val.hpMax || WB_BOSS_CONFIG.hpMax,
-              series: WB_BOSS_CONFIG.series,
-              heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-            };
-          } else {
-            WB.boss.hp = val.hp;
-            if (val.hpMax) WB.boss.hpMax = val.hpMax;
-          }
-          if (WB.arena.bossInst) {
-            WB.arena.bossInst.hp = val.hp;
-          }
-        }
+      if (!WB.boss) {
+        WB.boss = {
+          name: WB_BOSS_CONFIG.name,
+          title: WB_BOSS_CONFIG.title,
+          mapName: WB_BOSS_CONFIG.mapName,
+          mapImg: WB_BOSS_CONFIG.mapImg,
+          lvl: WB_BOSS_CONFIG.lvl,
+          hp: WB_BOSS_CONFIG.hpMax,
+          hpMax: WB_BOSS_CONFIG.hpMax,
+          series: WB_BOSS_CONFIG.series,
+          heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+        };
       }
-      if (val.st === "dead" && !WB.defeatDone) {
-        if (WB.arena.on && WB.boss && WB.boss.hp > 1000) {
-          // Chưa chết thực sự trong trận đấu của client
-        } else {
-          WB.defeatedHandled = true;
-          handleBossDefeated(false, val.killer);
-        }
+      if (val.st === "dead" && !WB.defeatDone && !WB.isSummon) {
+        WB.defeatedHandled = true;
+        handleBossDefeated(true, val.killer);
       }
       if (val.st === "up" && WB.st !== "up") {
         WB.defeatedHandled = false;
@@ -334,7 +319,6 @@ window.wbInitFirebase = wbInitFirebase;
  */
 function updateWbLeaderboard() {
   if (!WB.boss) return;
-  const total = WB.boss.hpMax;
   const list = [];
   const myCid = typeof chatCid === "function" ? chatCid() : "";
   let hasMe = false;
@@ -366,11 +350,15 @@ function updateWbLeaderboard() {
 
   list.sort((a, b) => b.dmg - a.dmg);
 
+  const topDmg = list.length > 0 ? Math.max(1, list[0].dmg) : 1;
+  const totalDmg = Math.max(1, list.reduce((acc, cur) => acc + (cur.dmg || 0), 0));
+
   WB.top = list.map((item, idx) => ({
     rank: idx + 1,
     name: item.name,
     dmg: item.dmg,
-    share: Math.min(1, item.dmg / Math.max(1, total)),
+    share: Math.min(1, item.dmg / topDmg),
+    totalShare: item.dmg / totalDmg,
     isPlayer: item.isPlayer
   }));
 }
@@ -379,14 +367,14 @@ function updateWbLeaderboard() {
  * Main Tick for World Boss & simulated combat
  */
 function wbTick() {
-  if (WB.st === "dead" || WB.defeatDone) {
+  if (!WB.isSummon && (WB.st === "dead" || WB.defeatDone)) {
     updateWbButtonState();
     return;
   }
   const sched = getWbSchedule();
 
   // If not manually forced 'up' and not in arena, sync with schedule
-  if (!WB.arena.on && (!WB.boss || WB.boss.hp <= 0)) {
+  if (!WB.isSummon && !WB.arena.on && WB.st !== "up") {
     if (sched.st === "up" && WB.st !== "up") {
       spawnWorldBoss(false);
     } else if (sched.st !== "up" && WB.st !== "up") {
@@ -406,34 +394,25 @@ function wbTick() {
       handleBossDefeated(true);
       return;
     } else {
-      WB.st = "gone";
-      showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã rời khỏi Phong Lăng Độ!`);
+      const wasSummon = WB.isSummon;
+      WB.st = wasSummon ? sched.st : "gone";
+      WB.isSummon = false;
+      showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã kết thúc thời gian khiêu chiến!`);
       updateWbButtonState();
       return;
     }
   }
 
-  // If in arena, simulate BOT damage every second
-  if (WB.arena.on && WB.boss && WB.boss.hp > 0) {
-    let tickDmg = 0;
+  // If in arena, simulate BOT damage every second (accumulate DPS for leaderboard)
+  if (WB.arena.on && WB.boss) {
     WB.bots.forEach(b => {
       const variance = 0.85 + Math.random() * 0.3;
       const d = Math.round(b.baseDps * variance);
       b.dmg += d;
-      tickDmg += d;
     });
 
-    WB.boss.hp = Math.max(0, WB.boss.hp - tickDmg);
-    if (WB.arena.bossInst) {
-      WB.arena.bossInst.hp = WB.boss.hp;
-    }
     updateWbLeaderboard();
     renderWbDpsMeter();
-
-    if (WB.boss.hp <= 0 && WB.st !== "dead") {
-      handleBossDefeated(false);
-      return;
-    }
   }
 
   renderWbDpsMeter();
@@ -442,54 +421,57 @@ function wbTick() {
 }
 
 /**
- * When Boss HP reaches 0 OR 5m timeout
+ * When 5m battle timeout expires
  */
-function handleBossDefeated(isTimeout = false) {
-  if (WB.st === "dead" || WB.defeatDone) return;
+function handleBossDefeated(isTimeout = true) {
+  if (WB.defeatDone) return;
   WB.defeatDone = true;
   WB.st = "dead";
+  const wasSummon = WB.isSummon;
   const dpsEl = document.getElementById("wbDpsMeter");
   if (dpsEl) dpsEl.style.display = "none";
   const sched = getWbSchedule();
-  if (S && S.rw) {
+
+  // Only record daily kill date if this was the scheduled daily boss, NOT VLMC summon!
+  if (!wasSummon && S && S.rw) {
     S.rw.wbKilledDate = sched.todayKey;
   }
 
-  // Cập nhật Firebase ngay lập tức để đồng bộ và chấm dứt spam
+  // Cập nhật Firebase ngay lập tức
   if (wbFirebaseOn()) {
     try {
       const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
       if (db) {
-        db.ref("worldboss/state").update({
-          st: "dead",
-          hp: 0,
-          killer: (S && S.name) || "Hiệp Sĩ",
-          endedAt: Date.now()
-        });
+        if (wasSummon) {
+          db.ref("worldboss/state").update({
+            st: sched.st === "up" ? "up" : "soon",
+            isSummon: false,
+            endedAt: Date.now()
+          });
+        } else {
+          db.ref("worldboss/state").update({
+            st: "dead",
+            isSummon: false,
+            killer: (S && S.name) || "Hiệp Sĩ",
+            endedAt: Date.now()
+          });
+        }
       }
     } catch (e) {}
   }
 
   updateWbLeaderboard();
-  const top1 = (WB.top && WB.top[0]) || { name: "Hiệp Sĩ" };
+  const top1 = (WB.top && WB.top[0]) || { name: "Hiệp Sĩ", dmg: 0 };
   const top1Name = top1.name;
 
-  if (isTimeout) {
-    showWbBanner(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới!</b> Quán quân TOP 1: <b>${top1Name}</b>.`);
-    if (typeof log === "function") {
-      log(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b>!`);
-    }
-  } else {
-    showWbBanner(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị đánh bại! TOP 1 Sát Thương: <b>${top1Name}</b>!`);
-    if (typeof log === "function") {
-      log(`🏆 <b>Boss thế giới Trung Hiếu</b> đã bị đánh bại! <b>${top1Name}</b> xuất sắc dẫn đầu bảng xếp hạng sát thương (TOP 1)!`);
-    }
+  showWbBanner(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới!</b> Quán quân TOP 1: <b>${top1Name}</b>.`);
+  if (typeof log === "function") {
+    log(`🏆 <b>Hết 5 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b> (${wbNum(top1.dmg)} sát thương)!`);
   }
 
-  grantPlayerWbRewards(isTimeout);
+  grantPlayerWbRewards(true);
 
   if (WB.arena.bossInst) {
-    WB.arena.bossInst.dead = true;
     WB.arena.bossInst.act = "st";
   }
 
@@ -498,8 +480,20 @@ function handleBossDefeated(isTimeout = false) {
     exitWorldBoss(false);
   }
 
+  if (wasSummon) {
+    WB.isSummon = false;
+    setTimeout(() => {
+      const sc = getWbSchedule();
+      WB.st = sc.st;
+      WB.next = sc.next;
+      WB.defeatDone = false;
+      WB.defeatedHandled = false;
+      updateWbButtonState();
+    }, 500);
+  }
+
   setTimeout(() => {
-    openWbResultModal(top1Name, isTimeout);
+    openWbResultModal(top1Name, true);
   }, 400);
 
   updateWbButtonState();
@@ -741,10 +735,11 @@ function hideWbBanner() {
  * Player enters Combat Arena: map img/z/337.jpg exclusively with ONLY Boss Trung Hiếu
  */
 function joinWorldBoss() {
-  if (WB.st !== "up" || !WB.boss || WB.boss.hp <= 0) {
-    spawnWorldBoss(true);
+  const sched = getWbSchedule();
+  if (WB.st !== "up" || !WB.boss) {
+    spawnWorldBoss(sched.st !== "up");
   }
-  if (!WB.boss || WB.boss.hp <= 0) {
+  if (!WB.boss) {
     WB.boss = {
       name: WB_BOSS_CONFIG.name,
       title: WB_BOSS_CONFIG.title,
@@ -790,7 +785,7 @@ function joinWorldBoss() {
     // Create the Boss Trung Hiếu entity cleanly as a hero-boss NPC
     const spawnX = H.x + 130;
     const spawnY = H.y - 30;
-    const bossHp = Math.max(10000000, (WB.boss && WB.boss.hp > 0) ? WB.boss.hp : WB_BOSS_CONFIG.hpMax);
+    const bossHp = 999999999;
     const b = {
       id: "wb_boss_trunghieu",
       tid: 9999,
@@ -808,7 +803,7 @@ function joinWorldBoss() {
       act: "st",
       actT: 0,
       hp: bossHp,
-      max: WB_BOSS_CONFIG.hpMax,
+      max: bossHp,
       r: 60,
       series: WB_BOSS_CONFIG.series,
       dmg: 450,
@@ -844,7 +839,8 @@ function joinWorldBoss() {
     R.ground = [];
     WB.arena.bossInst = b;
 
-    showWbExitButton();
+    const oldExit = document.getElementById("wbExitBtn");
+    if (oldExit) oldExit.remove();
     if (typeof snapCamera === "function") snapCamera();
     if (typeof toast === "function") toast(`⚔ Đã tiến vào chiến thuyền Phong Lăng Độ khiêu chiến Boss Thế Giới Trung Hiếu!`);
     if (typeof log === "function") log(`⚔ Tiến vào chiến trường khiêu chiến <b>Boss Thế Giới Trung Hiếu</b> tại <b>Phong Lăng Độ</b>!`);
@@ -852,21 +848,13 @@ function joinWorldBoss() {
 }
 
 function showWbExitButton() {
-  let btn = document.getElementById("wbExitBtn");
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "wbExitBtn";
-    btn.innerHTML = "🚪 Quay Lại Bãi";
-    btn.title = "Rời chiến trường Boss Thế Giới quay lại bãi luyện công";
-    btn.onclick = () => exitWorldBoss(true);
-    document.body.appendChild(btn);
-  }
-  btn.style.display = "flex";
+  const btn = document.getElementById("wbExitBtn");
+  if (btn) btn.remove();
 }
 
 function hideWbExitButton() {
   const btn = document.getElementById("wbExitBtn");
-  if (btn) btn.style.display = "none";
+  if (btn) btn.remove();
 }
 window.showWbExitButton = showWbExitButton;
 window.hideWbExitButton = hideWbExitButton;
@@ -913,9 +901,8 @@ function onHeroHitWb(dmg) {
   if (!WB.arena.on || WB.st !== "up" || !WB.boss) return;
   WB.playerDmg += dmg;
   wbPendingDmg += dmg;
-  WB.boss.hp = Math.max(0, WB.boss.hp - dmg);
   if (WB.arena.bossInst) {
-    WB.arena.bossInst.hp = WB.boss.hp;
+    WB.arena.bossInst.hp = WB.arena.bossInst.max || 999999999;
   }
   updateWbLeaderboard();
   renderWbDpsMeter();
@@ -930,10 +917,6 @@ function onHeroHitWb(dmg) {
         wbSyncHitFirebase();
       }, 350);
     }
-  }
-
-  if (WB.boss.hp <= 0 && WB.st !== "dead") {
-    handleBossDefeated();
   }
 }
 
@@ -953,7 +936,6 @@ function openWorldBossModal() {
   const sched = getWbSchedule();
   const b = WB.boss;
   const remSec = WB.st === "up" ? Math.max(0, (WB.end - Date.now()) / 1000) : Math.max(0, (sched.next - Date.now()) / 1000);
-  const hpPct = b ? Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100)) : 0;
   const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
 
   const content = `
@@ -961,16 +943,17 @@ function openWorldBossModal() {
       <h3 style="color:#ffd700;text-align:center;margin:0 0 8px">⚔ Boss Thế Giới: Trung Hiếu ⚔</h3>
       <div id="wbIn">
         ${WB.st === "up" && b ? `
-          <div style="background:rgba(255,100,0,0.12);border:1px solid #c96d1a;border-radius:6px;padding:8px 12px;margin-bottom:10px">
-            <div>⚔ <b>${b.name}</b> (${b.title}) đang xuất hiện tại <b>${b.mapName}</b>!</div>
-            <div style="font-size:12px;color:#bbb;margin-top:2px">Thời gian còn lại: <b class="wbt" style="color:#ffcc00">${wbFormatTime(remSec)}</b></div>
+          <div style="background:rgba(255,100,0,0.12);border:1px solid #c96d1a;border-radius:6px;padding:10px 12px;margin-bottom:10px;text-align:center">
+            <div style="font-size:15px;color:#ffd700;font-weight:bold">⚔ ${b.name} (${b.title})</div>
+            <div style="font-size:12px;color:#bbb;margin:4px 0">Chiến trường độc quyền: <b>${b.mapName}</b></div>
+            <div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.4);border-radius:4px;border:1px solid rgba(255,204,0,0.3)">
+              <div style="font-size:12px;color:#eee">⏱ Thời gian khiêu chiến còn lại:</div>
+              <div class="wbt" style="font-size:22px;color:#ffcc00;font-weight:bold;margin-top:2px">${wbFormatTime(remSec)}</div>
+              <div style="font-size:11px;color:#aaa;margin-top:3px">Sự kiện tính tổng sát thương gây ra để xếp hạng BXH</div>
+            </div>
           </div>
-          <div class="wbhp" style="margin:8px 0">
-            <i style="width:${hpPct.toFixed(2)}%"></i>
-            <span>${wbNum(b.hp)} / ${wbNum(b.hpMax)} (${hpPct.toFixed(1)}%)</span>
-          </div>
-          <p class="small" style="color:#bbb;margin:4px 0">
-            Chiến trường: <b>Map riêng</b> (Chỉ có Boss) · Bạn: hạng <b>#${me.rank}</b>, ${wbNum(me.dmg)} sát thương (${(me.share * 100).toFixed(1)}%)
+          <p class="small" style="color:#bbb;margin:6px 0;text-align:center">
+            Sát thương hiện tại của bạn: <b style="color:#ffd700">${wbNum(me.dmg)}</b> (Hạng <b style="color:#ffcc00">#${me.rank}</b>)
           </p>
 
           <div class="btnrow" style="margin:12px 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
@@ -979,12 +962,12 @@ function openWorldBossModal() {
             ` : `
               <button class="btn on" onclick="joinWorldBoss()">Tham chiến</button>
             `}
-            ${isWbHeroVlmc() ? '<button class="btn" onclick="spawnWorldBoss(true); openWorldBossModal();">Làm mới Boss</button>' : ''}
+            ${isWbHeroVlmc() ? '<button class="btn" onclick="spawnWorldBoss(true); openWorldBossModal();">⚡ Triệu hồi lại Boss (VLMC)</button>' : ''}
           </div>
         ` : `
           <div style="background:rgba(255,215,140,0.08);border:1px solid rgba(176,138,58,0.3);border-radius:6px;padding:12px;text-align:center;margin-bottom:12px">
             <p style="margin:0 0 6px;color:#ffcc00;font-size:15px">
-              ${sched.killedToday ? "🏆 Boss hôm nay đã bị hạ gục!" : "⏰ Giờ xuất hiện: <b>20:00 (8h tối)</b> mỗi ngày (1 lần duy nhất)."}
+              ${sched.killedToday ? "🏆 Boss hôm nay đã kết thúc thời gian khiêu chiến!" : "⏰ Giờ xuất hiện: <b>20:00 (8h tối)</b> mỗi ngày (1 lần duy nhất)."}
             </p>
             <p style="margin:0;color:#aaa;font-size:13px">
               Lần tiếp theo: <b>${new Date(sched.next).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</b> (còn <b class="wbt" style="color:#ffd700">${wbFormatTime(remSec)}</b>)
@@ -1013,14 +996,7 @@ function openWorldBossModal() {
 function updateWbDialogLive() {
   const wbIn = document.getElementById("wbIn");
   if (!wbIn) return;
-  const hpEl = wbIn.querySelector(".wbhp i");
-  const hpTxt = wbIn.querySelector(".wbhp span");
   const timeTxt = wbIn.querySelector(".wbt");
-  if (hpEl && hpTxt && WB.boss && WB.st === "up") {
-    const hpPct = Math.max(0, Math.min(100, (WB.boss.hp / WB.boss.hpMax) * 100));
-    hpEl.style.width = hpPct.toFixed(2) + "%";
-    hpTxt.textContent = `${wbNum(WB.boss.hp)} / ${wbNum(WB.boss.hpMax)} (${hpPct.toFixed(1)}%)`;
-  }
   if (timeTxt) {
     const sched = getWbSchedule();
     const remSec = WB.st === "up" ? Math.max(0, (WB.end - Date.now()) / 1000) : Math.max(0, (sched.next - Date.now()) / 1000);
@@ -1483,29 +1459,6 @@ function injectWbStyles() {
         top: 54px;
       }
     }
-    #wbExitBtn {
-      position: fixed;
-      top: 60px;
-      right: 14px;
-      z-index: 9999;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 68, 68, 0.4);
-      border: 1.5px solid #ff4444;
-      background: linear-gradient(180deg, #8b1111 0%, #4a0000 100%);
-      color: #ffd700;
-      padding: 7px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      display: none;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.15s, filter 0.15s;
-    }
-    #wbExitBtn:hover {
-      transform: scale(1.05);
-      filter: brightness(1.2);
-    }
   `;
   document.head.appendChild(style);
 }
@@ -1529,10 +1482,13 @@ function renderWbDpsMeter() {
   const isCollapsed = el.dataset.collapsed === "1";
   const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
 
+  const remSec = Math.max(0, (WB.end - Date.now()) / 1000);
+  const timeStr = wbFormatTime(remSec);
+
   if (isCollapsed) {
     el.innerHTML = `
       <div class="wbdps-mini" onclick="toggleWbDpsMeter()" style="display:flex;align-items:center;justify-content:space-between;gap:4px">
-        <span>⚔ <b>#${me.rank}</b> Bạn (${((me.share || 0) * 100).toFixed(1)}%)</span>
+        <span>⚔ <b>#${me.rank}</b> Bạn (${wbNum(me.dmg)}) · <b style="color:#ffd700">${timeStr}</b></span>
         <span style="display:inline-flex;gap:4px;align-items:center">
           <button class="wbdps-btn" title="Mở rộng BXH">▸</button>
           <button class="btn sm red" onclick="event.stopPropagation(); exitWorldBoss(true);" title="Rời Boss về bãi" style="font-size:11px;padding:1px 6px">🚪 Về bãi</button>
@@ -1546,7 +1502,7 @@ function renderWbDpsMeter() {
   const isMeInTop5 = top5.some(t => t.isPlayer);
 
   let rowsHtml = top5.map(t => {
-    const pct = ((t.share || 0) * 100).toFixed(1);
+    const pct = Math.round((t.share || 0) * 100);
     const isMe = t.isPlayer;
     const isR1 = t.rank === 1;
     const rankCol = isR1 ? '#ffd700' : t.rank <= 3 ? '#6aa8ff' : '#ddd';
@@ -1556,27 +1512,27 @@ function renderWbDpsMeter() {
         <span class="wbdps-rank" style="color:${rankCol}">${rankIcon}</span>
         <span class="wbdps-name" title="${t.name}">${isMe ? '<b style="color:#ffd700">【 Bạn 】</b>' : t.name}</span>
         <span class="wbdps-val">${wbNum(t.dmg)} <small>(${pct}%)</small></span>
-        <div class="wbdps-bar" style="width:${Math.min(100, (t.share || 0) * 200)}%"></div>
+        <div class="wbdps-bar" style="width:${Math.min(100, pct)}%"></div>
       </div>
     `;
   }).join("");
 
   if (!isMeInTop5 && me) {
-    const pct = ((me.share || 0) * 100).toFixed(1);
+    const pct = Math.round((me.share || 0) * 100);
     rowsHtml += `
       <div class="wbdps-sep">···</div>
       <div class="wbdps-row me">
         <span class="wbdps-rank" style="color:#ffd700">#${me.rank}</span>
         <span class="wbdps-name"><b style="color:#ffd700">【 Bạn 】</b></span>
         <span class="wbdps-val">${wbNum(me.dmg)} <small>(${pct}%)</small></span>
-        <div class="wbdps-bar" style="width:${Math.min(100, (me.share || 0) * 200)}%"></div>
+        <div class="wbdps-bar" style="width:${Math.min(100, pct)}%"></div>
       </div>
     `;
   }
 
   el.innerHTML = `
     <div class="wbdps-head">
-      <span class="wbdps-title">⚔ BXH SÁT THƯƠNG ⚔</span>
+      <span class="wbdps-title">⚔ BXH SÁT THƯƠNG · ${timeStr} ⚔</span>
       <button class="wbdps-btn" onclick="toggleWbDpsMeter()" title="Thu gọn">−</button>
     </div>
     <div class="wbdps-body">

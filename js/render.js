@@ -1086,7 +1086,7 @@ function draw(i) {
         `${e.n} · Lv${e.L || 200}`,
         "#ffd700",
         12,
-        e.hp / e.max,
+        -1,
         "#ff3030",
         "«BOSS THẾ GIỚI»",
         "#ff2200"
