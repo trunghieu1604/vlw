@@ -478,11 +478,15 @@ function openFullHkSetPicker() {
       return `<span style="display:inline-block;background:rgba(0,0,0,0.5);border:1px solid ${isTk ? '#ff9e42' : 'rgba(255,210,74,0.4)'};padding:2px 7px;border-radius:3px;font-size:11px;color:${isTk ? '#ffb86c' : '#ffd24a'}">${esc(r.n)} <small class="dim" style="font-size:10px">(cấp ${lvl})</small></span>`;
     }).join("");
 
+    const isBigSet = st.itemCount >= 9;
     const hasShoes = st.rows.some((r) => r.d === 5);
     const hasBelt = st.rows.some((r) => r.d === 6);
     const missingBadges = [];
-    if (!hasShoes) missingBadges.push(`<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Giày)</span>`);
-    if (!hasBelt) missingBadges.push(`<span style="color:#ff9e42;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Đai)</span>`);
+    if (isBigSet) {
+      if (!hasShoes) missingBadges.push(`<span style="color:#ff6b6b;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Giày)</span>`);
+      if (!hasBelt) missingBadges.push(`<span style="color:#ff9e42;font-size:12px;font-weight:bold;margin-left:4px">(Thiếu Đai)</span>`);
+      if (hasShoes && hasBelt) missingBadges.push(`<span style="color:#8fe34a;font-size:12px;font-weight:bold;margin-left:4px">(Đầy đủ)</span>`);
+    }
     const missingHtml = missingBadges.join(" ");
 
     return `
@@ -533,13 +537,18 @@ function openFullHkSetPicker() {
             giveHkItem(it);
           }
 
+          const isBigSet = chosen.rows.length >= 9;
           const hasShoes = chosen.rows.some((r) => r.d === 5);
           const hasBelt = chosen.rows.some((r) => r.d === 6);
-          const missingNotes = [];
-          if (!hasShoes) missingNotes.push("(Thiếu Giày)");
-          if (!hasBelt) missingNotes.push("(Thiếu Đai)");
-          const missingStr = missingNotes.join(" ");
-          const displayName = missingStr ? `${chosen.name} ${missingStr}` : chosen.name;
+          let tag = "";
+          if (isBigSet) {
+            const notes = [];
+            if (!hasShoes) notes.push("(Thiếu Giày)");
+            if (!hasBelt) notes.push("(Thiếu Đai)");
+            if (hasShoes && hasBelt) notes.push("(Đầy đủ)");
+            tag = notes.join(" ");
+          }
+          const displayName = tag ? `${chosen.name} ${tag}` : chosen.name;
 
           uiSfx("levelup");
           log(`🎉 <b style="color:#ffd24a">[RƯƠNG TRỌN BỘ HKMP]</b> Nhận <b>TRỌN BỘ ${esc(displayName)}</b> (${items.length} món Hoàng Kim Môn Phái cấp ${chosen.lvlStr})!`);
