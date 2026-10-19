@@ -53,62 +53,15 @@ function netClient() {
         }))
       : Promise.reject(new Error("Chưa cấu hình máy chủ (js/chatcfg.js)"));
 }
-// Back from SSO: ?sso=1 -> the server holds a one-time hand-off for this browser
-// (HttpOnly cookie) that becomes our session token; ?sso_err=<code> -> show why on the login gate.
-async function netSsoBack() {
-  const q = new URLSearchParams(location.search),
-    ok = q.get("sso") === "1",
-    err = q.get("sso_err");
-  if (!ok && !err) return;
-  if (ok)
-    try {
-      const j = await API.req("POST", "/api/auth/sso/claim", {}, { noLost: 1, cookies: 1 });
-      j && j.token && API.setToken(j.token);
-    } catch {}
-  err && (NET.ssoErr = NET_SSO_ERR[err] || `Đăng nhập không thành công (${String(err).slice(0, 20)})`);
-  q.delete("sso");
-  q.delete("sso_err");
-  try {
-    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
-  } catch {}
-}
-// Leave for SSO: it sends the player back with a ticket.
-function netSsoGo() {
-  try {
-    typeof save == "function" && S && S.fac && save();
-  } catch {}
-  location.href = API.base + "/api/auth/sso/start";
-}
+// SSO & Legacy Auth (bypassed with Firebase Auth)
+async function netSsoBack() {}
+function netSsoGo() {}
 const netCfg = () => window.CHAT_CFG || {},
-  netSsoHTML = (id) =>
-    netCfg().sso
-      ? `<div class="card"><div class="btnrow"><button class="btn" id="${id}">🎮 Đăng nhập</button></div></div>`
-      : "";
-const netCall = async (t) => {
-  try {
-    const n = await netClient();
-    return await t(n);
-  } catch (n) {
-    throw new Error(netErr(n));
-  }
-};
+  netSsoHTML = () => "";
+const netCall = async (t) => null;
 async function netAuth(t, n, e) {
-  if (
-    ((n = String(n || "")
-      .trim()
-      .toLowerCase()),
-    !/^[a-z0-9_]{3,16}$/.test(n))
-  )
-    throw new Error("Tên đăng nhập 3–16 ký tự: chữ không dấu, số, _");
-  if (String(e || "").length < 6) throw new Error("Mật khẩu ít nhất 6 ký tự");
-  const s = await Promise.race([
-    netCall((i) =>
-      i.req("POST", t === "up" ? "/api/auth/register" : "/api/auth/login", { username: n, password: e }, { noLost: 1 }),
-    ),
-    new Promise((i, a) => setTimeout(() => a(new Error("Máy chủ không phản hồi — kiểm tra mạng rồi bấm lại")), 2e4)),
-  ]);
-  if (!s || !s.token) throw new Error("Máy chủ trả lời sai");
-  (API.setToken(s.token), (NET.user = s.user), netMailCount());
+  if (typeof showLoginOverlay === "function") showLoginOverlay();
+  throw new Error("Vui lòng đăng nhập qua hệ thống Đăng nhập / Đám mây Firebase!");
 }
 function netGear() {
   const t = {};
@@ -116,26 +69,7 @@ function netGear() {
   return t;
 }
 async function netSyncChar(t) {
-  if (!NET.user) throw new Error("Chưa đăng nhập");
-  if (!S || !S.fac) throw new Error("Chưa có nhân vật");
-  if (!hasRealName()) throw (t || nameModal(), new Error("Cần đặt tên nhân vật trước"));
-  if (netForeign(S)) throw new Error("Nhân vật thuộc tài khoản khác");
-  const n = RW().stat || {},
-    e = {
-      owner: NET.user.id,
-      slot: SLOT,
-      name: S.name,
-      fac: S.fac,
-      sex: S.sex | 0,
-      lvl: S.lvl | 0,
-      reborn: n.reborn | 0,
-      power: Math.round(R.power || 0),
-      tower: n.towerBest | 0,
-      bosses: n.bosses | 0,
-      gear: netGear(),
-      updated: new Date().toISOString(),
-    };
-  (await netCall((s) => s.put("/api/chars/" + SLOT, e)), (NET.lastChar = Date.now()), netCheat().catch(() => {}));
+  if (typeof syncRankFirebase === "function") return syncRankFirebase(true);
 }
 const CHEAT_KEY = "jxCheat";
 function cheatK() {
@@ -214,28 +148,9 @@ function netLogout(btn) {
   );
 }
 async function netUpload() {
-  if (!NET.user) throw new Error("Chưa đăng nhập");
-  if (!S || !S.fac) throw new Error("Chưa có nhân vật");
-  if (netForeign(S)) throw new Error("Nhân vật thuộc tài khoản khác");
-  const t = new Date(),
-    n = S.cloudAt;
-  ((S.cloudAt = t.getTime()), (S.netOwner = NET.user.id));
-  let e;
-  try {
-    e = await netCall((s) =>
-      s.put("/api/saves/" + SLOT, {
-        name: S.name || "",
-        lvl: S.lvl | 0,
-        fac: S.fac,
-        data: cloudPack(pack(S), stashRaw()),
-        updated: t.toISOString(),
-      }),
-    );
-  } catch (s) {
-    throw ((S.cloudAt = n), s);
+  if (typeof authCloudSave === "function" && typeof AUTH !== "undefined" && AUTH && AUTH.user) {
+    return authCloudSave(false);
   }
-  // Mật Cốc pass: the server's record (js/migu.js)
-  (netAdj(S, e), e && "migu" in e && typeof miguFromServer == "function" && miguFromServer(e.migu), save(), (NET.lastUp = Date.now()));
 }
 // The server changed the stored save (market / mail) after this copy was packed: it replayed
 // those changes (gold, knb, removed / added items) on the upload and tells us to do the same.
@@ -831,42 +746,14 @@ async function netRelogin() {
 }
 const NET_PAUSE = [];
 async function netModal(t, n) {
-  if ((t && (NET.tab = t), NET.sb && (await netEnsureUser()), !netOn()))
-    return modal('<h3>🌐 Giang hồ online</h3><p class="desc">Chưa cấu hình máy chủ (js/chatcfg.js).</p>');
-  const e = [
-      ["acc", "Tài khoản"],
-      ["rank", "Xếp hạng"],
-      ["mail", `Thư${NET.mailN ? ` (${NET.mailN})` : ""}`],
-      ["mkt", "Chợ"],
-    ],
-    s = `<h3>🌐 Giang hồ online <small>${NET.user ? esc(netUname()) : "chưa đăng nhập"}</small></h3><div class="dtabs" id="netTabs">${e.map(([o, c]) => `<button data-nt="${o}" class="${o === NET.tab ? "on" : ""}">${c}</button>`).join("")}</div>${n ? `<p class="cn small">${esc(n)}</p>` : ""}`;
-  modal(
-    s + '<div id="netBody"><p class="dim small">Đang tải…</p></div>',
-    () => {
-      document.querySelectorAll("#netTabs [data-nt]").forEach((c) => (c.onclick = () => netModal(c.dataset.nt)));
-      const o = $("#netSlot");
-      o && (o.onclick = () => slotMenu());
-    },
-    !(S && S.fac),
-  );
-  try {
-    await netClient();
-  } catch (o) {
-    $("#netBody").innerHTML = `<p class="reqbad">${esc(o.message)}</p>`;
-    return;
+  if (t === "rank" || (!t && NET.tab === "rank")) {
+    if (typeof rankModal20 === "function") return rankModal20();
   }
-  const i = $("#netBody");
-  if (!i) return;
-  const a = !NET.user && NET.tab !== "rank";
-  if (!a && NET_PAUSE.includes(NET.tab)) {
-    i.innerHTML = `<div class="card"><b>⛔ Tạm đóng</b><p class="desc">${NET.tab === "mkt" ? "Chợ" : "Hộp thư"} đang tạm đóng để bảo trì. Đồ và ngân lượng trong ${NET.tab === "mkt" ? "Chợ" : "thư"} vẫn được giữ nguyên.</p></div>`;
-    return;
+  if (t === "acc" || (!t && NET.tab === "acc")) {
+    if (typeof openCloudAccountModal === "function") return openCloudAccountModal();
+    if (typeof showLoginOverlay === "function") return showLoginOverlay();
   }
-  try {
-    await { acc: netAccBody, rank: netRankBody, mail: netMailBody, mkt: netMktBody }[a ? "acc" : NET.tab](i);
-  } catch (o) {
-    i.innerHTML = `<p class="reqbad">${esc(o.message || o)}</p>`;
-  }
+  if (typeof rankModal20 === "function") return rankModal20();
 }
 const busy = async (t, n, e) => {
   t && (t.disabled = !0);
@@ -878,69 +765,14 @@ const busy = async (t, n, e) => {
   }
 };
 async function netAccBody(t) {
-  if (!NET.user) {
-    const local = netCfg().local !== !1;
-    t.innerHTML =
-      netSsoHTML("naE9") +
-      (local
-        ? `<div class="card"><b>Đăng nhập / Đăng ký</b><p class="dim small">Một tài khoản dùng cho cả 3 nhân vật: lưu đám mây, bảng xếp hạng, gửi thư, Chợ. Không cần email.</p>
-      <div class="row">Tên đăng nhập <input id="naU" maxlength="16" autocomplete="username" placeholder="chữ không dấu, số, _"></div>
-      <div class="row">Mật khẩu <input id="naP" type="password" maxlength="64" autocomplete="current-password" placeholder="ít nhất 6 ký tự"></div>
-      <div class="btnrow"><button class="btn" id="naIn">Đăng nhập</button><button class="btn" id="naUp">Đăng ký mới</button></div>
-      <p class="dim small">Nhớ mật khẩu — hiện chưa có cách lấy lại.</p></div>`
-        : "");
-    const g = $("#naE9");
-    g && (g.onclick = () => netSsoGo());
-    if (!local) return;
-    const a = (o) =>
-      busy(
-        $(o === "up" ? "#naUp" : "#naIn"),
-        () => netAuth(o, $("#naU").value, $("#naP").value),
-        () => {
-          (toast(o === "up" ? "Đã tạo tài khoản" : "Đã đăng nhập"), netModal("acc"));
-        },
-      );
-    (($("#naIn").onclick = () => a("in")), ($("#naUp").onclick = () => a("up")));
-    return;
+  if (typeof openCloudAccountModal === "function") {
+    if (typeof closeModal === "function") closeModal();
+    return openCloudAccountModal();
   }
-  const n = await netCloudList(),
-    e = (a) => (a ? new Date(a).toLocaleString("vi-VN") : "—");
-  ((t.innerHTML = `<div class="card"><b>Tài khoản ${esc(netUname())}</b> <button class="btn sm" id="naOut">Đăng xuất</button>
-      ${
-        S.fac
-          ? `<p class="small">Nhân vật đang chơi: <b>${esc(hasRealName() ? S.name : "(chưa đặt tên)")}</b> · ${esc(facName(S.fac))} cấp ${S.lvl}</p>
-      <div class="btnrow"><button class="btn sm" id="naSync">Cập nhật lên bảng xếp hạng</button>${hasRealName() ? "" : '<button class="btn sm on" id="naName">✏ Đặt tên</button>'}</div>`
-          : ""
-      }</div>
-`),
-    ($("#naOut").onclick = () => netLogout($("#naOut"))));
-  const s = (a, o) => {
-    const c = $(a);
-    c && (c.onclick = o);
-  };
-  (s("#naSync", () =>
-    busy(
-      $("#naSync"),
-      () => netSyncChar(),
-      () => toast("Đã cập nhật"),
-    ),
-  ),
-    s("#naName", () => nameModal(() => netModal("acc"))),
-    s("#naUp", () =>
-      busy(
-        $("#naUp"),
-        () => netUpload(),
-        () => {
-          (toast("Đã lưu lên đám mây"), netModal("acc"));
-        },
-      ),
-    ));
-  const i = $("#naAuto");
-  (i &&
-    (i.onchange = () => {
-      ((S.cloudAuto = i.checked), save());
-    }),
-    t.querySelectorAll("[data-cl]").forEach((a) => (a.onclick = () => busy(a, () => netCloudLoad(+a.dataset.cl)))));
+  if (typeof showLoginOverlay === "function") {
+    if (typeof closeModal === "function") closeModal();
+    return showLoginOverlay();
+  }
 }
 let lastRankSync = 0;
 async function syncRankFirebase(force) {

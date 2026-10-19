@@ -1343,7 +1343,7 @@ function renderMore() {
     const a = $(e);
     a && (a.onclick = s);
   };
-  (t("#bCloud", () => netModal("acc")),
+  (t("#bCloud", () => typeof openCloudAccountModal === "function" ? openCloudAccountModal() : (typeof showLoginOverlay === "function" ? showLoginOverlay() : null)),
     t("#bDl", () => {
       downloadSaveFile() && toast("Đã tải file lưu: " + saveFileName());
     }),
@@ -1619,7 +1619,7 @@ function slotMenu(n) {
     `<h3>${SLOT_N > 1 ? "Chọn nhân vật" : "Nhân vật"}</h3><p class="desc">${SLOT_N > 1 ? "Mỗi slot là một nhân vật riêng, lưu độc lập." : "Tiến trình nhân vật và đội hình 4 đồ đệ."}</p><div class="slotlist">${t}</div>${typeof netOn == "function" && netOn() ? "" : '<div class="btnrow"><button class="btn" id="slotImp">Nạp từ file lưu (.jxsave)</button></div>'}`,
     () => {
       const e = $("#slotCloud");
-      e && (e.onclick = () => netModal("acc"));
+      e && (e.onclick = () => typeof openCloudAccountModal === "function" ? openCloudAccountModal() : (typeof showLoginOverlay === "function" ? showLoginOverlay() : null));
       const s = $("#slotImp");
       (s && (s.onclick = () => pickSaveFile(() => slotMenu())),
         document.querySelectorAll("#mBody [data-play]").forEach(
