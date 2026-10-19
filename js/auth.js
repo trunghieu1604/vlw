@@ -425,8 +425,9 @@ async function handleAuthRegister() {
     let lvl = 1;
     let rb = 0;
 
-    // Chỉ dùng save máy nếu người chơi đang có sẵn nhân vật hợp lệ từ trước (khách cũ trước đây)
-    if (typeof S !== "undefined" && S && S.fac && S.lvl > 1) {
+    // Kiểm tra xem trên máy có save cũ của người chơi không (khách chơi từ trước bản cập nhật)
+    const hasExistingSave = typeof S !== "undefined" && S && (S.fac || S.lvl > 1 || S.xp > 0 || S.gold > 0 || (S.inv && S.inv.length > 0) || S.totalKills > 0);
+    if (hasExistingSave) {
       if (typeof pack === "function") curSave = pack(S);
       charName = S.name || "Tân thủ";
       lvl = S.lvl || 1;
@@ -434,7 +435,7 @@ async function handleAuthRegister() {
     }
 
     let curStash = null;
-    if (curSave && typeof stashRead === "function") {
+    if (hasExistingSave && typeof stashRead === "function") {
       try {
         const curSt = stashRead();
         if (curSt && curSt.st && typeof pack === "function") curStash = pack(curSt.st);
