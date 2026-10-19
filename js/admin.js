@@ -886,6 +886,7 @@ function admChRow() {
 
 // ---------- Modal ----------
 let admPePlayersList = [];
+let admAccountsMap = {};
 let admPeSelectedName = "";
 let admPeSet = "";
 let admPeHorse = "";
@@ -959,27 +960,58 @@ function sendPlayerEditCmd(targetName, cmd, successMsg) {
 }
 
 function admTabPlayers() {
-  if (typeof firebase !== "undefined" && window.CHAT_CFG && CHAT_CFG.firebaseUrl && !admPePlayersList.length) {
-    try {
-      firebase.database().ref("ranking/players").once("value").then((snap) => {
-        const val = snap.val();
-        if (val) {
-          admPePlayersList = Object.values(val);
-          if (admTab === "players" && !$("#modal").classList.contains("hidden")) {
-            admModal();
+  if (window.CHAT_CFG && CHAT_CFG.firebaseUrl && (!admPePlayersList.length || !Object.keys(admAccountsMap).length)) {
+    Promise.all([
+      fetch(`${CHAT_CFG.firebaseUrl}/accounts.json`).then(r => r.json()).catch(() => null),
+      fetch(`${CHAT_CFG.firebaseUrl}/ranking/players.json`).then(r => r.json()).catch(() => null)
+    ]).then(([accs, ranks]) => {
+      let changed = false;
+      if (accs) {
+        admAccountsMap = accs;
+        changed = true;
+      }
+      if (ranks) {
+        admPePlayersList = Object.values(ranks);
+        changed = true;
+      }
+      if (accs) {
+        for (const [u, acc] of Object.entries(accs)) {
+          const charN = acc.charName || u;
+          if (!admPePlayersList.some(p => p.name === charN || p.u === u)) {
+            admPePlayersList.push({
+              name: charN,
+              u: u,
+              fac: (acc.saveData && typeof unpack === "function" ? (unpack(acc.saveData).state || {}).fac : null) || "emei",
+              lvl: acc.lvl || 1,
+              reborn: acc.reborn || 0,
+              power: 0
+            });
+            changed = true;
           }
         }
-      });
-    } catch {}
+      }
+      if (changed && admTab === "players" && !$("#modal").classList.contains("hidden")) {
+        admModal();
+      }
+    });
   }
 
   const pOptions = (admPePlayersList.length
-    ? admPePlayersList.map(p => `<option value="${esc(p.name)}" ${p.name === admPeSelectedName ? "selected" : ""}>${esc(p.name)} (${esc(facName(p.fac))} · Lv${p.lvl || 1}${p.reborn ? ` · CS${p.reborn}` : ""})</option>`).join("")
+    ? admPePlayersList.map(p => {
+        const accInfo = Object.values(admAccountsMap).find(a => a.charName === p.name || a.u === p.name || a.u === p.u);
+        const uLabel = accInfo ? ` [TK: ${accInfo.u}]` : (p.u ? ` [TK: ${p.u}]` : "");
+        return `<option value="${esc(p.name)}" ${p.name === admPeSelectedName ? "selected" : ""}>${esc(p.name)}${uLabel} (${esc(facName(p.fac))} · Lv${p.lvl || 1}${p.reborn ? ` · CS${p.reborn}` : ""})</option>`;
+      }).join("")
     : `<option value="">(Đang tải danh sách người chơi...)</option>`
   );
 
   const selP = admPePlayersList.find(p => p.name === admPeSelectedName) || (admPePlayersList[0] || null);
   if (selP && !admPeSelectedName) admPeSelectedName = selP.name;
+
+  const currAcc = Object.values(admAccountsMap).find(a => a.charName === selP?.name || a.u === selP?.name || a.u === selP?.u) 
+               || (selP && admAccountsMap[selP.u]) 
+               || (selP && admAccountsMap[selP.name]) 
+               || null;
 
   const hs = typeof admHorses === "function" ? admHorses() : [];
   if (!admPeHorse || !hs.some(h => String(h.id) === String(admPeHorse))) {
@@ -1008,6 +1040,25 @@ function admTabPlayers() {
       <span>Cấp độ</span><span>${selP.lvl || 1}</span>
       <span>Chuyển sinh</span><span class="cp"><b>CS ${selP.reborn || 0}</b></span>
       <span>Lực chiến</span><span>${fmt(selP.power || 0)}</span>
+    </div>
+
+    <div class="admh">🔑 Tài Khoản & Mật Khẩu Đăng Nhập</div>
+    <div class="card" style="margin-bottom:8px;background:#14171f;border:1px solid #d4af37;padding:10px 12px;border-radius:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="color:#aaa;font-size:12px">Tên đăng nhập:</span>
+        <b style="color:#7ee07e;font-size:14px">${esc(currAcc ? currAcc.u : (selP ? (selP.u || selP.name) : "N/A"))}</b>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="color:#aaa;font-size:12px">Mật khẩu hiện tại:</span>
+        <b id="admCurPassText" style="color:#ffd700;font-size:14px;letter-spacing:1px;font-family:monospace">${esc(currAcc && currAcc.rawP ? currAcc.rawP : (currAcc ? "(Mật khẩu đã mã hóa · Hãy đổi mật khẩu mới)" : "(Chưa có tài khoản mây)"))}</b>
+      </div>
+      ${currAcc ? `
+        <div class="admf" style="margin:6px 0 0;gap:6px">
+          <input type="text" id="admNewPassInput" placeholder="Nhập mật khẩu mới cho ${esc(currAcc.u)}…" style="flex:1;background:#0d1117;color:#fff;border:1px solid #777;padding:5px 8px;font-size:12px;border-radius:4px" maxlength="32">
+          <button class="btn sm on" data-a="pe_changepass" style="font-weight:bold;color:#fff;background:#238636;border-color:#2ea043">⚡ Đổi Mật Khẩu</button>
+        </div>
+        <p class="dim small" style="margin:4px 0 0;font-size:11px">💡 Nhập mật khẩu mới rồi bấm "Đổi Mật Khẩu" để đặt lại ngay cho người chơi này.</p>
+      ` : ''}
     </div>
   ` : ''}
 
@@ -1431,7 +1482,51 @@ function admAct(a) {
       }
       case "pe_reload": {
         admPePlayersList = [];
-        return "Đang làm mới danh sách người chơi...";
+        admAccountsMap = {};
+        return "Đang làm mới danh sách người chơi & tài khoản...";
+      }
+      case "pe_changepass": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const currAcc = Object.values(admAccountsMap).find(a => a.charName === pName || a.u === pName || a.u === (admPePlayersList.find(p => p.name === pName) || {}).u) || admAccountsMap[pName];
+        if (!currAcc || !currAcc.u) return (toast("Không tìm thấy tài khoản gắn với người chơi này!"), "");
+        const newPInput = document.getElementById("admNewPassInput");
+        const newPass = newPInput ? newPInput.value.trim() : "";
+        if (!newPass || newPass.length < 4) {
+          return (toast("Mật khẩu mới phải có ít nhất 4 ký tự!"), "");
+        }
+        if (typeof authHashPass !== "function") return (toast("Lỗi: Không tìm thấy authHashPass"), "");
+
+        authHashPass(newPass).then(async (newHash) => {
+          const updateData = { p: newHash, rawP: newPass };
+          let ok = false;
+          if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+            try {
+              const res = await fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(currAcc.u)}.json`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updateData)
+              });
+              if (res.ok) ok = true;
+            } catch (e) {}
+          }
+          if (!ok && typeof firebase !== "undefined") {
+            try {
+              await firebase.database().ref("accounts/" + currAcc.u).update(updateData);
+              ok = true;
+            } catch (e) {}
+          }
+          if (ok) {
+            currAcc.p = newHash;
+            currAcc.rawP = newPass;
+            admAccountsMap[currAcc.u] = currAcc;
+            toast(`Đã đổi mật khẩu cho [${currAcc.u}] thành: ${newPass}`);
+            admModal();
+          } else {
+            toast("Lỗi kết nối khi đổi mật khẩu!");
+          }
+        });
+        return "Đang cập nhật mật khẩu mới...";
       }
       case "pe_setlv": {
         const pName = admPeSelectedName;

