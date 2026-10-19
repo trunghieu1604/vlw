@@ -135,6 +135,51 @@ function authVerifySession(user, hash) {
 }
 
 /**
+ * Cấu hình URL trang web Võ Lâm Battle (Có thể đổi khi có link chính thức)
+ */
+let VL_BATTLE_URL = "http://localhost:9999";
+
+function showVlBattlePopup() {
+  let pop = document.getElementById("vlBattlePopup");
+  if (!pop) {
+    pop = document.createElement("div");
+    pop.id = "vlBattlePopup";
+    pop.className = "vl-battle-backdrop";
+    pop.innerHTML = `
+      <div class="vl-battle-popup" onclick="event.stopPropagation()">
+        <button class="vl-battle-close" id="vlBattleCloseBtn" title="Đóng" onclick="closeVlBattlePopup()">✕</button>
+        <div class="vl-battle-badge">🔥 GAME MỚI RA MẮT</div>
+        <h2 class="vl-battle-title">Trải Nghiệm Võ Lâm Battle<br>— Sinh Tồn Vòng Bo —</h2>
+        <div class="vl-battle-desc">
+          <ul>
+            <li>🏹 <b>Sinh Tồn Kiếm Hiệp:</b> 100 hiệp khách cùng tranh đoạt bí kíp, binh khí và trang bị.</li>
+            <li>🌀 <b>Vòng Bo Khốc Liệt:</b> Thu hẹp theo từng phút, săn boss thủ lĩnh và nhặt đồ hoàng kim.</li>
+            <li>⚔ <b>Đấu Trực Tiếp Trên Web:</b> Tối ưu mượt mà, kỹ năng sống động, không cần cài đặt.</li>
+          </ul>
+        </div>
+        <button class="vl-battle-btn" id="vlBattleGoBtn" onclick="openVlBattleWeb()">
+          <span>⚔ TRẢI NGHIỆM NGAY</span>
+        </button>
+      </div>
+    `;
+    pop.onclick = () => closeVlBattlePopup();
+    document.body.appendChild(pop);
+  }
+  pop.classList.remove("hidden");
+}
+
+function closeVlBattlePopup() {
+  const pop = document.getElementById("vlBattlePopup");
+  if (pop) pop.classList.add("hidden");
+}
+
+function openVlBattleWeb() {
+  if (VL_BATTLE_URL) {
+    window.open(VL_BATTLE_URL, "_blank");
+  }
+}
+
+/**
  * Hiển thị Màn hình Đăng nhập / Chào mừng (Overlay)
  */
 function showLoginOverlay() {
@@ -148,6 +193,7 @@ function showLoginOverlay() {
 
   el.classList.remove("hidden");
   renderLoginOverlayContent();
+  showVlBattlePopup();
 }
 
 /**
@@ -155,6 +201,7 @@ function showLoginOverlay() {
  */
 function hideLoginOverlay() {
   if (!AUTH.user) return;
+  closeVlBattlePopup();
   const el = document.getElementById("loginOverlay");
   if (el) el.classList.add("hidden");
   updateInGameAuthUI();
@@ -182,6 +229,11 @@ function renderLoginOverlayContent() {
           <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
         </div>
 
+        <div style="background:linear-gradient(90deg, rgba(255,153,0,0.15), rgba(212,175,55,0.25));border:1px solid rgba(255,215,0,0.45);border-radius:8px;padding:8px 12px;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="showVlBattlePopup()">
+          <span style="font-size:12px;font-weight:bold;color:#ffd700">🔥 Trải Nghiệm Võ Lâm Battle — Sinh Tồn Vòng Bo</span>
+          <span style="font-size:11px;color:#fff;background:rgba(212,175,55,0.45);padding:2px 8px;border-radius:4px">Xem ngay ❯</span>
+        </div>
+
         <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:14px;margin-bottom:18px;">
           <div style="font-size:15px;color:#ffd700;font-weight:bold;margin-bottom:6px">
             ⚔ Chào mừng Đại Hiệp <span style="color:#fff">${AUTH.user}</span>!
@@ -206,6 +258,11 @@ function renderLoginOverlayContent() {
       <div class="login-header">
         <h1 class="login-title">VÕ LÂM WEB</h1>
         <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
+      </div>
+
+      <div style="background:linear-gradient(90deg, rgba(255,153,0,0.15), rgba(212,175,55,0.25));border:1px solid rgba(255,215,0,0.45);border-radius:8px;padding:8px 12px;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="showVlBattlePopup()">
+        <span style="font-size:12px;font-weight:bold;color:#ffd700">🔥 Trải Nghiệm Võ Lâm Battle — Sinh Tồn Vòng Bo</span>
+        <span style="font-size:11px;color:#fff;background:rgba(212,175,55,0.45);padding:2px 8px;border-radius:4px">Xem ngay ❯</span>
       </div>
 
       <div class="login-tabs">
