@@ -152,7 +152,7 @@ function renderLoginOverlayContent() {
       <div class="login-card">
         <div class="login-header">
           <h1 class="login-title">VÕ LÂM WEB</h1>
-          <div class="login-sub">Kiếm Hiệp Tình Duyên · Nhập Vai Đỉnh Cao</div>
+          <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
         </div>
 
         <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:14px;margin-bottom:18px;">
@@ -178,7 +178,7 @@ function renderLoginOverlayContent() {
     <div class="login-card">
       <div class="login-header">
         <h1 class="login-title">VÕ LÂM WEB</h1>
-        <div class="login-sub">Kiếm Hiệp Tình Duyên · Nhập Vai Đỉnh Cao</div>
+        <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
       </div>
 
       <div class="login-tabs">
