@@ -78,18 +78,34 @@ async function initAuth() {
 }
 
 /**
+ * Truy vấn dữ liệu tài khoản nhanh qua REST API (hoặc fallback sang Firebase RTDB)
+ */
+async function authFetchAccount(u) {
+  if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+    try {
+      const res = await fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}.json`, {
+        cache: "no-store"
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn("authFetchAccount REST err, fallback db:", e);
+    }
+  }
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+  if (db) {
+    const snap = await db.ref("accounts/" + u).once("value");
+    return snap.val();
+  }
+  return null;
+}
+
+/**
  * Xác thực phiên đăng nhập đã lưu
  */
 function authVerifySession(user, hash) {
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-  if (!db) {
-    // Không có mạng/DB: vẫn coi như đăng nhập ở máy này
-    updateInGameAuthUI();
-    return;
-  }
-
-  db.ref("accounts/" + user).once("value", (snap) => {
-    const data = snap.val();
+  authFetchAccount(user).then((data) => {
     if (!data || data.p !== hash) {
       // Mật khẩu đã đổi hoặc tài khoản không hợp lệ
       AUTH.user = null;
@@ -99,8 +115,17 @@ function authVerifySession(user, hash) {
       showLoginOverlay();
     } else {
       AUTH.cloudMeta = data;
-      // Cập nhật last login
-      db.ref("accounts/" + user).update({ lastLogin: Date.now() });
+      // Cập nhật ngầm lastLogin
+      if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+        fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(user)}/lastLogin.json`, {
+          method: "PUT",
+          body: JSON.stringify(Date.now())
+        }).catch(() => {});
+      }
+      // Tự nạp bản lưu mới hơn từ mây nếu có (ví dụ chơi từ máy khác)
+      if (data.saveData && data.saveAt && (!S || !S.last || data.saveAt > S.last + 60000)) {
+        authApplyCloudSave(data.saveData);
+      }
       updateInGameAuthUI();
     }
   }).catch(() => {
@@ -269,21 +294,16 @@ async function handleAuthLogin() {
     return;
   }
 
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-  if (!db) {
-    alert("Không thể kết nối đến máy chủ lưu trữ. Vui lòng kiểm tra kết nối mạng!");
-    return;
-  }
-
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Đang đăng nhập...";
   }
 
   try {
-    const hash = await authHashPass(p);
-    const snap = await db.ref("accounts/" + u).once("value");
-    const val = snap.val();
+    const [hash, val] = await Promise.all([
+      authHashPass(p),
+      authFetchAccount(u)
+    ]);
 
     if (!val) {
       alert("Tên tài khoản không tồn tại! Hãy bấm tab 'Đăng Ký Mới' để tạo tài khoản.");
@@ -314,10 +334,20 @@ async function handleAuthLogin() {
       localStorage.setItem("vl_auth_pass", hash);
     }
 
-    db.ref("accounts/" + u).update({ lastLogin: Date.now() });
+    // Cập nhật lastLogin ngầm
+    if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+      fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}/lastLogin.json`, {
+        method: "PUT",
+        body: JSON.stringify(Date.now())
+      }).catch(() => {});
+    }
 
-    // Xử lý nạp bản lưu
-    await resolveSaveOnLogin(val);
+    // Nạp bản lưu từ đám mây ngay lập tức (không modal, không treo)
+    if (val.saveData) {
+      authApplyCloudSave(val.saveData);
+    } else if (typeof S !== "undefined" && S && S.fac && S.lvl > 1) {
+      authCloudSave(false);
+    }
 
     hideLoginOverlay();
     if (typeof toast === "function") toast("⚔ Đã đăng nhập: " + u);
@@ -359,20 +389,14 @@ async function handleAuthRegister() {
     return;
   }
 
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-  if (!db) {
-    alert("Không thể kết nối đến máy chủ Firebase. Vui lòng kiểm tra lại mạng!");
-    return;
-  }
-
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Đang tạo tài khoản...";
   }
 
   try {
-    const snap = await db.ref("accounts/" + u).once("value");
-    if (snap.exists()) {
+    const existing = await authFetchAccount(u);
+    if (existing) {
       alert("Tên tài khoản '" + u + "' đã có người đăng ký! Vui lòng chọn tên khác.");
       if (btn) {
         btn.disabled = false;
@@ -407,7 +431,22 @@ async function handleAuthRegister() {
       reborn: rb
     };
 
-    await db.ref("accounts/" + u).set(newAccountData);
+    let created = false;
+    if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+      try {
+        const r = await fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newAccountData)
+        });
+        if (r.ok) created = true;
+      } catch (e) {}
+    }
+
+    if (!created) {
+      const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+      if (db) await db.ref("accounts/" + u).set(newAccountData);
+    }
 
     AUTH.user = u;
     AUTH.passHash = hash;
@@ -432,89 +471,6 @@ async function handleAuthRegister() {
 }
 
 /**
- * Phân giải xung đột Save khi đăng nhập
- */
-async function resolveSaveOnLogin(cloudVal) {
-  const hasCloudSave = !!(cloudVal && cloudVal.saveData);
-  const hasLocalChar = typeof S !== "undefined" && S && S.fac && S.lvl > 1;
-
-  if (hasCloudSave && !hasLocalChar) {
-    // Trên máy chưa có nhân vật hoặc mới cấp 1 -> Tự nạp bản lưu từ Mây
-    authApplyCloudSave(cloudVal.saveData);
-    return;
-  }
-
-  if (!hasCloudSave && hasLocalChar) {
-    // Trên Mây chưa có save nhưng máy có nhân vật -> Tự động đẩy lên mây
-    authCloudSave(true);
-    return;
-  }
-
-  if (hasCloudSave && hasLocalChar) {
-    // Cả 2 nơi đều có save -> Hỏi người chơi rõ ràng
-    const cName = cloudVal.charName || "Nhân vật mây";
-    const cLvl = cloudVal.lvl || 1;
-    const cRb = cloudVal.reborn || 0;
-    const cTime = authFormatTime(cloudVal.saveAt);
-
-    const lName = S.name || "Nhân vật máy";
-    const lLvl = S.lvl || 1;
-    const lRb = typeof rebornN === "function" ? rebornN() : 0;
-    const lTime = authFormatTime(S.last || Date.now());
-
-    // Nếu dữ liệu giống hệt nhau thì không cần hỏi
-    if (cLvl === lLvl && cRb === lRb && cName === lName) {
-      return;
-    }
-
-    return new Promise((resolve) => {
-      if (typeof modal === "function") {
-        modal(`
-          <h3>☁ Đồng Bộ Dữ Liệu Đám Mây</h3>
-          <p style="font-size:13px;color:#c9d5e3">Phát hiện tài khoản <b>${cloudVal.u}</b> có bản lưu khác với nhân vật trên máy này:</p>
-          
-          <div class="card" style="margin-bottom:8px;border:1px solid #5aa0ff;background:rgba(90,160,255,0.08)">
-            <b style="color:#6aa8ff">☁ Bản lưu trên Đám Mây:</b><br>
-            Nhân vật: <b>${cName}</b> · Cấp: <b>${cLvl}</b> · CS: <b>${cRb}</b><br>
-            <small class="dim">Lưu lúc: ${cTime}</small>
-          </div>
-
-          <div class="card" style="margin-bottom:12px;border:1px solid #7ee07e;background:rgba(126,224,126,0.08)">
-            <b style="color:#7ee07e">💻 Bản lưu trên Máy này:</b><br>
-            Nhân vật: <b>${lName}</b> · Cấp: <b>${lLvl}</b> · CS: <b>${lRb}</b><br>
-            <small class="dim">Lưu lúc: ${lTime}</small>
-          </div>
-
-          <div class="btnrow" style="display:flex;gap:10px">
-            <button class="btn on" id="btnSyncPickCloud" style="flex:1">☁ Lấy bản trên Mây</button>
-            <button class="btn" id="btnSyncPickLocal" style="flex:1">💻 Lấy bản Máy ghi đè Mây</button>
-          </div>
-        `, () => {
-          const btnC = document.getElementById("btnSyncPickCloud");
-          const btnL = document.getElementById("btnSyncPickLocal");
-          if (btnC) {
-            btnC.onclick = () => {
-              authApplyCloudSave(cloudVal.saveData);
-              if (typeof closeModal === "function") closeModal(true);
-              resolve();
-            };
-          }
-          if (btnL) {
-            btnL.onclick = () => {
-              authCloudSave(true);
-              if (typeof closeModal === "function") closeModal(true);
-              resolve();
-            };
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
-  }
-}
-
-/**
  * Nạp bản save từ mây vào bộ nhớ game
  */
 function authApplyCloudSave(saveStr) {
@@ -530,6 +486,12 @@ function authApplyCloudSave(saveStr) {
     if (typeof save === "function") save();
     if (typeof recalc === "function") recalc();
     if (typeof refresh === "function") refresh();
+    if (typeof gotoZone === "function" && typeof zoneIdx === "function" && typeof STAGES !== "undefined") {
+      R.enemies = [];
+      R.corpses = [];
+      R.zoneShown = null;
+      gotoZone(zoneIdx(Math.min(S.stage || 1, STAGES)));
+    }
     if (typeof toast === "function") toast("☁ Đã tải bản lưu từ Đám Mây thành công!");
   } catch (e) {
     console.error("authApplyCloudSave err:", e);
@@ -542,8 +504,7 @@ function authApplyCloudSave(saveStr) {
  */
 async function authCloudSave(notify = false) {
   if (!AUTH.user) return;
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-  if (!db || typeof pack !== "function" || typeof S === "undefined" || !S || !S.fac) return;
+  if (typeof pack !== "function" || typeof S === "undefined" || !S || !S.fac) return;
 
   try {
     const sData = pack(S);
@@ -557,7 +518,24 @@ async function authCloudSave(notify = false) {
       lastLogin: now
     };
 
-    await db.ref("accounts/" + AUTH.user).update(meta);
+    let saved = false;
+    if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+      try {
+        const url = `${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(AUTH.user)}.json`;
+        const r = await fetch(url, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(meta)
+        });
+        if (r.ok) saved = true;
+      } catch (err) {}
+    }
+
+    if (!saved) {
+      const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+      if (db) await db.ref("accounts/" + AUTH.user).update(meta);
+    }
+
     AUTH.cloudMeta = Object.assign(AUTH.cloudMeta || {}, meta);
     AUTH.lastSyncAt = now;
 
@@ -574,13 +552,34 @@ async function authCloudSave(notify = false) {
 /**
  * Đăng xuất tài khoản
  */
-function authLogout() {
+async function authLogout() {
+  if (AUTH.user) {
+    try {
+      await authCloudSave(false);
+    } catch (e) {}
+  }
+
   AUTH.user = null;
   AUTH.passHash = null;
   AUTH.cloudMeta = null;
   localStorage.removeItem("vl_auth_user");
   localStorage.removeItem("vl_auth_pass");
+
+  if (typeof newSave === "function") {
+    S = newSave();
+    if (typeof save === "function") save();
+    if (typeof recalc === "function") recalc();
+    if (typeof refresh === "function") refresh();
+    if (typeof gotoZone === "function" && typeof zoneIdx === "function" && typeof STAGES !== "undefined") {
+      R.enemies = [];
+      R.corpses = [];
+      R.zoneShown = null;
+      gotoZone(zoneIdx(Math.min(S.stage || 1, STAGES)));
+    }
+  }
+
   updateInGameAuthUI();
+  showLoginOverlay();
   if (typeof toast === "function") toast("Đã đăng xuất tài khoản.");
 }
 
