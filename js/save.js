@@ -95,6 +95,12 @@ function save() {
       (localStorage.setItem(n, pack(S)), localStorage.setItem(SLOT_PTR, String(SLOT)));
     } catch {}
     typeof syncRankFirebase == "function" && syncRankFirebase();
+    if (typeof authCloudSave == "function" && typeof AUTH !== "undefined" && AUTH.user) {
+      if (!AUTH._lastCloudSave || Date.now() - AUTH._lastCloudSave > 45000) {
+        AUTH._lastCloudSave = Date.now();
+        authCloudSave(false);
+      }
+    }
   }
 }
 function vioDedupe(n) {

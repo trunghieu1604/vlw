@@ -1267,7 +1267,23 @@ function renderMore() {
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
   $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
-    <h3>Lưu game</h3><div class="card">
+    <h3>Tài khoản & Đám mây</h3>
+    <div class="card" id="cloudAccSection">
+      ${(typeof AUTH !== "undefined" && AUTH.user) ? `
+        <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối mây ☁)</div>
+        <div class="btnrow">
+          <button class="btn on sm" onclick="authCloudSave(true)">☁ Lưu Lên Mây</button>
+          <button class="btn sm" onclick="openCloudAccountModal()">Quản lý đám mây</button>
+          <button class="btn red sm" onclick="authLogout()">Đăng xuất</button>
+        </div>
+      ` : `
+        <div style="font-size:13px;margin-bottom:6px;color:#aaa">Chưa đăng nhập (Đang chơi chế độ Khách)</div>
+        <div class="btnrow">
+          <button class="btn on sm" onclick="showLoginOverlay()">🔑 Đăng Nhập / Đăng Ký Mây</button>
+        </div>
+      `}
+    </div>
+    <h3>Lưu file trên máy</h3><div class="card">
     <div class="btnrow"><button class="btn" id="bDl">Tải Save</button><button class="btn" id="bFile">Nạp Save</button></div>
     <p class="dim small" style="margin-top:8px">File save có mã hóa, Không được chỉnh sửa.</p></div>
     <h3>Âm thanh</h3><div class="card lootf">
