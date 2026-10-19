@@ -53,7 +53,7 @@ function netClient() {
         }))
       : Promise.reject(new Error("Chưa cấu hình máy chủ (js/chatcfg.js)"));
 }
-// Back from esport9.com (server/sso.py): ?sso=1 -> the server holds a one-time hand-off for this browser
+// Back from SSO: ?sso=1 -> the server holds a one-time hand-off for this browser
 // (HttpOnly cookie) that becomes our session token; ?sso_err=<code> -> show why on the login gate.
 async function netSsoBack() {
   const q = new URLSearchParams(location.search),
@@ -62,27 +62,27 @@ async function netSsoBack() {
   if (!ok && !err) return;
   if (ok)
     try {
-      const j = await API.req("POST", "/api/auth/esport9/claim", {}, { noLost: 1, cookies: 1 });
+      const j = await API.req("POST", "/api/auth/sso/claim", {}, { noLost: 1, cookies: 1 });
       j && j.token && API.setToken(j.token);
     } catch {}
-  err && (NET.ssoErr = NET_SSO_ERR[err] || `Đăng nhập eSport9 không thành công (${String(err).slice(0, 20)})`);
+  err && (NET.ssoErr = NET_SSO_ERR[err] || `Đăng nhập không thành công (${String(err).slice(0, 20)})`);
   q.delete("sso");
   q.delete("sso_err");
   try {
     history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
   } catch {}
 }
-// Leave for esport9.com (Google / email there); it sends the player back with a ticket.
+// Leave for SSO: it sends the player back with a ticket.
 function netSsoGo() {
   try {
     typeof save == "function" && S && S.fac && save();
   } catch {}
-  location.href = API.base + "/api/auth/esport9/start";
+  location.href = API.base + "/api/auth/sso/start";
 }
 const netCfg = () => window.CHAT_CFG || {},
   netSsoHTML = (id) =>
     netCfg().sso
-      ? `<div class="card"><div class="btnrow"><button class="btn" id="${id}">🎮 Đăng nhập bằng tài khoản eSport9</button></div><p class="dim small">Google hoặc email — dùng chung tài khoản với <b>esport9.com</b>. Chưa có tài khoản: tạo ngay ở trang đăng nhập eSport9 (Google hoặc mã gửi qua email).</p></div>`
+      ? `<div class="card"><div class="btnrow"><button class="btn" id="${id}">🎮 Đăng nhập</button></div></div>`
       : "";
 const netCall = async (t) => {
   try {
@@ -905,11 +905,7 @@ async function netAccBody(t) {
   }
   const n = await netCloudList(),
     e = (a) => (a ? new Date(a).toLocaleString("vi-VN") : "—");
-  ((t.innerHTML = `<div class="card"><b>Tài khoản ${esc(netUname())}</b>${NET.user.esport9 ? ` <small class="dim">eSport9 · ${esc(NET.user.name || "")}</small>` : ""} <button class="btn sm" id="naOut">Đăng xuất</button>${
-        NET.user.esport9 && /^https:\/\//.test(netCfg().e9home || "")
-          ? `<p class="dim small">Đăng xuất chỉ thoát Võ Lâm. Máy dùng chung: đăng xuất cả <a href="${esc(netCfg().e9home)}" target="_blank" rel="noopener">tài khoản eSport9 ↗</a>, nếu không bấm "Đăng nhập bằng eSport9" sẽ vào lại ngay.</p>`
-          : ""
-      }
+  ((t.innerHTML = `<div class="card"><b>Tài khoản ${esc(netUname())}</b> <button class="btn sm" id="naOut">Đăng xuất</button>
       ${
         S.fac
           ? `<p class="small">Nhân vật đang chơi: <b>${esc(hasRealName() ? S.name : "(chưa đặt tên)")}</b> · ${esc(facName(S.fac))} cấp ${S.lvl}</p>

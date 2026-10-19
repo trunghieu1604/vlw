@@ -905,7 +905,7 @@ body.nochat #modeSw {
   font: bold 18px/34px serif;
   background: #2a1210;
 }
-/* ---- Man dang nhap eSport9 (prod): che het game toi khi dang nhap; modal khoa thi khong hien nut X ---- */
+/* ---- Man dang nhap: che het game toi khi dang nhap; modal khoa thi khong hien nut X ---- */
 #modal[data-locked="1"] .mx {
   display: none;
 }

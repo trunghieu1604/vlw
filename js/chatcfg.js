@@ -5,8 +5,8 @@ window.CHAT_CFG = {
   off: false,
   prod: true,
   local: false,
-  sso: "esport9",
-  e9home: "https://esport9.com/",
+  sso: "",
+  e9home: "",
   build: "20261014163000",
   mapBase: "https://cdn.kuku.vn/volam/maps/v1",
   label: ""

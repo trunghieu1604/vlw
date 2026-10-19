@@ -284,7 +284,7 @@ function jmCast(t, a, n, s, l, u, i) {
     }
   }
 }
-// skillFx is handled by the modern HoaiNiem FX engine in render.js
+// skillFx is handled by the FX engine in render.js
 
 // Buff / curse cast (js/skillsys.js) for skills whose missile comes from the JX1 tables: the cast
 // picture (PreCastSpr) on the caster and the missile's collision picture on the target.

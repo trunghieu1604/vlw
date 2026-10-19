@@ -167,7 +167,7 @@ function drawHeroStates(s, t, f) {
   const c = R.clock || 0;
   if (t === "under" && S.lookFx !== !1) {
     if (typeof drawActiveHalo === "function" && drawActiveHalo(s, H.x, H.y)) {
-      // Đã vẽ vòng sáng JX1 webp đích thực từ s1volam.esport9.com
+      // Đã vẽ vòng sáng JX1 webp
     } else {
       const tw = typeof titleWorn == "function" && titleWorn();
       if (tw && tw[0] === "vlmc") {

@@ -209,7 +209,7 @@ if (typeof save == "function") {
   };
 }
 
-// Test environments (VOLAM_ENV_LABEL, e.g. uatvolam.esport9.com = "UAT"): a fixed badge + tab title prefix, so a
+// Test environments (VOLAM_ENV_LABEL): a fixed badge + tab title prefix, so a
 // test page is never mistaken for production.
 (function () {
   const l = self.CHAT_CFG && CHAT_CFG.label;
