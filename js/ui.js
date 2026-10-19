@@ -1283,9 +1283,6 @@ function renderMore() {
         </div>
       `}
     </div>
-    <h3>Lưu file trên máy</h3><div class="card">
-    <div class="btnrow"><button class="btn" id="bDl">Tải Save</button><button class="btn" id="bFile">Nạp Save</button></div>
-    <p class="dim small" style="margin-top:8px">File save có mã hóa, Không được chỉnh sửa.</p></div>
     <h3>Âm thanh</h3><div class="card lootf">
       <label><input type="checkbox" id="sOn" ${sndCfg().on ? "checked" : ""}> Tiếng động (đòn đánh, chiêu, quái, rơi đồ)</label>
       <div class="row">Âm lượng <input type="range" id="sVol" min="0" max="1" step="0.05" value="${sndCfg().vol}"></div>
