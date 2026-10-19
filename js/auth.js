@@ -154,6 +154,7 @@ function showLoginOverlay() {
  * Ẩn Màn hình Đăng nhập
  */
 function hideLoginOverlay() {
+  if (!AUTH.user) return;
   const el = document.getElementById("loginOverlay");
   if (el) el.classList.add("hidden");
   updateInGameAuthUI();
@@ -245,12 +246,10 @@ function renderLoginOverlayContent() {
           <input type="password" id="authRegP2" class="login-input" placeholder="Nhập lại mật khẩu trên" minlength="4" maxlength="32" autocomplete="new-password" required>
         </div>
         <div class="login-tip">
-          💡 <i>Lưu ý: Nếu trên máy hiện đang có nhân vật đang chơi, tiến độ sẽ tự động liên kết và lưu vào tài khoản mới tạo.</i>
+          💡 <i>Đăng ký tài khoản miễn phí để bảo vệ nhân vật và đồng bộ kho đồ trên mọi thiết bị.</i>
         </div>
-        <button type="submit" id="btnSubmitReg" class="login-btn-primary" style="margin-top:12px">⚡ ĐĂNG KÝ & LIÊN KẾT MÂY</button>
+        <button type="submit" id="btnSubmitReg" class="login-btn-primary" style="margin-top:12px">⚡ TẠO TÀI KHOẢN & VÀO GAME</button>
       </form>
-
-      <button class="login-guest-btn" onclick="hideLoginOverlay()">🚪 Chơi Ngay (Chế độ Khách) ❯</button>
     </div>
   `;
 }
@@ -347,11 +346,21 @@ async function handleAuthLogin() {
     // Nạp bản lưu từ đám mây ngay lập tức (không modal, không treo)
     if (val.saveData) {
       authApplyCloudSave(val.saveData);
-    } else if (typeof S !== "undefined" && S && S.fac && S.lvl > 1) {
-      authCloudSave(false);
+    } else {
+      if (typeof newSave === "function") {
+        S = newSave();
+        if (typeof save === "function") save();
+      }
+      if (typeof pickFaction === "function") {
+        pickFaction();
+      }
     }
     if (val.stashData) {
       authApplyCloudStash(val.stashData);
+    } else {
+      if (typeof stashWrite === "function" && typeof stashNew === "function") {
+        stashWrite(stashNew());
+      }
     }
 
     hideLoginOverlay();
@@ -405,7 +414,7 @@ async function handleAuthRegister() {
       alert("Tên tài khoản '" + u + "' đã có người đăng ký! Vui lòng chọn tên khác.");
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "⚡ ĐĂNG KÝ & LIÊN KẾT MÂY";
+        btn.textContent = "⚡ TẠO TÀI KHOẢN & VÀO GAME";
       }
       return;
     }
@@ -416,7 +425,8 @@ async function handleAuthRegister() {
     let lvl = 1;
     let rb = 0;
 
-    if (typeof S !== "undefined" && S && S.fac) {
+    // Chỉ dùng save máy nếu người chơi đang có sẵn nhân vật hợp lệ từ trước (khách cũ trước đây)
+    if (typeof S !== "undefined" && S && S.fac && S.lvl > 1) {
       if (typeof pack === "function") curSave = pack(S);
       charName = S.name || "Tân thủ";
       lvl = S.lvl || 1;
@@ -424,7 +434,7 @@ async function handleAuthRegister() {
     }
 
     let curStash = null;
-    if (typeof stashRead === "function") {
+    if (curSave && typeof stashRead === "function") {
       try {
         const curSt = stashRead();
         if (curSt && curSt.st && typeof pack === "function") curStash = pack(curSt.st);
@@ -470,9 +480,23 @@ async function handleAuthRegister() {
     localStorage.setItem("vl_auth_user", u);
     localStorage.setItem("vl_auth_pass", hash);
 
+    // Nếu là nhân vật mới toanh (chưa có môn phái): khởi tạo nhân vật mới và đưa vào chọn phái
+    if (!curSave) {
+      if (typeof newSave === "function") {
+        S = newSave();
+        if (typeof save === "function") save();
+      }
+      if (typeof stashWrite === "function" && typeof stashNew === "function") {
+        stashWrite(stashNew());
+      }
+      if (typeof pickFaction === "function") {
+        pickFaction();
+      }
+    }
+
     hideLoginOverlay();
     if (typeof toast === "function") {
-      toast("⚡ Đăng ký thành công tài khoản " + u + "! Đã bảo vệ save & kho trên mây.");
+      toast("⚡ Đăng ký thành công tài khoản " + u + "! Chào mừng đến với Võ Lâm Web.");
     }
   } catch (err) {
     console.error("Register err:", err);
@@ -480,7 +504,7 @@ async function handleAuthRegister() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "⚡ ĐĂNG KÝ & LIÊN KẾT MÂY";
+      btn.textContent = "⚡ TẠO TÀI KHOẢN & VÀO GAME";
     }
   }
 }
@@ -592,7 +616,7 @@ async function authCloudSave(notify = false) {
 }
 
 /**
- * Đăng xuất tài khoản: Tự động lưu mây và văng ra trang đăng nhập ngay lập tức
+ * Đăng xuất tài khoản: Tự động lưu mây và xóa sạch bộ nhớ tạm trên máy
  */
 async function authLogout() {
   if (AUTH.user) {
@@ -606,6 +630,19 @@ async function authLogout() {
   AUTH.cloudMeta = null;
   localStorage.removeItem("vl_auth_user");
   localStorage.removeItem("vl_auth_pass");
+
+  // Xóa sạch save nhân vật và kho đồ trên máy để bảo mật và bắt đầu mới cho tài khoản tiếp theo
+  try {
+    localStorage.removeItem("jxidle");
+    localStorage.removeItem("jxidle_bak");
+    localStorage.removeItem("jxidle_slot");
+    for (let i = 1; i <= 3; i++) {
+      localStorage.removeItem("jxidle_" + i);
+      localStorage.removeItem("jxidle_" + i + "_bak");
+    }
+    localStorage.removeItem("jx_shared_stash");
+    localStorage.removeItem("jx_shared_stash_bak");
+  } catch (e) {}
 
   // Tải lại trang: do đã xóa vl_auth_user nên game sẽ văng ra ngay màn hình Đăng Nhập
   location.reload();
@@ -718,9 +755,9 @@ function updateInGameAuthUI() {
       `;
     } else {
       card.innerHTML = `
-        <div style="font-size:13px;margin-bottom:6px;color:#aaa">Chưa đăng nhập (Đang chơi chế độ Khách)</div>
+        <div style="font-size:13px;margin-bottom:6px;color:#ffd700">Vui lòng đăng nhập tài khoản để chơi game</div>
         <div class="btnrow">
-          <button class="btn on sm" onclick="showLoginOverlay()">🔑 Đăng Nhập / Đăng Ký Mây</button>
+          <button class="btn on sm" onclick="showLoginOverlay()">🔑 Đăng Nhập / Đăng Ký</button>
         </div>
       `;
     }
