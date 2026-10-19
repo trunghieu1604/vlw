@@ -633,7 +633,7 @@ function rebornBody(t = RW()) {
   const n = rebornBonus(),
     o = t.stat.reborn >= REBORN_MAX;
   return `<p class="desc">Đạt cấp 200: về cấp 1, giữ trang bị; <b>mỗi lần chuyển sinh +${REB_EQ_LV} cấp khi xét yêu cầu trang bị</b> (vd cấp 10 chuyển sinh 1 = cấp ${10 + REB_EQ_LV}: mặc được mọi trang bị); võ công 90 học không cần Mật Tịch; mỗi lần +10% tỉ lệ rơi đồ; mốc cấp nhận lại mỗi vòng; tẩy toàn bộ điểm tiềm năng và kỹ năng cũ, nhận cố định <b>${REB_ATTR} điểm tiềm năng + ${REB_SK} điểm kỹ năng</b>; mỗi lần quái mạnh thêm (+25% máu, +15% sát thương), +10% sát thương nhưng <b>kinh nghiệm nhận được −10%</b> mỗi lần (tối đa ${REBORN_MAX} lần).</p>
-      <p>Đã chuyển sinh: <b>${t.stat.reborn}</b> lần · hiện ${Math.round(n.xp * 100)}% kinh nghiệm, +${Math.round(n.dmg * 100)}% sát thương, kháng tối đa ${PLAYER_RES_MAX + REBORN_RES * t.stat.reborn}% (+${REBORN_RES}% mỗi lần) · độ khó: quái ×${rebornHard().hp.toFixed(2)} máu, ×${rebornHard().dmg.toFixed(2)} sát thương.</p>
+      <p>Đã chuyển sinh: <b>${t.stat.reborn}</b> lần · hiện ${Math.round(n.xp * 100)}% kinh nghiệm, +${Math.round(n.dmg * 100)}% sát thương, kháng tối đa ${PLAYER_RES_MAX + REBORN_RES * t.stat.reborn}% (+${REBORN_RES}% mỗi lần, vô hiệu khi đánh Boss Thế Giới) · độ khó: quái ×${rebornHard().hp.toFixed(2)} máu, ×${rebornHard().dmg.toFixed(2)} sát thương.</p>
       <div class="btnrow"><button class="btn red" id="gReborn" ${S.lvl >= 200 && !o ? "" : "disabled"}>${o ? "Đã chuyển sinh tối đa" : S.lvl >= 200 ? "Chuyển sinh" : "Cần cấp 200"}</button></div>`;
 }
 const GIFT_TABS = [

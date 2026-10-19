@@ -202,8 +202,10 @@ function calc(t) {
       Math.max(0, a.dex / 4 + av(n, "adddefense_v") + av(n, "armordefense_v")) *
       (1 + av(n, "armordefenseenhance_p") / 100)));
   const C = { phys: i.physicres, poison: i.poisonres, cold: i.coldres, fire: i.fireres, light: i.lightingres };
+  const isWbScene = (typeof WB !== "undefined" && WB.arena && WB.arena.on) || (typeof R !== "undefined" && R && R.dg && R.dg.kind === "worldboss");
+  const rebRes = isWbScene ? 0 : REBORN_RES * (typeof rebornN == "function" ? rebornN() : 0);
   ((a.res = {}),
-    (a.resMax = PLAYER_RES_MAX + av(n, "allresmax_p") + REBORN_RES * (typeof rebornN == "function" ? rebornN() : 0)));
+    (a.resMax = PLAYER_RES_MAX + av(n, "allresmax_p") + rebRes));
   for (const r of ELEM) a.res[r] = clamp(C[r] + av(n, ELEM_RES[r]) + av(n, "allres_p"), -100, a.resMax);
   const w = t.weapon && reqPass(t.weapon) ? t.weapon : null,
     x = !!(w && w.d === 1),
