@@ -125,6 +125,7 @@ function authVerifySession(user, hash) {
       // Tự nạp bản lưu mới hơn từ mây nếu có (ví dụ chơi từ máy khác)
       if (data.saveData && data.saveAt && (!S || !S.last || data.saveAt > S.last + 60000)) {
         authApplyCloudSave(data.saveData);
+        if (data.stashData) authApplyCloudStash(data.stashData);
       }
       updateInGameAuthUI();
     }
@@ -348,6 +349,9 @@ async function handleAuthLogin() {
     } else if (typeof S !== "undefined" && S && S.fac && S.lvl > 1) {
       authCloudSave(false);
     }
+    if (val.stashData) {
+      authApplyCloudStash(val.stashData);
+    }
 
     hideLoginOverlay();
     if (typeof toast === "function") toast("⚔ Đã đăng nhập: " + u);
@@ -418,6 +422,14 @@ async function handleAuthRegister() {
       rb = typeof rebornN === "function" ? rebornN() : 0;
     }
 
+    let curStash = null;
+    if (typeof stashRead === "function") {
+      try {
+        const curSt = stashRead();
+        if (curSt && curSt.st && typeof pack === "function") curStash = pack(curSt.st);
+      } catch (err) {}
+    }
+
     const now = Date.now();
     const newAccountData = {
       u: u,
@@ -425,6 +437,7 @@ async function handleAuthRegister() {
       createdAt: now,
       lastLogin: now,
       saveData: curSave,
+      stashData: curStash,
       saveAt: curSave ? now : 0,
       charName: charName,
       lvl: lvl,
@@ -457,7 +470,7 @@ async function handleAuthRegister() {
 
     hideLoginOverlay();
     if (typeof toast === "function") {
-      toast("⚡ Đăng ký thành công tài khoản " + u + "! Đã bảo vệ save trên mây.");
+      toast("⚡ Đăng ký thành công tài khoản " + u + "! Đã bảo vệ save & kho trên mây.");
     }
   } catch (err) {
     console.error("Register err:", err);
@@ -471,7 +484,7 @@ async function handleAuthRegister() {
 }
 
 /**
- * Nạp bản save từ mây vào bộ nhớ game
+ * Nạp bản save nhân vật từ mây
  */
 function authApplyCloudSave(saveStr) {
   if (!saveStr) return;
@@ -500,7 +513,25 @@ function authApplyCloudSave(saveStr) {
 }
 
 /**
- * Lưu tiến độ hiện tại lên Đám Mây
+ * Nạp bản lưu kho chung từ mây
+ */
+function authApplyCloudStash(stashStr) {
+  if (!stashStr || typeof unpack !== "function" || typeof stashClean !== "function") return;
+  try {
+    const up = unpack(stashStr);
+    if (up && up.ok && up.state) {
+      const cl = stashClean(up.state);
+      if (typeof pack === "function") {
+        localStorage.setItem("jxidle_stash", pack(cl));
+      }
+    }
+  } catch (e) {
+    console.warn("authApplyCloudStash err:", e);
+  }
+}
+
+/**
+ * Lưu tiến độ hiện tại (nhân vật & kho chung) lên Đám Mây
  */
 async function authCloudSave(notify = false) {
   if (!AUTH.user) return;
@@ -508,9 +539,18 @@ async function authCloudSave(notify = false) {
 
   try {
     const sData = pack(S);
+    let stData = null;
+    if (typeof stashRead === "function") {
+      try {
+        const curSt = stashRead();
+        if (curSt && curSt.st && typeof pack === "function") stData = pack(curSt.st);
+      } catch (err) {}
+    }
+
     const now = Date.now();
     const meta = {
       saveData: sData,
+      stashData: stData,
       saveAt: now,
       charName: S.name || "Tân thủ",
       lvl: S.lvl || 1,
@@ -540,7 +580,7 @@ async function authCloudSave(notify = false) {
     AUTH.lastSyncAt = now;
 
     if (notify && typeof toast === "function") {
-      toast("☁ Đã lưu tiến độ lên Đám Mây thành công!");
+      toast("☁ Đã lưu tiến độ & kho chung lên Mây thành công!");
     }
     updateInGameAuthUI();
   } catch (e) {
@@ -550,7 +590,7 @@ async function authCloudSave(notify = false) {
 }
 
 /**
- * Đăng xuất tài khoản
+ * Đăng xuất tài khoản: Tự động lưu mây và văng ra trang đăng nhập ngay lập tức
  */
 async function authLogout() {
   if (AUTH.user) {
@@ -565,22 +605,8 @@ async function authLogout() {
   localStorage.removeItem("vl_auth_user");
   localStorage.removeItem("vl_auth_pass");
 
-  if (typeof newSave === "function") {
-    S = newSave();
-    if (typeof save === "function") save();
-    if (typeof recalc === "function") recalc();
-    if (typeof refresh === "function") refresh();
-    if (typeof gotoZone === "function" && typeof zoneIdx === "function" && typeof STAGES !== "undefined") {
-      R.enemies = [];
-      R.corpses = [];
-      R.zoneShown = null;
-      gotoZone(zoneIdx(Math.min(S.stage || 1, STAGES)));
-    }
-  }
-
-  updateInGameAuthUI();
-  showLoginOverlay();
-  if (typeof toast === "function") toast("Đã đăng xuất tài khoản.");
+  // Tải lại trang: do đã xóa vl_auth_user nên game sẽ văng ra ngay màn hình Đăng Nhập
+  location.reload();
 }
 
 /**

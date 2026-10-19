@@ -410,7 +410,7 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-let APP_V = 465;
+let APP_V = 466;
 function getAppV() {
   try {
     const s = document.querySelector('script[src*="main.js"]');
@@ -419,7 +419,7 @@ function getAppV() {
       if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 465;
+  return APP_V || 466;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;

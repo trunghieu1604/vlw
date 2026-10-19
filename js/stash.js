@@ -70,6 +70,12 @@ function stashWrite(n) {
       unpack(t).ok && localStorage.setItem(STASH_KEY + "_bak", t);
     } catch {}
   localStorage.setItem(STASH_KEY, pack(n));
+  if (typeof authCloudSave === "function" && typeof AUTH !== "undefined" && AUTH.user) {
+    if (!AUTH._lastStashSave || Date.now() - AUTH._lastStashSave > 10000) {
+      AUTH._lastStashSave = Date.now();
+      authCloudSave(false);
+    }
+  }
 }
 function stashTx(n) {
   const { st: t, err: s } = stashRead();
@@ -242,20 +248,20 @@ function stashDone(n, t) {
 }
 function stashModal(n) {
   n && (stashTab = n);
+  if (stashTab === "file") stashTab = "item";
   const { st: t, err: s } = stashRead(),
     e = [
       ["item", "Đồ"],
       ["mat", "Nguyên liệu"],
       ["gold", "Ngân lượng"],
-      ["file", "File kho"],
     ];
   let i = "";
   if (
     (s &&
-      (i = `<p class="reqbad">${s === "tampered" ? "Kho đã bị chỉnh sửa ngoài game (sai chữ ký) và không có bản sao lưu hợp lệ. Có thể nạp lại từ file kho." : "Không đọc được bộ nhớ trình duyệt."}</p>`),
+      (i = `<p class="reqbad">${s === "tampered" ? "Kho đã bị chỉnh sửa ngoài game (sai chữ ký) và không có bản sao lưu hợp lệ." : "Không đọc được bộ nhớ trình duyệt."}</p>`),
     stashTab === "item")
   )
-    i += `<p class="desc">Bấm món trong <b>hành trang</b> để gửi vào kho. Bấm món trong <b>kho</b> để xem và lấy ra. Kho dùng chung cho cả 3 slot (${t.items.length}/60 món).</p>
+    i += `<p class="desc">Bấm món trong <b>hành trang</b> để gửi vào kho. Bấm món trong <b>kho</b> để xem và lấy ra. Kho dùng chung cho tài khoản (${t.items.length}/60 món).</p>
       <h3>Hành trang <small>${S.inv.length}/${INV_MAX}</small></h3><div class="invgrid" id="stInv">${S.inv.map(itemCell).join("") || '<small class="dim">Trống</small>'}</div>
       <h3>Kho chung <small>${t.items.length}/60</small></h3><div class="invgrid" id="stBox">${t.items.map(stashCell).join("") || '<small class="dim">Kho trống</small>'}</div>`;
   else if (stashTab === "mat") {
@@ -270,12 +276,10 @@ function stashModal(n) {
             `<div class="qrow"><span>${esc(matName(r, h))}<small>có ${matHave(r, h)} · kho ${t.mats[r][h] || 0}</small></span><span></span><span class="pm"><button class="btn sm" data-mi="${r}|${h}" ${matHave(r, h) ? "" : "disabled"}>Gửi hết</button><button class="btn sm" data-mo="${r}|${h}" ${t.mats[r][h] ? "" : "disabled"}>Rút hết</button></span></div>`,
         )
         .join("") || '<small class="dim">Chưa có nguyên liệu</small>');
-  } else
-    stashTab === "gold"
-      ? (i += `<p class="desc">Ngân lượng: bạn <b>${fmtL(S.gold)}</b> · kho <b>${fmtL(t.gold)}</b>.</p><div class="row"><input type="number" id="stGold" min="1" placeholder="Số lượng"></div>
-      <div class="btnrow"><button class="btn" id="stIn">Gửi vào kho</button><button class="btn" id="stOut">Rút ra</button><button class="btn" id="stInAll">Gửi hết</button><button class="btn" id="stOutAll">Rút hết</button></div>`)
-      : (i += `<p class="desc">Chuyển kho sang thiết bị khác: tải file kho (.jxkho) ở đây, nạp ở thiết bị kia. Nạp file sẽ <b>thay thế</b> kho hiện tại. File có chữ ký, sửa tay sẽ bị từ chối.</p>
-      <div class="btnrow"><button class="btn" id="stDl">Tải file kho</button><button class="btn red" id="stUp">Nạp file kho</button></div>`);
+  } else {
+    i += `<p class="desc">Ngân lượng: bạn <b>${fmtL(S.gold)}</b> · kho <b>${fmtL(t.gold)}</b>.</p><div class="row"><input type="number" id="stGold" min="1" placeholder="Số lượng"></div>
+      <div class="btnrow"><button class="btn" id="stIn">Gửi vào kho</button><button class="btn" id="stOut">Rút ra</button><button class="btn" id="stInAll">Gửi hết</button><button class="btn" id="stOutAll">Rút hết</button></div>`;
+  }
   modal(
     `<h3>Kho chung <small>${fmtL(t.gold)} lượng · ${t.items.length} món</small></h3><div class="btnrow"><button class="btn sm" id="stDon">🧹 Dọn kho (bán / luyện đồ thừa)</button></div><div class="dtabs" id="stTabs">${e.map(([a, r]) => `<button data-st="${a}" class="${a === stashTab ? "on" : ""}">${r}</button>`).join("")}</div>${i}`,
     () => {
@@ -315,33 +319,7 @@ function stashModal(n) {
       (m("#stIn", () => stashDone(stashGold("in", h()))),
         m("#stOut", () => stashDone(stashGold("out", h()))),
         m("#stInAll", () => stashDone(stashGold("in", S.gold))),
-        m("#stOutAll", () => stashDone(stashGold("out", stashRead().st.gold))),
-        m("#stDl", () => {
-          const o = new Blob([stashFileText()], { type: "application/json" }),
-            l = document.createElement("a");
-          ((l.href = URL.createObjectURL(o)),
-            (l.download = `jxidle_kho_${new Date().toISOString().slice(0, 10)}.jxkho`),
-            document.body.appendChild(l),
-            l.click(),
-            setTimeout(() => {
-              (URL.revokeObjectURL(l.href), l.remove());
-            }, 1500),
-            toast("Đã tải file kho"));
-        }),
-        m("#stUp", () => {
-          const o = document.createElement("input");
-          ((o.type = "file"),
-            (o.accept = ".jxkho,.json"),
-            (o.style.display = "none"),
-            (o.onchange = () => {
-              const l = o.files && o.files[0];
-              if ((o.remove(), !l)) return;
-              const c = new FileReader();
-              ((c.onload = () => stashImportFlow(String(c.result))), c.readAsText(l));
-            }),
-            document.body.appendChild(o),
-            o.click());
-        }));
+        m("#stOutAll", () => stashDone(stashGold("out", stashRead().st.gold))));
     },
   );
 }
