@@ -159,10 +159,11 @@
       case "reborn": {
         const from = typeof rebGet === "function" ? rebGet() : ((S.rw && S.rw.stat && S.rw.stat.reborn) | 0);
         let to = from;
+        const maxRb = typeof REBORN_MAX !== "undefined" ? REBORN_MAX : 20;
         if (typeof g.v !== "undefined") {
-          to = Math.max(0, Math.min(10, Math.floor(+g.v) || 0));
+          to = Math.max(0, Math.min(maxRb, Math.floor(+g.v) || 0));
         } else if (typeof g.delta !== "undefined") {
-          to = Math.max(0, Math.min(10, from + (+g.delta || 0)));
+          to = Math.max(0, Math.min(maxRb, from + (+g.delta || 0)));
         }
         if (typeof rebSet === "function") rebSet(to);
         else {
