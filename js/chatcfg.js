@@ -8,7 +8,7 @@ window.CHAT_CFG = {
   sso: "",
   e9home: "",
   build: "20261014163000",
-  mapBase: "https://cdn.kuku.vn/volam/maps/v1",
+  mapBase: "",
   label: ""
 };
 
