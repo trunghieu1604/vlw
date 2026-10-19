@@ -971,7 +971,16 @@ function admTabPlayers() {
         changed = true;
       }
       if (ranks) {
-        admPePlayersList = Object.values(ranks);
+        const rkMap = new Map();
+        for (const p of Object.values(ranks)) {
+          if (!p || !p.name) continue;
+          const k = p.u ? "u_" + p.u.toLowerCase() : "n_" + p.name.trim().toLowerCase();
+          const cur = rkMap.get(k);
+          if (!cur || ((p.reborn || 0) * 1e6 + (p.lvl || 0) * 1e3) > ((cur.reborn || 0) * 1e6 + (cur.lvl || 0) * 1e3)) {
+            rkMap.set(k, p);
+          }
+        }
+        admPePlayersList = Array.from(rkMap.values());
         changed = true;
       }
       if (accs) {

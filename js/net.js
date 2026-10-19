@@ -947,18 +947,23 @@ async function netAccBody(t) {
     t.querySelectorAll("[data-cl]").forEach((a) => (a.onclick = () => busy(a, () => netCloudLoad(+a.dataset.cl)))));
 }
 let lastRankSync = 0;
-function syncRankFirebase(force) {
+async function syncRankFirebase(force) {
   const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
   if (!db) return;
   if (!S || !S.fac || !hasRealName()) return;
   if (!force && Date.now() - lastRankSync < 180000) return;
   lastRankSync = Date.now();
   try {
-    const cid = chatCid();
+    const user = (typeof AUTH !== "undefined" && AUTH && AUTH.user) ? AUTH.user : "";
+    const cleanName = (S.name || "anon").trim();
+    // Key cố định duy nhất theo tài khoản hoặc tên nhân vật (thay vì random cid mỗi thiết bị)
+    const playerKey = user ? "u_" + user : "c_" + cleanName.replace(/[.#$\[\]\/]/g, "_");
+    const cid = typeof chatCid === "function" ? chatCid() : "";
     const n = (typeof RW == "function" && RW().stat) || (S.rw && S.rw.stat) || {};
     const data = {
       cid: cid,
-      name: S.name,
+      u: user,
+      name: cleanName,
       fac: S.fac,
       sex: S.sex | 0,
       lvl: S.lvl | 0,
@@ -969,7 +974,25 @@ function syncRankFirebase(force) {
       gear: netGear(),
       updated: Date.now(),
     };
-    db.ref("ranking/players/" + cid).set(data);
+    db.ref("ranking/players/" + playerKey).set(data);
+
+    // Dọn dẹp các bản ghi cũ của cùng tài khoản hoặc cùng tên nhân vật ở key khác (do đổi máy / random cid trước đây)
+    db.ref("ranking/players").once("value").then((snap) => {
+      const val = snap.val();
+      if (val) {
+        const lowerName = cleanName.toLowerCase();
+        const lowerUser = user.toLowerCase();
+        for (const [k, p] of Object.entries(val)) {
+          if (k !== playerKey && p) {
+            const pName = (p.name || "").trim().toLowerCase();
+            const pUser = (p.u || "").trim().toLowerCase();
+            if ((lowerUser && pUser === lowerUser) || (pName && pName === lowerName)) {
+              db.ref("ranking/players/" + k).remove().catch(() => {});
+            }
+          }
+        }
+      }
+    }).catch(() => {});
   } catch (e) {
     console.warn("syncRankFirebase err:", e);
   }
@@ -982,7 +1005,25 @@ async function getRankFirebase(col, fac) {
     const snap = await db.ref("ranking/players").once("value");
     const val = snap.val();
     if (!val) return [];
-    let list = Object.values(val);
+
+    // Lọc trùng lặp theo tài khoản hoặc tên nhân vật: chỉ giữ lại bản ghi có tiến độ cao nhất / mới nhất
+    const map = new Map();
+    for (const p of Object.values(val)) {
+      if (!p || !p.name) continue;
+      const dedupeKey = (p.u ? "u_" + p.u.toLowerCase() : "n_" + p.name.trim().toLowerCase());
+      const existing = map.get(dedupeKey);
+      if (!existing) {
+        map.set(dedupeKey, p);
+      } else {
+        const scoreP = (p.reborn || 0) * 1000000 + (p.lvl || 0) * 1000 + (p.power || 0);
+        const scoreE = (existing.reborn || 0) * 1000000 + (existing.lvl || 0) * 1000 + (existing.power || 0);
+        if (scoreP > scoreE || (scoreP === scoreE && (p.updated || 0) > (existing.updated || 0))) {
+          map.set(dedupeKey, p);
+        }
+      }
+    }
+
+    let list = Array.from(map.values());
     if (fac) {
       list = list.filter((p) => p.fac === fac || (FAC[p.fac] && FAC[p.fac].key === fac));
     }
@@ -1008,11 +1049,13 @@ async function getProfileFirebase(name) {
     const val = snap.val();
     if (val) {
       const target = (name || "").trim().toLowerCase();
-      const p = Object.values(val).find(
+      const matches = Object.values(val).filter(
         (x) => x && (x.name === name || (x.name && x.name.trim().toLowerCase() === target))
       );
-      if (p) {
-        if (p.gear) {
+      if (matches.length) {
+        matches.sort((a, b) => ((b.reborn || 0) * 1e6 + (b.lvl || 0) * 1e3 + (b.power || 0)) - ((a.reborn || 0) * 1e6 + (a.lvl || 0) * 1e3 + (a.power || 0)) || (b.updated || 0) - (a.updated || 0));
+        const p = matches[0];
+        if (p && p.gear) {
           for (const it of Object.values(p.gear)) {
             if (it && typeof it === "object") {
               if (!Array.isArray(it.base)) it.base = [];

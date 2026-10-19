@@ -225,7 +225,7 @@ function renderLoginOverlayContent() {
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:12px;color:#aaa">
           <label style="cursor:pointer;display:flex;align-items:center;gap:5px">
-            <input type="checkbox" id="authRemember" checked> Ghi nhớ đăng nhập
+            <input type="checkbox" id="authRemember"> Ghi nhớ đăng nhập
           </label>
         </div>
         <button type="submit" id="btnSubmitLogin" class="login-btn-primary">⚔ ĐĂNG NHẬP VÀO GAME</button>
@@ -244,6 +244,11 @@ function renderLoginOverlayContent() {
         <div class="login-form-group">
           <label class="login-label">Nhập lại mật khẩu</label>
           <input type="password" id="authRegP2" class="login-input" placeholder="Nhập lại mật khẩu trên" minlength="4" maxlength="32" autocomplete="new-password" required>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-size:12px;color:#aaa">
+          <label style="cursor:pointer;display:flex;align-items:center;gap:5px">
+            <input type="checkbox" id="authRegRemember"> Ghi nhớ đăng nhập
+          </label>
         </div>
         <div class="login-tip">
           💡 <i>Đăng ký tài khoản miễn phí để bảo vệ nhân vật và đồng bộ kho đồ trên mọi thiết bị.</i>
@@ -329,9 +334,12 @@ async function handleAuthLogin() {
     AUTH.cloudMeta = val;
 
     const remember = document.getElementById("authRemember");
-    if (!remember || remember.checked) {
+    if (remember && remember.checked) {
       localStorage.setItem("vl_auth_user", u);
       localStorage.setItem("vl_auth_pass", hash);
+    } else {
+      localStorage.removeItem("vl_auth_user");
+      localStorage.removeItem("vl_auth_pass");
     }
 
     // Cập nhật lastLogin & rawP ngầm
@@ -478,8 +486,14 @@ async function handleAuthRegister() {
     AUTH.passHash = hash;
     AUTH.cloudMeta = newAccountData;
 
-    localStorage.setItem("vl_auth_user", u);
-    localStorage.setItem("vl_auth_pass", hash);
+    const regRemember = document.getElementById("authRegRemember");
+    if (regRemember && regRemember.checked) {
+      localStorage.setItem("vl_auth_user", u);
+      localStorage.setItem("vl_auth_pass", hash);
+    } else {
+      localStorage.removeItem("vl_auth_user");
+      localStorage.removeItem("vl_auth_pass");
+    }
 
     // Nếu là nhân vật mới toanh (chưa có môn phái): khởi tạo nhân vật mới và đưa vào chọn phái
     if (!curSave) {
