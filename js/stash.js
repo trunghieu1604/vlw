@@ -70,12 +70,6 @@ function stashWrite(n) {
       unpack(t).ok && localStorage.setItem(STASH_KEY + "_bak", t);
     } catch {}
   localStorage.setItem(STASH_KEY, pack(n));
-  if (typeof authCloudSave === "function" && typeof AUTH !== "undefined" && AUTH.user) {
-    if (!AUTH._lastStashSave || Date.now() - AUTH._lastStashSave > 10000) {
-      AUTH._lastStashSave = Date.now();
-      authCloudSave(false);
-    }
-  }
 }
 function stashTx(n) {
   const { st: t, err: s } = stashRead();
