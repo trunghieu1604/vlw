@@ -137,7 +137,7 @@ function authVerifySession(user, hash) {
 /**
  * Cấu hình URL trang web Võ Lâm Battle (Có thể đổi khi có link chính thức)
  */
-let VL_BATTLE_URL = "http://localhost:9999";
+let VL_BATTLE_URL = "https://trunghieu1604.github.io/vl-battle/";
 
 function showVlBattlePopup() {
   let pop = document.getElementById("vlBattlePopup");
@@ -229,11 +229,6 @@ function renderLoginOverlayContent() {
           <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
         </div>
 
-        <div style="background:linear-gradient(90deg, rgba(255,153,0,0.15), rgba(212,175,55,0.25));border:1px solid rgba(255,215,0,0.45);border-radius:8px;padding:8px 12px;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="showVlBattlePopup()">
-          <span style="font-size:12px;font-weight:bold;color:#ffd700">🔥 Trải Nghiệm Võ Lâm Battle — Sinh Tồn Vòng Bo</span>
-          <span style="font-size:11px;color:#fff;background:rgba(212,175,55,0.45);padding:2px 8px;border-radius:4px">Xem ngay ❯</span>
-        </div>
-
         <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:14px;margin-bottom:18px;">
           <div style="font-size:15px;color:#ffd700;font-weight:bold;margin-bottom:6px">
             ⚔ Chào mừng Đại Hiệp <span style="color:#fff">${AUTH.user}</span>!
@@ -258,11 +253,6 @@ function renderLoginOverlayContent() {
       <div class="login-header">
         <h1 class="login-title">VÕ LÂM WEB</h1>
         <div class="login-sub">Võ Lâm IDLE · Treo Máy Nhàn Rỗi</div>
-      </div>
-
-      <div style="background:linear-gradient(90deg, rgba(255,153,0,0.15), rgba(212,175,55,0.25));border:1px solid rgba(255,215,0,0.45);border-radius:8px;padding:8px 12px;margin-bottom:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="showVlBattlePopup()">
-        <span style="font-size:12px;font-weight:bold;color:#ffd700">🔥 Trải Nghiệm Võ Lâm Battle — Sinh Tồn Vòng Bo</span>
-        <span style="font-size:11px;color:#fff;background:rgba(212,175,55,0.45);padding:2px 8px;border-radius:4px">Xem ngay ❯</span>
       </div>
 
       <div class="login-tabs">
