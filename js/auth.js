@@ -657,6 +657,8 @@ async function authLogout() {
     }
     localStorage.removeItem("jx_shared_stash");
     localStorage.removeItem("jx_shared_stash_bak");
+    localStorage.removeItem("jxidle_stash");
+    localStorage.removeItem("jxidle_stash_bak");
   } catch (e) {}
 
   // Tải lại trang: do đã xóa vl_auth_user nên game sẽ văng ra ngay màn hình Đăng Nhập
