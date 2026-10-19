@@ -13,6 +13,7 @@ const WB_BOSS_CONFIG = {
   mapId: 337,
   lvl: 200,
   hpMax: 120000000,
+  dmg: 13500,
   series: 3, // Hỏa (Cái Bang)
   heroLook: {
     f: "gaibang",
@@ -120,7 +121,9 @@ function spawnWorldBoss(isSummon = false) {
   };
 
   WB.st = "up";
-  WB.end = Date.now() + 10 * 60 * 1000;
+  if (!WB.end || WB.end <= Date.now()) {
+    WB.end = Date.now() + 10 * 60 * 1000;
+  }
   WB.playerDmg = 0;
   WB.defeatDone = false;
   WB.defeatedHandled = false;
@@ -256,6 +259,8 @@ function wbSyncHitFirebase() {
   }
 }
 
+let wbFbFirstLoad = true;
+
 function wbInitFirebase() {
   if (!wbFirebaseOn() || wbFbInitialized) return;
   try {
@@ -265,14 +270,59 @@ function wbInitFirebase() {
     db.ref("worldboss/state").on("value", (snap) => {
       const val = snap.val();
       if (!val) return;
+
+      if (wbFbFirstLoad) {
+        wbFbFirstLoad = false;
+        WB.st = val.st || "dead";
+        if (val.isSummon !== undefined) WB.isSummon = !!val.isSummon;
+        if (val.end) WB.end = val.end;
+
+        // If boss in DB is dead OR already expired: mark it done, NEVER trigger defeat / rewards on F5!
+        if (val.st === "dead" || (val.end && Date.now() >= val.end)) {
+          WB.st = "dead";
+          WB.defeatDone = true;
+          WB.defeatedHandled = true;
+          WB.rewardClaimed = true;
+        } else if (val.st === "up" && val.end && Date.now() < val.end) {
+          WB.st = "up";
+          WB.defeatDone = false;
+          WB.defeatedHandled = false;
+          WB.rewardClaimed = false;
+          if (!WB.boss) {
+            WB.boss = {
+              name: WB_BOSS_CONFIG.name,
+              title: WB_BOSS_CONFIG.title,
+              mapName: WB_BOSS_CONFIG.mapName,
+              mapImg: WB_BOSS_CONFIG.mapImg,
+              lvl: WB_BOSS_CONFIG.lvl,
+              hp: val.hp != null ? val.hp : WB_BOSS_CONFIG.hpMax,
+              hpMax: WB_BOSS_CONFIG.hpMax,
+              series: WB_BOSS_CONFIG.series,
+              heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+            };
+          }
+        }
+        updateWbButtonState();
+        renderWbDpsMeter();
+        return;
+      }
+
       if (val.st) {
         const prevSt = WB.st;
         if (val.isSummon !== undefined) {
           WB.isSummon = !!val.isSummon;
         }
         WB.st = val.st;
-        if (val.st === "up" && prevSt !== "up" && !WB.arena.on) {
+        if (val.end) WB.end = val.end;
+
+        if (val.st === "up" && prevSt !== "up" && (!val.end || Date.now() < val.end) && !WB.arena.on) {
           spawnWorldBoss(!!val.isSummon);
+        }
+        if (val.st === "up" && prevSt !== "up") {
+          WB.defeatedHandled = false;
+          WB.defeatDone = false;
+          WB.rewardClaimed = false;
+          WB.resultModalShown = false;
         }
       }
       if (!WB.boss) {
@@ -291,12 +341,6 @@ function wbInitFirebase() {
       if (val.st === "dead" && !WB.defeatDone && !WB.isSummon) {
         WB.defeatedHandled = true;
         handleBossDefeated(true, val.killer);
-      }
-      if (val.st === "up" && WB.st !== "up") {
-        WB.defeatedHandled = false;
-        WB.defeatDone = false;
-        WB.rewardClaimed = false;
-        WB.resultModalShown = false;
       }
       updateWbButtonState();
       renderWbDpsMeter();
@@ -383,24 +427,17 @@ function wbTick() {
     }
   }
 
-  // Ensure existing arena limit is 10 mins (600s)
-  if (WB.arena.on && typeof R === "object" && R && R.dg && R.dg.kind === "worldboss" && R.dg.limit !== 600) {
-    R.dg.limit = 600;
+  // Ensure existing arena limit matches remaining time
+  if (WB.arena.on && typeof R === "object" && R && R.dg && R.dg.kind === "worldboss") {
+    const rem = (WB.end && WB.end > Date.now()) ? Math.max(1, Math.round((WB.end - Date.now()) / 1000)) : 0;
+    R.dg.limit = rem;
+    R.dg.t = 0;
   }
 
-  // Check boss expiration (5 mins passed)
+  // Check boss expiration (10 mins passed)
   if (WB.st === "up" && WB.end && Date.now() >= WB.end) {
-    if (WB.arena.on) {
-      handleBossDefeated(true);
-      return;
-    } else {
-      const wasSummon = WB.isSummon;
-      WB.st = wasSummon ? sched.st : "gone";
-      WB.isSummon = false;
-      showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã kết thúc thời gian khiêu chiến!`);
-      updateWbButtonState();
-      return;
-    }
+    handleBossDefeated(true);
+    return;
   }
 
   // If in arena, simulate BOT damage every second (accumulate DPS for leaderboard)
@@ -421,7 +458,7 @@ function wbTick() {
 }
 
 /**
- * When 5m battle timeout expires
+ * When 10m battle timeout expires
  */
 function handleBossDefeated(isTimeout = true) {
   if (WB.defeatDone) return;
@@ -442,20 +479,12 @@ function handleBossDefeated(isTimeout = true) {
     try {
       const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
       if (db) {
-        if (wasSummon) {
-          db.ref("worldboss/state").update({
-            st: sched.st === "up" ? "up" : "soon",
-            isSummon: false,
-            endedAt: Date.now()
-          });
-        } else {
-          db.ref("worldboss/state").update({
-            st: "dead",
-            isSummon: false,
-            killer: (S && S.name) || "Hiệp Sĩ",
-            endedAt: Date.now()
-          });
-        }
+        db.ref("worldboss/state").update({
+          st: "dead",
+          isSummon: false,
+          killer: (S && S.name) || "Hiệp Sĩ",
+          endedAt: Date.now()
+        });
       }
     } catch (e) {}
   }
@@ -469,7 +498,10 @@ function handleBossDefeated(isTimeout = true) {
     log(`🏆 <b>Hết 10 phút khiêu chiến Boss Thế Giới Trung Hiếu!</b> Quán quân sát thương TOP 1 thuộc về <b>${top1Name}</b> (${wbNum(top1.dmg)} sát thương)!`);
   }
 
-  grantPlayerWbRewards(true);
+  const participated = (WB.playerDmg > 0) || (WB.arena && WB.arena.on);
+  if (participated) {
+    grantPlayerWbRewards(true);
+  }
 
   if (WB.arena.bossInst) {
     WB.arena.bossInst.act = "st";
@@ -482,19 +514,13 @@ function handleBossDefeated(isTimeout = true) {
 
   if (wasSummon) {
     WB.isSummon = false;
-    setTimeout(() => {
-      const sc = getWbSchedule();
-      WB.st = sc.st;
-      WB.next = sc.next;
-      WB.defeatDone = false;
-      WB.defeatedHandled = false;
-      updateWbButtonState();
-    }, 500);
   }
 
-  setTimeout(() => {
-    openWbResultModal(top1Name, true);
-  }, 400);
+  if (participated) {
+    setTimeout(() => {
+      openWbResultModal(top1Name, true);
+    }, 400);
+  }
 
   updateWbButtonState();
 }
@@ -504,8 +530,14 @@ function handleBossDefeated(isTimeout = true) {
  */
 function grantPlayerWbRewards(isTimeout = false) {
   if (WB.rewardClaimed) return;
+  // Non-participants or 0 damage NEVER get rewards
+  if (!WB.playerDmg || WB.playerDmg <= 0) {
+    WB.rewardClaimed = true;
+    return;
+  }
   WB.rewardClaimed = true;
-  const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
+  const me = (WB.top || []).find(t => t.isPlayer);
+  if (!me || me.dmg <= 0) return;
   let knbGain = 0;
   let goldGain = 0;
   let itemsGained = [];
@@ -659,6 +691,7 @@ function grantPlayerWbRewards(isTimeout = false) {
  */
 function openWbResultModal(top1Name, isTimeout = false) {
   if (WB.resultModalShown) return;
+  if (!WB.playerDmg || WB.playerDmg <= 0) return;
   WB.resultModalShown = true;
   const r = WB.lastRewards || {};
   const medal = r.rank === 1 ? "👑" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : `#${r.rank || 1}`;
@@ -806,7 +839,7 @@ function joinWorldBoss() {
       max: bossHp,
       r: 60,
       series: WB_BOSS_CONFIG.series,
-      dmg: 4500,
+      dmg: 13500,
       ar: 25000,
       def: 2500,
       atkCd: 0.8,
@@ -825,12 +858,16 @@ function joinWorldBoss() {
     R.spawnT = 0;
     R.stall = 0;
 
+    const remSec = (WB.end && WB.end > Date.now())
+      ? Math.max(1, Math.round((WB.end - Date.now()) / 1000))
+      : 600;
+
     R.dg = {
       kind: "worldboss",
       d: { n: "Boss Thế Giới: Trung Hiếu" },
       room: 1,
       rooms: 1,
-      limit: 600,
+      limit: remSec,
       t: 0,
       boss: b
     };
@@ -843,6 +880,7 @@ function joinWorldBoss() {
 
     const oldExit = document.getElementById("wbExitBtn");
     if (oldExit) oldExit.remove();
+    if (typeof recalc === "function") recalc();
     if (typeof snapCamera === "function") snapCamera();
     if (typeof toast === "function") toast(`⚔ Đã tiến vào chiến thuyền Phong Lăng Độ khiêu chiến Boss Thế Giới Trung Hiếu!`);
     if (typeof log === "function") log(`⚔ Tiến vào chiến trường khiêu chiến <b>Boss Thế Giới Trung Hiếu</b> tại <b>Phong Lăng Độ</b>!`);
@@ -889,6 +927,7 @@ function exitWorldBoss(notify = true) {
     if (typeof inWorld === "function" && typeof H !== "undefined" && H) {
       [H.x, H.y] = inWorld(H.x || 1500, H.y || 1000);
     }
+    if (typeof recalc === "function") recalc();
     if (typeof snapCamera === "function") snapCamera();
   }
   if (notify && typeof toast === "function") toast("Đã rời chiến trường Boss Thế Giới, quay lại bãi luyện công.");

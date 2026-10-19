@@ -333,6 +333,8 @@ const titleWorn = () => {
 function titleAttr(n) {
   const t = titleWorn();
   if (!t || !t[6]) return;
+  const isWbScene = (typeof WB !== "undefined" && WB.arena && WB.arena.on) || (typeof R !== "undefined" && R && R.dg && R.dg.kind === "worldboss");
+  if (isWbScene && t[0] === "admin") return;
   if (Array.isArray(t[6][0])) {
     for (const a of t[6]) addAttr(n, a[0], [a[1], 0, 0]);
   } else {

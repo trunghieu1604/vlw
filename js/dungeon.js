@@ -313,9 +313,11 @@ function dgTick(t) {
   const n = R.dg;
   if (!n) return;
   if (n.kind === "worldboss") {
-    n.t += t;
     R.stall = 0;
-    if (n.t >= n.limit) {
+    const isExpired = (typeof WB !== "undefined" && WB.end)
+      ? (Date.now() >= WB.end)
+      : ((n.t += t) >= n.limit);
+    if (isExpired) {
       if (typeof handleBossDefeated === "function") {
         handleBossDefeated(true);
       } else if (typeof exitWorldBoss === "function") {
@@ -482,7 +484,9 @@ const dgPending = () => S && S.fac && ((DG().wbRank && !DG().wbClaimed) || !1);
 function drawDgHud(t) {
   const n = R.dg;
   if (!n) return;
-  const o = Math.max(0, n.limit - n.t),
+  const o = (n.kind === "worldboss" && typeof WB !== "undefined" && WB.end)
+    ? Math.max(0, Math.round((WB.end - Date.now()) / 1000))
+    : Math.max(0, n.limit - n.t),
     s = Math.floor(o / 60),
     e = String(Math.floor(o % 60)).padStart(2, "0"),
     i =

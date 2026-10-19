@@ -48,12 +48,10 @@ const presOn = () =>
     typeof API == "object" &&
     !!API.token);
 
-// The shared map currently shown: town, stage, or World Boss arena
+// The shared map currently shown: exclusively World Boss arena
 function presMapId() {
   if (typeof S != "object" || !S || !S.fac) return "";
   if (typeof WB != "undefined" && WB.arena && WB.arena.on) return "wb_337";
-  if (R.town && typeof W == "object" && W.town) return "town_" + (W.town.id || "37");
-  if (S && S.stage) return "stage_" + Math.min(S.stage || 1, 30);
   return "";
 }
 
@@ -543,10 +541,12 @@ const presCharOf = (e) => (e.oth.k < 0 ? e.oth.p.s : e.oth.p.s.d[e.oth.k]);
 const presJx = () => typeof jxOn == "function" && jxOn();
 // render.js: depth-sorted entries
 function othEnts() {
+  if (typeof WB === "undefined" || !WB.arena || !WB.arena.on) return [];
   presStep();
   return PRES.drawn.map((e) => ({ oth: e, x: e.x, y: e.y }));
 }
 function othShadows(c) {
+  if (typeof WB === "undefined" || !WB.arena || !WB.arena.on) return;
   presStep();
   for (const e of PRES.drawn) {
     const ch = presCharOf(e),
@@ -675,6 +675,7 @@ function presPt(e) {
   return [(e.clientX - r.left) * sx + CAM.x, (e.clientY - r.top) * sy + CAM.y];
 }
 function presPointerDown(e) {
+  if (typeof WB === "undefined" || !WB.arena || !WB.arena.on) return;
   if (!PRES.drawn.length || e.target !== CV || (e.button != null && e.button > 0)) return;
   const [x, y] = presPt(e);
   if (typeof npcAt == "function" && npcAt(x, y)) return; // town NPCs first (js/npc.js)

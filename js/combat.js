@@ -452,7 +452,8 @@ function heroHit(t, n) {
 }
 function enemyHit(t) {
   if (R.invulT > 0) return;
-  if (typeof isGodMode == "function" && isGodMode()) {
+  const isWbScene = (typeof WB !== "undefined" && WB.arena && WB.arena.on) || (typeof R !== "undefined" && R && R.dg && R.dg.kind === "worldboss");
+  if (!isWbScene && ((typeof isGodMode == "function" && isGodMode()) || (typeof R !== "undefined" && R && R.admGod))) {
     addText(H.x, H.y - 30, "Bất tử", "#ffd24a", 11);
     return;
   }
