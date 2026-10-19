@@ -175,7 +175,7 @@ function drawHeroStates(s, t, f) {
       } else if (tw && tw[0] === "admin") {
         drawState(s, JXCS_ROYAL, H.x, H.y, f, c, ST_HERO_K, 0.98);
       } else if (typeof rebornN == "function") {
-        const n = Math.min(10, rebornN());
+        const n = Math.min(20, rebornN());
         n > 0 && (JXCS[n] || JXCS[5]) && drawState(s, JXCS[n] || JXCS[5], H.x, H.y, f, c, ST_HERO_K, 0.95);
       }
     }

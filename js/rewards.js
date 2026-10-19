@@ -4,7 +4,7 @@ const dayKey = (t) => `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`,
   GB_EVERY = 1800,
   GB_RETRY = 300,
   REBORN_LV = 200,
-  REBORN_MAX = 10,
+  REBORN_MAX = 20,
   FD_COST = 10;
 function RW() {
   const t = S.rw || (S.rw = {});

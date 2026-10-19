@@ -472,6 +472,21 @@ function enemyHit(t) {
     addText(H.x, H.y - 30, "Mê Ảnh", "#bfe8ff", 11);
     return;
   }
+  const isWb = t.wb || t.isWbBoss;
+  if (isWb) {
+    const maxHp = (R.P && R.P.life) || 1000;
+    // Gõ 1 cái mất 15% máu tính theo từng người chơi
+    const dmgVal = Math.max(1, Math.round(maxHp * 0.15));
+    R.life = Math.max(0, R.life - dmgVal);
+    R.hurtT = 0.25;
+    if (H.act !== "at" && Math.random() < 0.3) {
+      H.act = "hurt";
+      H.actT = 0;
+      R.atkT = Math.max(R.atkT || 0, 0.25 * (1 - (R.P.hitRec || 0) / 100));
+    }
+    addText(H.x + rnd(-10, 10), H.y - 36, "-" + fmt(dmgVal), "#ff3333", 13);
+    return;
+  }
   const n = typeof curseMod == "function" ? curseMod(t) : null;
   if (Math.random() * 100 >= hitPercent(t.ar * (n ? Math.max(0.1, 1 + n.ar / 100) : 1), R.P.def)) {
     addText(H.x, H.y - 30, "Né", "#9cf", 11);
@@ -930,7 +945,7 @@ function enemyAI(t, n) {
     o <= i + 4 &&
       t.see &&
       t.atkCd <= 0 &&
-      ((t.atkCd = t.cd * (crs ? (1 + (crs.slow || 0) / 100) * (1 - (crs.atkSpeed || 0) / 100) : 1)),
+      ((t.atkCd = (t.wb || t.isWbBoss) ? t.cd : t.cd * (crs ? (1 + (crs.slow || 0) / 100) * (1 - (crs.atkSpeed || 0) / 100) : 1)),
       pk ? withChar(pk, () => enemyHit(t)) : enemyHit(t),
       (t.act = "at"),
       (t.actT = 0),
@@ -1240,17 +1255,20 @@ function waveCleared() {
     typeof onStageChange == "function" && onStageChange());
 }
 function heroDeath() {
-  if (typeof isGodMode == "function" && isGodMode() && R.P) {
+  const isWbScene = (typeof WB !== "undefined" && WB.arena && WB.arena.on) || (typeof R !== "undefined" && R && R.dg && R.dg.kind === "worldboss");
+  if (!isWbScene && typeof isGodMode == "function" && isGodMode() && R.P) {
     R.life = R.P.life;
     R.hpDot = R.hpDotT = 0;
     return;
   }
-  if (R.dg && R.dg.kind === "worldboss") {
-    if (R.P) {
-      R.life = R.P.life;
-      R.mana = R.P.mana;
-    }
+  if (isWbScene) {
+    R.deadT = 2.5;
+    R.life = 0;
+    H.act = "die";
+    H.actT = 0;
     R.slowT = R.stunT = R.hpDotT = R.hpDot = 0;
+    log('<span class="bad">Bạn đã bị Boss Thế Giới hạ gục! Sẽ hồi sinh sau 2.5s để tiếp tục chiến đấu...</span>');
+    addText(H.x, H.y - 40, "Trọng thương! Chờ hồi sinh...", "#ff3333", 14);
     return;
   }
   if (

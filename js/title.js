@@ -93,12 +93,21 @@ const CAMP = {
     ],
     [
       "cs10",
-      "Thập Trùng ISEKAI",
+      "Thập Trùng Tuyệt Đỉnh",
       "Chuyển sinh",
       5,
       () => RW().stat.reborn >= 10,
       "Chuyển sinh 10 lần",
       ["lifemax_p", 20],
+    ],
+    [
+      "cs20",
+      "Nhị Thập Trùng Sinh",
+      "Chuyển sinh",
+      5,
+      () => RW().stat.reborn >= 20,
+      "Chuyển sinh 20 lần",
+      ["manamax_p", 20],
     ],
     [
       "mp1",
