@@ -407,18 +407,20 @@ function heroHit(t, n) {
     g = counters(n.series, t.series);
   (T ? (s *= 1 + SERIES_BONUS) : g && (s *= 1 - SERIES_BONUS),
     t.parts.cold && !(n.slowT > 0) && (n.slowT = (t.coldT || ELEM_SLOW_T) * (1 - ((e && e.freezeRed) || 0) / 100)));
-  const isWb = n.wb || n.isWbBoss;
-  if (isWb) {
+  const isWorldBoss = !!n.isWbBoss;
+  const isAnyBoss = isWorldBoss || !!n.wb;
+  const isWb = isWorldBoss;
+  if (isAnyBoss) {
     n.stun = 0;
     n.slowT = 0;
   }
-  const k = isWb ? 0 : (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
+  const k = isAnyBoss ? 0 : (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
   if (
-    (t.parts.light && !isWb && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
+    (t.parts.light && !isAnyBoss && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
     (s = Math.max(1, s * cheatK())),
-    (isWb ? (n.hp = n.max) : (n.hp -= s)),
+    (isWorldBoss ? (n.hp = n.max) : (n.hp = Math.max(0, n.hp - s))),
     R.tower && (R.stall = 0),
-    n.wb && typeof onHeroHitWb === "function" && onHeroHitWb(s),
+    isWorldBoss && typeof onHeroHitWb === "function" && onHeroHitWb(s),
     (n.retMeleeP || n.retMelee) && !t.ranged && (() => {
       const retP = Math.max(0, (n.retMeleeP || 0) * (1 - (R.P.returnRes || 0) / 100));
       const refDmg = Math.max(0, (n.retMelee || 0) + (s * retP) / 100);
@@ -472,7 +474,7 @@ function enemyHit(t) {
     addText(H.x, H.y - 30, "Mê Ảnh", "#bfe8ff", 11);
     return;
   }
-  const isWb = t.wb || t.isWbBoss;
+  const isWb = !!t.isWbBoss;
   if (isWb) {
     const maxHp = (R.P && R.P.life) || 1000;
     // Gõ 1 cái mất 15% máu tính theo từng người chơi
@@ -1218,7 +1220,11 @@ function gainXp(t) {
       (1 + buffP("tt"))) /
     xpSlow(Math.min(BASE_CAP, S.lvl));
   const rb = typeof rebornN === "function" ? rebornN() : ((S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0);
-  if (rb >= 10 && S.lvl >= 200) e = Math.min(2500, e);
+  if (S.lvl < 200) {
+    e = Math.min(200000, e);
+  } else if (rb >= 10 && S.lvl >= 200) {
+    e = Math.min(2500, e);
+  }
   let upCount = 0;
   for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl) && upCount < 50; upCount++) {
     const need = lvNeed(S.lvl);

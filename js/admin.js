@@ -1066,8 +1066,14 @@ function admTabPlayers() {
           <input type="text" id="admNewPassInput" placeholder="Nhập mật khẩu mới cho ${esc(currAcc.u)}…" style="flex:1;background:#0d1117;color:#fff;border:1px solid #777;padding:5px 8px;font-size:12px;border-radius:4px" maxlength="32">
           <button class="btn sm on" data-a="pe_changepass" style="font-weight:bold;color:#fff;background:#238636;border-color:#2ea043">⚡ Đổi Mật Khẩu</button>
         </div>
-        <p class="dim small" style="margin:4px 0 0;font-size:11px">💡 Nhập mật khẩu mới rồi bấm "Đổi Mật Khẩu" để đặt lại ngay cho người chơi này.</p>
-      ` : ''}
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(255,255,255,0.15);display:flex;justify-content:center">
+          <button class="btn sm red" data-a="pe_deleteacc" style="background:#8b1a1a;border-color:#ff4444;font-weight:bold;color:#fff;padding:5px 16px">Xóa tài khoản</button>
+        </div>
+      ` : `
+        <div style="margin-top:10px;display:flex;justify-content:center">
+          <button class="btn sm red" data-a="pe_deleteacc" style="background:#8b1a1a;border-color:#ff4444;font-weight:bold;color:#fff;padding:5px 16px">Xóa tài khoản</button>
+        </div>
+      `}
     </div>
   ` : ''}
 
@@ -1536,6 +1542,51 @@ function admAct(a) {
           }
         });
         return "Đang cập nhật mật khẩu mới...";
+      }
+      case "pe_deleteacc": {
+        const pName = admPeSelectedName;
+        const currAcc = Object.values(admAccountsMap).find(a => a.charName === pName || a.u === pName || a.u === (admPePlayersList.find(p => p.name === pName) || {}).u) || admAccountsMap[pName];
+        const targetU = currAcc ? currAcc.u : (admPePlayersList.find(p => p.name === pName) || {}).u || pName;
+        if (!targetU && !pName) return (toast("Không xác định được tài khoản cần xóa!"), "");
+
+        const confirmMsg = `⚠️ CẢNH BÁO NGUY HIỂM!\n\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${targetU || pName}" (Nhân vật: ${pName || "N/A"}) trên Firebase không?\n\n• Tài khoản và vị trí Bảng Xếp Hạng sẽ bị xóa hoàn toàn!\n• Hành động này KHÔNG THỂ khôi phục!`;
+        if (!confirm(confirmMsg)) {
+          return "";
+        }
+
+        (async () => {
+          let ok = false;
+          if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+            try {
+              if (targetU) {
+                await fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(targetU)}.json`, { method: "DELETE" });
+                await fetch(`${CHAT_CFG.firebaseUrl}/ranking/players/u_${encodeURIComponent(targetU)}.json`, { method: "DELETE" });
+              }
+              if (pName) {
+                await fetch(`${CHAT_CFG.firebaseUrl}/ranking/players/${encodeURIComponent(pName)}.json`, { method: "DELETE" });
+              }
+              ok = true;
+            } catch (e) {}
+          }
+          if (typeof firebase !== "undefined") {
+            try {
+              if (targetU) {
+                await firebase.database().ref("accounts/" + targetU).remove();
+                await firebase.database().ref("ranking/players/u_" + targetU).remove();
+              }
+              if (pName) {
+                await firebase.database().ref("ranking/players/" + pName).remove();
+              }
+              ok = true;
+            } catch (e) {}
+          }
+          if (targetU) delete admAccountsMap[targetU];
+          admPePlayersList = admPePlayersList.filter(p => p.name !== pName && p.u !== targetU);
+          admPeSelectedName = admPePlayersList[0] ? admPePlayersList[0].name : "";
+          toast(`Đã xóa vĩnh viễn tài khoản [${targetU || pName}]!`);
+          admModal();
+        })();
+        return "Đang thực hiện xóa tài khoản...";
       }
       case "pe_setlv": {
         const pName = admPeSelectedName;

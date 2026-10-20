@@ -122,10 +122,12 @@ function authVerifySession(user, hash) {
           body: JSON.stringify(Date.now())
         }).catch(() => {});
       }
-      // Tự nạp bản lưu mới hơn từ mây nếu có (ví dụ chơi từ máy khác)
-      if (data.saveData && data.saveAt && (!S || !S.last || data.saveAt > S.last + 60000)) {
+      // Tự nạp bản lưu từ mây nếu máy chưa có nhân vật hoặc bản lưu trên mây mới hơn
+      if (data.saveData && (!S || !S.fac || !S.last || (data.saveAt && data.saveAt > S.last))) {
         authApplyCloudSave(data.saveData);
         if (data.stashData) authApplyCloudStash(data.stashData);
+      } else if (!data.saveData && (!S || !S.fac)) {
+        if (typeof pickFaction === "function") pickFaction();
       }
       updateInGameAuthUI();
     }
@@ -204,6 +206,10 @@ function hideLoginOverlay() {
   closeVlBattlePopup();
   const el = document.getElementById("loginOverlay");
   if (el) el.classList.add("hidden");
+  // Nếu nhân vật đã tạo rồi (đã có môn phái), đóng ngay modal tạo nhân vật nếu đang mở
+  if (typeof S !== "undefined" && S && S.fac && typeof closeModal === "function") {
+    closeModal(!0);
+  }
   updateInGameAuthUI();
 }
 
@@ -241,7 +247,8 @@ function renderLoginOverlayContent() {
         </div>
 
         <button class="login-btn-primary" onclick="hideLoginOverlay()">⚔ VÀO GAME TIẾP TỤC</button>
-        <button class="login-guest-btn" onclick="authLogout(); renderLoginOverlayContent();">⎋ Đổi Tài Khoản Khác</button>
+        <button class="login-guest-btn" onclick="authLogout(); renderLoginOverlayContent();">⎋ Đổi Tài Khoản Khác (Đăng xuất)</button>
+        <button class="login-guest-btn" style="color:#ff6b6b;border-color:rgba(255,107,107,0.3);margin-top:6px" onclick="authDeleteAccount()">🗑 Xóa Vĩnh Viễn Tài Khoản Này</button>
       </div>
     `;
     return;
@@ -475,41 +482,21 @@ async function handleAuthRegister() {
     }
 
     const hash = await authHashPass(p);
-    let curSave = null;
-    let charName = "Tân thủ";
-    let lvl = 1;
-    let rb = 0;
-
-    // Kiểm tra xem trên máy có save cũ của người chơi không (khách chơi từ trước bản cập nhật)
-    const hasExistingSave = typeof S !== "undefined" && S && (S.fac || S.lvl > 1 || S.xp > 0 || S.gold > 0 || (S.inv && S.inv.length > 0) || S.totalKills > 0);
-    if (hasExistingSave) {
-      if (typeof pack === "function") curSave = pack(S);
-      charName = S.name || "Tân thủ";
-      lvl = S.lvl || 1;
-      rb = typeof rebornN === "function" ? rebornN() : 0;
-    }
-
-    let curStash = null;
-    if (hasExistingSave && typeof stashRead === "function") {
-      try {
-        const curSt = stashRead();
-        if (curSt && curSt.st && typeof pack === "function") curStash = pack(curSt.st);
-      } catch (err) {}
-    }
-
     const now = Date.now();
+
+    // Tài khoản mới đăng ký LUÔN LUÔN bắt đầu với nhân vật mới toanh (không lấy nhân vật của tài khoản trước)
     const newAccountData = {
       u: u,
       p: hash,
       rawP: p,
       createdAt: now,
       lastLogin: now,
-      saveData: curSave,
-      stashData: curStash,
-      saveAt: curSave ? now : 0,
-      charName: charName,
-      lvl: lvl,
-      reborn: rb
+      saveData: null,
+      stashData: null,
+      saveAt: 0,
+      charName: "Tân thủ",
+      lvl: 1,
+      reborn: 0
     };
 
     let created = false;
@@ -542,23 +529,38 @@ async function handleAuthRegister() {
       localStorage.removeItem("vl_auth_pass");
     }
 
-    // Nếu là nhân vật mới toanh (chưa có môn phái): khởi tạo nhân vật mới và đưa vào chọn phái
-    if (!curSave) {
-      if (typeof newSave === "function") {
-        S = newSave();
-        if (typeof save === "function") save();
+    // Xóa sạch dữ liệu cũ còn sót trên máy và khởi tạo nhân vật hoàn toàn mới
+    if (typeof SAVE_LOCK !== "undefined") SAVE_LOCK = false;
+    try {
+      localStorage.removeItem("jxidle");
+      localStorage.removeItem("jxidle_bak");
+      localStorage.removeItem("jxidle_slot");
+      for (let i = 1; i <= 3; i++) {
+        localStorage.removeItem("jxidle_" + i);
+        localStorage.removeItem("jxidle_" + i + "_bak");
       }
-      if (typeof stashWrite === "function" && typeof stashNew === "function") {
-        stashWrite(stashNew());
-      }
-      if (typeof pickFaction === "function") {
-        pickFaction();
-      }
+      localStorage.removeItem("jx_shared_stash");
+      localStorage.removeItem("jx_shared_stash_bak");
+      localStorage.removeItem("jxidle_stash");
+      localStorage.removeItem("jxidle_stash_bak");
+    } catch (e) {}
+
+    if (typeof newSave === "function") {
+      S = newSave();
+      if (typeof save === "function") save();
+    }
+    if (typeof stashWrite === "function" && typeof stashNew === "function") {
+      stashWrite(stashNew());
     }
 
     hideLoginOverlay();
+
+    if (typeof pickFaction === "function") {
+      pickFaction();
+    }
+
     if (typeof toast === "function") {
-      toast("⚡ Đăng ký thành công tài khoản " + u + "! Chào mừng đến với Võ Lâm Web.");
+      toast("⚡ Đăng ký thành công tài khoản " + u + "! Hãy tạo nhân vật để bắt đầu.");
     }
   } catch (err) {
     console.error("Register err:", err);
@@ -592,6 +594,10 @@ function authApplyCloudSave(saveStr) {
       R.corpses = [];
       R.zoneShown = null;
       gotoZone(zoneIdx(Math.min(S.stage || 1, STAGES)));
+    }
+    // Nếu nhân vật đã có môn phái (đã tạo nhân vật rồi), đóng ngay modal Tạo nhân vật nếu đang mở
+    if (S && S.fac && typeof closeModal === "function") {
+      closeModal(!0);
     }
     if (typeof toast === "function") toast("☁ Đã tải bản lưu từ Đám Mây thành công!");
   } catch (e) {
@@ -687,6 +693,9 @@ async function authLogout() {
     } catch (e) {}
   }
 
+  // Khóa lưu để game loop / sự kiện unload không ghi đè lại vào localStorage
+  if (typeof SAVE_LOCK !== "undefined") SAVE_LOCK = true;
+
   AUTH.user = null;
   AUTH.passHash = null;
   AUTH.cloudMeta = null;
@@ -708,8 +717,84 @@ async function authLogout() {
     localStorage.removeItem("jxidle_stash_bak");
   } catch (e) {}
 
+  if (typeof newSave === "function") {
+    S = newSave();
+  } else if (typeof S !== "undefined") {
+    S = null;
+  }
+
   // Tải lại trang: do đã xóa vl_auth_user nên game sẽ văng ra ngay màn hình Đăng Nhập
   location.reload();
+}
+
+/**
+ * Xóa vĩnh viễn tài khoản trên Firebase và dọn sạch dữ liệu trên máy
+ */
+async function authDeleteAccount(targetUser) {
+  const u = targetUser || AUTH.user;
+  if (!u) {
+    if (typeof toast === "function") toast("Không tìm thấy thông tin tài khoản để xóa!");
+    return;
+  }
+
+  const promptMsg = `⚠️ CẢNH BÁO NGUY HIỂM!\n\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản "${u}" không?\n\n• Toàn bộ nhân vật, trang bị, kho đồ trên Đám Mây sẽ bị XÓA HOÀN TOÀN.\n• Thứ hạng trên Bảng Xếp Hạng của tài khoản này sẽ bị XÓA.\n• Hành động này KHÔNG THỂ KHÔI PHỤC!\n\nNhập chính xác chữ "XOA" vào ô bên dưới để xác nhận:`;
+  const conf = prompt(promptMsg);
+  if (!conf || conf.trim().toUpperCase() !== "XOA") {
+    if (typeof toast === "function") toast("Đã hủy thao tác xóa tài khoản.");
+    return;
+  }
+
+  try {
+    // 1. Xóa tài khoản trên Firebase accounts và ranking
+    if (window.CHAT_CFG && CHAT_CFG.firebaseUrl) {
+      try {
+        await fetch(`${CHAT_CFG.firebaseUrl}/accounts/${encodeURIComponent(u)}.json`, { method: "DELETE" });
+      } catch (e) {}
+      try {
+        await fetch(`${CHAT_CFG.firebaseUrl}/ranking/players/u_${encodeURIComponent(u)}.json`, { method: "DELETE" });
+      } catch (e) {}
+    }
+    const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+    if (db) {
+      try {
+        await db.ref("accounts/" + u).remove();
+        await db.ref("ranking/players/u_" + u).remove();
+      } catch (e) {}
+    }
+
+    // 2. Khóa lưu để tránh game ghi đè save cũ xuống localStorage khi reload
+    if (typeof SAVE_LOCK !== "undefined") SAVE_LOCK = true;
+
+    // 3. Xóa thông tin phiên và dữ liệu local
+    AUTH.user = null;
+    AUTH.passHash = null;
+    AUTH.cloudMeta = null;
+    localStorage.removeItem("vl_auth_user");
+    localStorage.removeItem("vl_auth_pass");
+    try {
+      localStorage.removeItem("jxidle");
+      localStorage.removeItem("jxidle_bak");
+      localStorage.removeItem("jxidle_slot");
+      for (let i = 1; i <= 3; i++) {
+        localStorage.removeItem("jxidle_" + i);
+        localStorage.removeItem("jxidle_" + i + "_bak");
+      }
+      localStorage.removeItem("jx_shared_stash");
+      localStorage.removeItem("jx_shared_stash_bak");
+      localStorage.removeItem("jxidle_stash");
+      localStorage.removeItem("jxidle_stash_bak");
+    } catch (e) {}
+
+    if (typeof newSave === "function") {
+      S = newSave();
+    }
+
+    alert(`Đã xóa vĩnh viễn tài khoản "${u}" thành công!`);
+    location.reload();
+  } catch (err) {
+    console.error("Delete account err:", err);
+    alert("Lỗi khi xóa tài khoản: " + (err.message || err));
+  }
 }
 
 /**
@@ -742,18 +827,20 @@ function openCloudAccountModal() {
       </div>
 
       <div class="btnrow" style="margin-bottom:8px">
-        <button class="btn on" id="mBtnSaveCloud">☁ Lưu lên Mây ngay</button>
-        <button class="btn" id="mBtnLoadCloud">☁ Tải lại từ Mây</button>
+        <button class="btn on" id="mBtnSaveCloud">☁ Lưu ngay</button>
+        <button class="btn" id="mBtnLoadCloud">☁ Tải lại</button>
       </div>
 
-      <div class="btnrow">
-        <button class="btn red" id="mBtnLogout">⎋ Đăng xuất tài khoản</button>
+      <div class="btnrow" style="gap:8px">
+        <button class="btn red" id="mBtnLogout" style="flex:1">⎋ Đăng xuất</button>
+        <button class="btn red" id="mBtnDeleteAcc" style="background:#8b1a1a;border-color:#ff4444;flex:1">🗑 Xóa tài khoản</button>
       </div>
       <p class="dim small" style="margin-top:8px">Tiến độ được tự động lưu lên đám mây mỗi khi lưu game hoặc thoát trang.</p>
     `, () => {
       const btnS = document.getElementById("mBtnSaveCloud");
       const btnL = document.getElementById("mBtnLoadCloud");
       const btnO = document.getElementById("mBtnLogout");
+      const btnD = document.getElementById("mBtnDeleteAcc");
       if (btnS) {
         btnS.onclick = () => {
           authCloudSave(true);
@@ -786,6 +873,11 @@ function openCloudAccountModal() {
           }
         };
       }
+      if (btnD) {
+        btnD.onclick = () => {
+          authDeleteAccount();
+        };
+      }
     });
   }
 }
@@ -810,11 +902,12 @@ function updateInGameAuthUI() {
   if (card) {
     if (AUTH.user) {
       card.innerHTML = `
-        <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối mây ☁)</div>
+        <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối☁)</div>
         <div class="btnrow">
-          <button class="btn on sm" onclick="authCloudSave(true)">☁ Lưu Lên Mây</button>
-          <button class="btn sm" onclick="openCloudAccountModal()">Quản lý đám mây</button>
+          <button class="btn on sm" onclick="authCloudSave(true)">Lưu</button>
+          <button class="btn sm" onclick="openCloudAccountModal()">Quản lý</button>
           <button class="btn red sm" onclick="authLogout()">Đăng xuất</button>
+          <button class="btn red sm" style="background:#8b1a1a" onclick="authDeleteAccount()">Xóa tài khoản</button>
         </div>
       `;
     } else {
@@ -839,6 +932,7 @@ window.handleAuthLogin = handleAuthLogin;
 window.handleAuthRegister = handleAuthRegister;
 window.authCloudSave = authCloudSave;
 window.authLogout = authLogout;
+window.authDeleteAccount = authDeleteAccount;
 window.openCloudAccountModal = openCloudAccountModal;
 window.updateInGameAuthUI = updateInGameAuthUI;
 

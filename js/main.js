@@ -266,7 +266,11 @@ function init() {
       const i = t.target.closest("button[data-t]");
       i && (i.dataset.t === "more" && typeof u20MoreMode < "u" && (u20MoreMode = "sys"), showTab(i.dataset.t));
     }),
-    ($("#mClose").onclick = () => closeModal(!0)),
+    ($("#mClose").onclick = () => {
+      const m = $("#modal");
+      if (m && (m.dataset.locked === "1" || m.classList.contains("locked") || (typeof S !== "undefined" && S && !S.fac))) return;
+      closeModal(!0);
+    }),
     ($("#giftBtn") && ($("#giftBtn").onclick = () => {
       S.fac && (uiSfx("click"), giftModal(!0));
     })),
@@ -303,7 +307,16 @@ function init() {
     n.menu)
   )
     slotMenu();
-  else if (!S.fac) pickFaction();
+  else if (!S.fac) {
+    // Không tự động mở tạo nhân vật khi chưa đăng nhập hoặc đang chờ nạp save từ Đám mây
+    if (!localStorage.getItem("vl_auth_user") && typeof showLoginOverlay === "function") {
+      // Đang ở màn hình đăng nhập
+    } else if (localStorage.getItem("vl_auth_user")) {
+      // Đang có tài khoản, chờ authVerifySession nạp bản lưu từ Firebase
+    } else {
+      pickFaction();
+    }
+  }
   else {
     if (
       (delete S.jxLook,

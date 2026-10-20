@@ -690,6 +690,15 @@ textarea {
   color: var(--dim);
   font-size: 16px;
 }
+#modal[data-locked="1"] .mx,
+#modal[data-locked="1"] #mClose,
+#modal.locked .mx,
+#modal.locked #mClose {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 .desc {
   color: var(--dim);
   font-size: 13px;

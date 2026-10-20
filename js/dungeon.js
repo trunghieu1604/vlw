@@ -279,7 +279,7 @@ function dgSpawn() {
     const [i, d] = n(200, 240),
       a = makeEnemy(t.tid, t.L, "boss", i, d);
     ((a.hp = a.max = a.max * WB_HP),
-      (a.dmg *= 1.1),
+      (a.dmg *= 0.35),
       (a.wb = !0),
       (a.n = "Boss tuần · " + a.n),
       (t.boss = a),

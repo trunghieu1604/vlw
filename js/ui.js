@@ -13,9 +13,31 @@ function toast(n) {
     (toastT = setTimeout(() => t.classList.remove("on"), 1800)));
 }
 function modal(n, t, e) {
+  const m = $("#modal");
+  const mc = $("#mClose");
+  if (e) {
+    if (m) {
+      m.dataset.locked = "1";
+      m.classList.add("locked");
+    }
+    if (mc) {
+      mc.style.setProperty("display", "none", "important");
+      mc.style.setProperty("visibility", "hidden", "important");
+      mc.disabled = true;
+    }
+  } else {
+    if (m) {
+      delete m.dataset.locked;
+      m.classList.remove("locked");
+    }
+    if (mc) {
+      mc.style.display = "";
+      mc.style.visibility = "";
+      mc.disabled = false;
+    }
+  }
   (($("#mBody").innerHTML = n),
-    $("#modal").classList.remove("hidden"),
-    ($("#modal").dataset.locked = e ? "1" : ""),
+    m && m.classList.remove("hidden"),
     t && t(),
     // opened for a disciple (js/party.js): its buttons act on that disciple
     typeof PCTX < "u" && PCTX && typeof pModalCtx == "function" && pModalCtx(PCTX));
@@ -24,7 +46,20 @@ function modal(n, t, e) {
   } catch {}
 }
 function closeModal(n) {
-  ($("#modal").dataset.locked && !n) || $("#modal").classList.add("hidden");
+  const m = $("#modal");
+  if (!m) return;
+  if ((m.dataset.locked === "1" || m.classList.contains("locked") || (typeof S !== "undefined" && S && !S.fac)) && n !== "force") {
+    return;
+  }
+  m.classList.add("hidden");
+  m.classList.remove("locked");
+  delete m.dataset.locked;
+  const mc = $("#mClose");
+  if (mc) {
+    mc.style.display = "";
+    mc.style.visibility = "";
+    mc.disabled = false;
+  }
 }
 const FUSE_KEEP = 6;
 function isJunk(n) {
@@ -1258,23 +1293,22 @@ window.resetGameAll = resetGameAll;
 
 function renderMore() {
   setTimeout(() => {
-    const r = document.getElementById("bResetGame");
-    r && (r.onclick = () => resetGameAll());
     const e = document.getElementById("bGcode");
     e && (e.onclick = () => giftcodeModal());
     const o = document.getElementById("bLogout");
     o && typeof netLogout == "function" && (o.onclick = () => netLogout(o));
   }, 0);
   const n = typeof netOn == "function" && netOn() && !NET.offline;
-  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bResetGame" onclick="resetGameAll()">Chơi Lại Từ Đầu</button></div><div class="btnrow"><button class="btn" id="bGcode">Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
+  $("#t-more").innerHTML = `<div class="btnrow"><button class="btn" id="bGcode">Nhập Giftcode</button>${n && NET.user ? `<button class="btn red" id="bLogout" title="Lưu rồi thoát tài khoản ${esc(typeof netUname == "function" ? netUname() : "")}">⎋ Đăng xuất</button>` : ""}</div>
     <h3>Tài khoản & Đám mây</h3>
     <div class="card" id="cloudAccSection">
       ${(typeof AUTH !== "undefined" && AUTH.user) ? `
-        <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối mây ☁)</div>
+        <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối☁)</div>
         <div class="btnrow">
-          <button class="btn on sm" onclick="authCloudSave(true)">☁ Lưu Lên Mây</button>
-          <button class="btn sm" onclick="openCloudAccountModal()">Quản lý đám mây</button>
+          <button class="btn on sm" onclick="authCloudSave(true)">Lưu </button>
+          <button class="btn sm" onclick="openCloudAccountModal()">Quản lý</button>
           <button class="btn red sm" onclick="authLogout()">Đăng xuất</button>
+          <button class="btn red sm" style="background:#8b1a1a" onclick="authDeleteAccount()">Xóa tài khoản</button>
         </div>
       ` : `
         <div style="font-size:13px;margin-bottom:6px;color:#aaa">Chưa đăng nhập (Đang chơi chế độ Khách)</div>
@@ -1676,6 +1710,10 @@ function newcDiscHTML() {
     .join("")}`;
 }
 function pickFaction() {
+  if (typeof S !== "undefined" && S && S.fac) {
+    if (typeof closeModal === "function") closeModal(!0);
+    return;
+  }
   const n = (a) => FACTIONS.filter((c) => c.series === a),
     t = (a, c) =>
       n(a)
@@ -1775,8 +1813,9 @@ function createCharacter(n, t, e, dd) {
     (R.mana = R.P.mana),
     loginCheck(),
     dotGift(),
-    closeModal(!0),
+    closeModal("force"),
     save(),
+    typeof authCloudSave === "function" && authCloudSave(!1),
     showTab("log"),
     noticeModal(),
     S.party &&

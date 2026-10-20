@@ -64,11 +64,11 @@ function hiddenActive(t, n = S.eq) {
   return s;
 }
 function heroStart() {
-  const t = FAC[S.fac];
-  return J.start[t.series * 2 + (S.sex || 0)] || J.start[0];
+  const t = S && S.fac ? FAC[S.fac] : null;
+  return (t && J.start[t.series * 2 + (S.sex || 0)]) || J.start[0];
 }
 function heroSeries() {
-  return FAC[S.fac] ? FAC[S.fac].series : 0;
+  return S && S.fac && FAC[S.fac] ? FAC[S.fac].series : 0;
 }
 function weaponCode(t) {
   const n = t.weapon;

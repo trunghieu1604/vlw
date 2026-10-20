@@ -534,6 +534,25 @@ body.u20 #modal .mx {
   right: 5px !important;
   box-shadow: 0 0 3px #000;
 }
+#modal[data-locked="1"] .mx,
+#modal[data-locked="1"] #mClose,
+#modal.locked .mx,
+#modal.locked #mClose,
+body.u20 #modal[data-locked="1"] .mx,
+body.u20 #modal[data-locked="1"] #mClose,
+body.u20 #modal.locked .mx,
+body.u20 #modal.locked #mClose,
+body.u2m #modal[data-locked="1"] .mx,
+body.u2m #modal[data-locked="1"] #mClose,
+body.u2s #modal[data-locked="1"] .mx,
+body.u2s #modal[data-locked="1"] #mClose,
+body.zflip #modal[data-locked="1"] .mx,
+body.zflip #modal[data-locked="1"] #mClose {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 /* do rong tung cua so (js/ui20.js: moi bang la mot cua so rieng .u20w) */
 body.u20 #t-char {
   width: 600px;
