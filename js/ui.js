@@ -380,9 +380,10 @@ function renderChar() {
     e = Object.values(S.eq).filter((o) => o && !reqOk(o)),
     s = calc({}),
     a = { life: Math.round(n.life - s.life), mana: Math.round(n.mana - s.mana) },
-    c = SLOTS.map(
-      ([o, p]) => `<div class="slot" data-slot="${o}">${S.eq[o] ? itemCell(S.eq[o]) : `<span>${p}</span>`}</div>`,
-    ).join(""),
+    c = SLOTS.map(([o, p]) => {
+      const it = S.eq[o];
+      return `<div class="slot${it ? ` r${it.r}` : ""}" data-slot="${o}">${it ? itemCell(it) : `<span>${p}</span>`}</div>`;
+    }).join(""),
     i = Object.keys(ATTR_VI)
       .map(
         (o) =>
@@ -622,6 +623,10 @@ function skillEffectLines(n, t) {
     const lines = SK_120[n.id].desc(t);
     if (lines && lines.length) return lines;
   }
+  if (typeof SK_180 !== "undefined" && SK_180[n.id] && typeof sk180DescLines === "function") {
+    const lines = sk180DescLines(n.id, t);
+    if (lines && lines.length) return lines;
+  }
   const e = [];
   for (const a in n.attr) {
     if (SK_HIDE.test(a) || !J.attrDesc[a]) continue;
@@ -766,7 +771,7 @@ function skillModal(n) {
             <div style="background:linear-gradient(90deg,#2563eb,#10b981);height:100%;width:${pct}%;transition:width .3s"></div>
           </div>
           <small class="dim" style="display:block;margin-top:6px;line-height:1.4">
-            ${t.req === 120 
+            ${t.req === 120 || t.req === 180 || t.learn === "180" 
               ? "⚡ <b>Điều kiện thăng cấp:</b> Diệt quái bất kỳ ngoài bản đồ để tự động tích lũy exp (quái cấp cao/trùm nhận nhiều exp hơn)." 
               : "⚡ <b>Điều kiện thăng cấp:</b> Đặt làm chiêu chính (★) và dùng tiêu diệt quái ngoài bản đồ để nhận exp thăng cấp."}
           </small>
@@ -777,8 +782,8 @@ function skillModal(n) {
     } else {
       expBox = `<div class="sl" style="background:rgba(0,0,0,0.25);padding:8px;border-radius:6px;border:1px solid #444;margin:8px 0">
         <small class="dim" style="display:block;line-height:1.4">
-          📖 <b>Cách học:</b> Mua <b>${t.req === 120 ? "Bí Kíp 120" : "Bí Kíp 150"}</b> tại Kỳ Trân Các, sau đó bấm <b>Lĩnh ngộ</b> tại đây hoặc trong Kỳ Trân Các.<br>
-          ⚡ <b>Cách thăng cấp:</b> ${t.req === 120 ? "Hạ quái bất kỳ ngoài bản đồ để tự động nhận exp luyện chiêu." : "Đặt làm chiêu chính và dùng tiêu diệt quái để nhận exp luyện chiêu."}
+          📖 <b>Cách học:</b> Mua <b>${t.req === 120 ? "Bí Kíp 120" : (t.req === 180 || t.learn === "180") ? "Bí Kíp 180" : "Bí Kíp 150"}</b> tại Kỳ Trân Các, sau đó bấm <b>Lĩnh ngộ</b> tại đây hoặc trong Kỳ Trân Các.<br>
+          ⚡ <b>Cách thăng cấp:</b> ${t.req === 120 || t.req === 180 || t.learn === "180" ? "Hạ quái bất kỳ ngoài bản đồ để tự động nhận exp luyện chiêu." : "Đặt làm chiêu chính và dùng tiêu diệt quái để nhận exp luyện chiêu."}
         </small>
       </div>`;
     }
@@ -799,7 +804,7 @@ function skillModal(n) {
     }
     <div class="sl"><b>${a ? "Cấp hiện tại " + a : "Nếu học (cấp 1)"}</b>${u(i)}</div>
     ${d && a ? `<div class="sl"><b>Cấp kế tiếp ${d}</b>${u(d)}</div>` : ""}
-    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}${!e && t.exp && (t.req === 120 || t.learn === "120") ? `<button class="btn on" id="skLearn120" ${matHave("misc", "bk120") > 0 && (S.lvl >= 120 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 120)</button>` : !e && t.exp && (t.req >= 150 || t.learn === "150") ? `<button class="btn on" id="skLearn150" ${matHave("misc", "bk150") > 0 && (S.lvl >= 150 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 150)</button>` : !t.exp ? `<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button>${canLearn(t) && S.skPts >= 2 ? `<button class="btn gold" id="skMax" title="Cộng tối đa điểm vào chiêu này">+ Tối đa (${Math.min(S.skPts, t.max - (S.sk[t.id] || 0))})</button>` : ""}` : ""}<button class="btn red" id="skMinus" ${!t.exp && a ? "" : "disabled"}>− Rút điểm</button></div>`,
+    <div class="btnrow">${c && a ? '<button class="btn" id="skMain">Chọn làm chiêu chính</button>' : ""}${!e && t.exp && (t.req === 120 || t.learn === "120") ? `<button class="btn on" id="skLearn120" ${matHave("misc", "bk120") > 0 && (S.lvl >= 120 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 120)</button>` : !e && t.exp && (t.req === 180 || t.learn === "180") ? `<button class="btn on" id="skLearn180" ${matHave("misc", "bk180") > 0 && (S.lvl >= 180 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 180)</button>` : !e && t.exp && (t.req >= 150 || t.learn === "150") ? `<button class="btn on" id="skLearn150" ${matHave("misc", "bk150") > 0 && (S.lvl >= 150 || rebornN() > 0) ? "" : "disabled"}>Lĩnh ngộ (1 Bí Kíp 150)</button>` : !t.exp ? `<button class="btn" id="skPlus" ${canLearn(t) ? "" : "disabled"}>+ Cộng điểm</button>${canLearn(t) && S.skPts >= 2 ? `<button class="btn gold" id="skMax" title="Cộng tối đa điểm vào chiêu này">+ Tối đa (${Math.min(S.skPts, t.max - (S.sk[t.id] || 0))})</button>` : ""}` : ""}<button class="btn red" id="skMinus" ${!t.exp && a ? "" : "disabled"}>− Rút điểm</button></div>`,
     () => {
       bindSkState($("#mBody"));
       const o = $("#skMain");
@@ -861,6 +866,29 @@ function skillModal(n) {
           refresh();
           toast(`Đã lĩnh ngộ ${t.n}!`);
           log(`📕 Dùng Bí Kíp 120: lĩnh ngộ tuyệt kỹ 120 <b style="color:#ffd24a">${esc(t.n)}</b>!`);
+          skillModal(n);
+        });
+      const l180 = $("#skLearn180");
+      l180 &&
+        (l180.onclick = () => {
+          if (matHave("misc", "bk180") < 1) {
+            toast("Chưa có Bí Kíp 180 (mua tại Kỳ Trân Các)");
+            return;
+          }
+          if (S.lvl < 180 && !(typeof rebornN == "function" && rebornN())) {
+            toast("Tuyệt kỹ 180 cần cấp 180");
+            return;
+          }
+          matAdd("misc", "bk180", -1);
+          S.sk[n] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[n] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          uiSfx("levelup");
+          refresh();
+          toast(`Đã lĩnh ngộ ${t.n}!`);
+          log(`📕 Dùng Bí Kíp 180: lĩnh ngộ tuyệt kỹ 180 <b style="color:#ffd24a">${esc(t.n)}</b>!`);
           skillModal(n);
         });
       const l150 = $("#skLearn150");

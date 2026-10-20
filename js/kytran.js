@@ -136,6 +136,14 @@ const KNB_GOLD = 1e6,
       use: () => (matAdd("misc", "bk150", 1), "Nhận 1 Mật Tịch 150 (bấm Lĩnh ngộ để chọn chiêu)"),
     },
     {
+      k: "bk180",
+      n: "Mật Tịch 180",
+      ic: "img/ep/dtbk.png",
+      knb: 2000,
+      d: "Dùng để lĩnh ngộ tuyệt kỹ 180 của môn phái (cần cấp 180 hoặc trùng sinh)",
+      use: () => (matAdd("misc", "bk180", 1), "Nhận 1 Mật Tịch 180 (bấm Lĩnh ngộ để học chiêu)"),
+    },
+    {
       k: "rhk",
       n: "Rương Hoàng Kim",
       ic: "img/ep/box2.png",
@@ -754,11 +762,13 @@ function ktcModal(tab) {
                           ? matHave("misc", "bk120")
                           : n.k === "bk150"
                             ? matHave("misc", "bk150")
+                            : n.k === "bk180"
+                              ? matHave("misc", "bk180")
                             : n.k === "knb"
                               ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
                               : null;
         return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "rhk" && c ? '<button class="btn sm on" id="ktcRhk">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRhk10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rfullhk" && c ? '<button class="btn sm on" id="ktcRfullhk">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "rhk" && c ? '<button class="btn sm on" id="ktcRhk">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRhk10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rfullhk" && c ? '<button class="btn sm on" id="ktcRfullhk">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "bk180" && c ? '<button class="btn sm on" id="ktcBk180">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" || n.k === "bk180" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
       }).join("")}</div>
       <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>
     `;
@@ -821,6 +831,8 @@ function ktcModal(tab) {
       b120 && (b120.onclick = ktcBk120Modal);
       const b150 = $("#ktcBk150");
       b150 && (b150.onclick = ktcBk150Modal);
+      const b180 = $("#ktcBk180");
+      b180 && (b180.onclick = ktcBk180Modal);
       const c = $("#ktcDgt");
       c && (c.onclick = doiGioiTinhModal);
       const a = $("#ktcDtbk");
@@ -983,6 +995,61 @@ function ktcBk150Modal() {
           refresh();
         };
       });
+    }
+  );
+}
+
+function ktcBk180Modal() {
+  if (!S.fac || (typeof isNovice == "function" && isNovice())) {
+    toast("Chưa gia nhập môn phái");
+    return;
+  }
+  if (S.lvl < 180 && !(typeof rebornN == "function" && rebornN())) {
+    toast("Tuyệt kỹ 180 cần cấp 180 hoặc trùng sinh");
+    return;
+  }
+  const have = matHave("misc", "bk180");
+  if (have < 1) {
+    toast("Chưa có Mật Tịch 180");
+    return;
+  }
+  const id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  if (!id || !SK[id]) {
+    toast("Phái này chưa có tuyệt kỹ 180");
+    return;
+  }
+  const sk = SK[id];
+  const learned = S.sk[id] > 0;
+  modal(
+    `<h3>Lĩnh ngộ tuyệt kỹ 180 <small>${have} Mật Tịch 180</small></h3>
+    <p class="desc">Dùng 1 Mật Tịch 180 để lĩnh ngộ tuyệt kỹ 180 bổn phái (cần cấp 180 hoặc trùng sinh, học cấp 1 sau đó luyện theo điểm kinh nghiệm).</p>
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;padding:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <img src="${esc(sk.ic || "")}" alt="" style="width:36px;height:36px;border-radius:4px;image-rendering:pixelated">
+        <div><b>${esc(sk.n)}</b><br><small class="dim">${esc(sk.d || "")}</small></div>
+      </div>
+      <div>
+        ${learned ? '<span class="tag">Đã học</span>' : `<button class="btn sm on" id="bLearn180">Lĩnh ngộ</button>`}
+      </div>
+    </div>`,
+    () => {
+      const btn = $("#bLearn180");
+      if (btn) {
+        btn.onclick = () => {
+          if (S.sk[id] || matHave("misc", "bk180") < 1) return;
+          matAdd("misc", "bk180", -1);
+          S.sk[id] = 1;
+          const lx = typeof skTrainMap == "function" ? skTrainMap() : (S.lx || (S.lx = {}));
+          lx[id] = { lv: 1, xp: 0 };
+          recalc();
+          save();
+          closeModal(true);
+          toast(`Đã lĩnh ngộ ${sk.n}!`);
+          log(`📕 Dùng Mật Tịch 180: lĩnh ngộ tuyệt kỹ 180 <b style="color:#ffd24a">${esc(sk.n)}</b>!`);
+          uiSfx("levelup");
+          refresh();
+        };
+      }
     }
   );
 }

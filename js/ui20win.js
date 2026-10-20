@@ -102,7 +102,8 @@ function renderChar20() {
     i = { life: Math.round(n.life - s.life), mana: Math.round(n.mana - s.mana) },
     t = SLOTS.map(([e, l]) => {
       const [r, b, f, p] = U2_DOLL[e];
-      return `<div class="u2s slot" data-slot="${e}" style="left:${r}px;top:${b}px;width:${f}px;height:${p}px">${S.eq[e] ? itemCell(S.eq[e]) : `<span>${l}</span>`}</div>`;
+      const it = S.eq[e];
+      return `<div class="u2s slot${it ? ` r${it.r}` : ""}" data-slot="${e}" style="left:${r}px;top:${b}px;width:${f}px;height:${p}px">${it ? itemCell(it) : `<span>${l}</span>`}</div>`;
     }).join(""),
     o = Object.keys(ATTR_VI)
       .map(
@@ -300,7 +301,7 @@ function renderSkill20() {
     ${u2MainBar()}
     ${typeof sk9MainHTML == "function" ? sk9MainHTML() : ""}
     ${listHtml}
-    <div class="u2foot"><span class="dim small">Mật Tịch 90 ×${matHave("misc", "bk90")} · Mật Tịch 120 ×${matHave("misc", "bk120")} · Mật Tịch 150 ×${matHave("misc", "bk150")} · Đại Thành ×${matHave("misc", "dtbk")}${S.mainLock ? ' · <a id="bAutoMain">bỏ khóa chiêu chính</a>' : ""}</span><span class="sp"></span><button class="btn sm" id="bSugSk">Gợi ý</button><button class="btn sm" id="bTT">Tẩy Tủy</button><span class="u2pts">Điểm kỹ năng còn: <b>${S.skPts}</b></span></div>
+    <div class="u2foot"><span class="dim small">Mật Tịch 90 ×${matHave("misc", "bk90")} · Mật Tịch 120 ×${matHave("misc", "bk120")} · Mật Tịch 150 ×${matHave("misc", "bk150")} · Mật Tịch 180 ×${matHave("misc", "bk180")} · Đại Thành ×${matHave("misc", "dtbk")}${S.mainLock ? ' · <a id="bAutoMain">bỏ khóa chiêu chính</a>' : ""}</span><span class="sp"></span><button class="btn sm" id="bSugSk">Gợi ý</button><button class="btn sm" id="bTT">Tẩy Tủy</button><span class="u2pts">Điểm kỹ năng còn: <b>${S.skPts}</b></span></div>
     <p class="dim small u2tip">Bấm biểu tượng: xem chi tiết, chọn chiêu chính, rút điểm. Bấm <b class="plusd">+</b> để cộng điểm.</p>`),
     document.querySelectorAll("#t-skill .plus").forEach(
       (e) =>
@@ -601,7 +602,7 @@ function u20TrkDraw() {
 }
 const KTC_CAT = [
   ["Tiện ích", ["knb", "tt", "qht", "ldt"]],
-  ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "dtbk"]],
+  ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "bk180", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Rương Thần Bí", ["rngua", "rmatna"]],
   ["Rương Hoàng Kim", ["rfullhk", "rhk"]],
@@ -623,10 +624,10 @@ function ktcModal20(cat) {
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
-        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150"].includes(t)
+        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150", "bk180"].includes(t)
           ? matHave("misc", t)
           : null,
-    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk" },
+    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", bk180: "ktcBk180", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk" },
     c = !1,
     s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
@@ -634,7 +635,7 @@ function ktcModal20(cat) {
         d = n(t.k);
       const titleName = t.k === "rhk" ? `Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}` : t.k === "rfullhk" ? `Rương Trọn Bộ HK ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}` : t.n;
       return `<div class="u2card${o ? "" : " bad"}" title="${esc(t.d)}"><div class="u2ct">${esc(titleName)}</div><div class="u2cb"><img src="${t.ic}" alt=""><div><div>Giá: <b class="${t.knb ? "gold" : ""}">${ktcCost(t)}</b></div><small class="dim">${t.k === "knb" ? `Không giới hạn · hôm nay đổi ${knbDay().n}` : t.k === "ldt" ? `Hôm nay ${ldtDay().n}/${LDT_BUY_DAY} · có ${d}` : d != null ? `Đang có ${d}` : esc(t.d.slice(0, 40))}</small></div></div>
-      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" || t.k === "rfullhk" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}${t.k === "rhk" && d > 1 ? `<button class="u2buy x on" id="ktcRhk10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
+      <div class="u2cf"><button class="u2buy" data-ktc="${t.k}" ${o && ktcCan(t) ? "" : "disabled"}>Mua</button>${t.k === "dtbk" || t.k === "ldp" || t.k === "dgt" || t.k === "ldt" || t.k === "bk120" || t.k === "bk150" || t.k === "bk180" || t.k === "rfullhk" ? "" : `<button class="u2buy x" data-ktc10="${t.k}" ${o && ktcCan(t, 10) ? "" : "disabled"}>×10</button>`}${a[t.k] && d ? `<button class="u2buy x on" id="${a[t.k]}">${t.k === "mt90" || t.k === "bk120" || t.k === "bk150" || t.k === "bk180" ? "Lĩnh ngộ" : "Dùng"}</button>` : ""}${t.k === "rngua" && d > 1 ? `<button class="u2buy x on" id="ktcRngua10">Dùng ×${Math.min(10, d)}</button>` : ""}${t.k === "rhk" && d > 1 ? `<button class="u2buy x on" id="ktcRhk10">Dùng ×${Math.min(10, d)}</button>` : ""}</div></div>`;
     };
 
   const cardsHtml = s.map(i).join("");
@@ -674,6 +675,7 @@ function ktcModal20(cat) {
         }),
         t("ktcBk120", ktcBk120Modal),
         t("ktcBk150", ktcBk150Modal),
+        t("ktcBk180", ktcBk180Modal),
         t("ktcLdt", () => {
           if (S.lvl < DT_LV) {
             toast(`Dã Tẩu mở từ cấp ${DT_LV}`);

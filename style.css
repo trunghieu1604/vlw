@@ -2311,4 +2311,87 @@ body.u2s #skBuffs {
   box-shadow: 0 8px 25px rgba(255, 170, 0, 0.6);
 }
 
+/* ======== CON TRỎ CHUỘT JX ======== */
+body, body * {
+  cursor: url(ui/cursor.png?v=481) 0 0, auto !important;
+}
+input, textarea {
+  cursor: text !important;
+}
+button, a, select, [role="button"], .btn, .chip, .tab, .it, .slot, .pbtn {
+  cursor: url(ui/cursor.png?v=481) 0 0, pointer !important;
+}
+
+/* ======== HIỆU ỨNG ĐỒ HOÀNG KIM (r4) & BẠCH KIM (r5) CHỚP CHỚP (CẢ KHUNG LẪN XEM TỪNG MÓN) ======== */
+@keyframes goldglow {
+  0%, 100% {
+    border-color: #ffb52e;
+    box-shadow: inset 0 0 6px rgba(255, 181, 46, 0.7), 0 0 6px rgba(255, 181, 46, 0.5);
+  }
+  50% {
+    border-color: #fff2a8;
+    box-shadow: inset 0 0 14px rgba(255, 207, 90, 0.95), 0 0 14px rgba(255, 181, 46, 0.9);
+  }
+}
+@keyframes platglow {
+  0%, 100% {
+    border-color: #9fe8ff;
+    box-shadow: inset 0 0 6px rgba(159, 232, 255, 0.7), 0 0 6px rgba(159, 232, 255, 0.5);
+  }
+  50% {
+    border-color: #ffffff;
+    box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.95), 0 0 14px rgba(159, 232, 255, 0.9);
+  }
+}
+
+.u2s.r1, .slot.r1, .u2s:has(.it.r1), .slot:has(.it.r1) {
+  border-color: #6aa8ff !important;
+  box-shadow: inset 0 0 8px #2255a0;
+}
+.u2s.r2, .slot.r2, .u2s:has(.it.r2), .slot:has(.it.r2) {
+  border-color: #ffd24a !important;
+  box-shadow: inset 0 0 8px #a85a10;
+}
+.u2s.r3, .slot.r3, .u2s:has(.it.r3), .slot:has(.it.r3) {
+  border-color: #c77bff !important;
+  box-shadow: inset 0 0 10px #7a3ab0;
+}
+
+.u2s.r4,
+.slot.r4,
+.u2s:has(.it.r4),
+.slot:has(.it.r4),
+.it.r4,
+.dslot.r4,
+.pic.r4,
+.card .pic.r4,
+.u2ri.r4,
+.u2ri:has(.it.r4),
+.u2bag .it.r4,
+.invgrid .it.r4 {
+  border-color: #ffb52e !important;
+  animation: goldglow 1.5s ease-in-out infinite !important;
+}
+
+.u2s.r5,
+.slot.r5,
+.u2s:has(.it.r5),
+.slot:has(.it.r5),
+.it.r5,
+.dslot.r5,
+.pic.r5,
+.card .pic.r5,
+.u2ri.r5,
+.u2ri:has(.it.r5),
+.u2bag .it.r5,
+.invgrid .it.r5 {
+  border-color: #9fe8ff !important;
+  animation: platglow 1.5s ease-in-out infinite !important;
+}
+
+body.saver .it.r4, body.saver .it.r5, body.saver .dslot.r4, body.saver .dslot.r5,
+body.saver .u2s.r4, body.saver .u2s.r5, body.saver .slot.r4, body.saver .slot.r5 {
+  animation: none !important;
+}
+
 

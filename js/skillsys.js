@@ -464,6 +464,179 @@ function init120Skills() {
   }
 }
 
+// --- KỸ NĂNG 180 (VÕ LÂM HOÀNG KIM) ---
+const SK_180_REQ = 180,
+  SK_180_MAX = 20,
+  SK_180_XP = [600, 1200, 2000, 3000, 4200, 5600, 7200, 9000, 11000, 13200, 15600, 18200, 21000, 24000, 27200, 30600, 34200, 38000, 42800],
+  sk180Scale = (lv, minVal, maxVal) => minVal + (maxVal - minVal) * (clamp(lv, 1, SK_180_MAX) - 1) / (SK_180_MAX - 1),
+  sk180Fmt = (val, dec = 0) => (+val).toFixed(dec).replace(".", ","),
+  SK_180_TRIGGERS = {
+    hurt: "Bị đánh trúng",
+    atk: "Khi tấn công",
+    low: "Khi sinh lực yếu"
+  },
+  SK_180 = {
+    1220: {
+      fac: "shaolin",
+      n: "Kim Quyên La Hán",
+      trigger: "hurt",
+      prob: [3, 5],
+      cd: [30, 20],
+      d: "Kỹ năng thất truyền của Thiếu Lâm, dùng nó thì vạn tà không nhập.",
+      desc: (lv) => [
+        `Minh Kính Vô Di: phản lại ${sk180Fmt(sk180Scale(lv, 10, 50))}% sát thương nhận vào trong ${sk180Fmt(sk180Scale(lv, 10, 15))} giây`
+      ]
+    },
+    1221: {
+      fac: "tianwang",
+      n: "Chinh Chiến Bát Phương",
+      trigger: "hurt",
+      prob: [10, 10],
+      cd: [30, 10],
+      d: "Kỹ năng thất truyền của Thiên Vương, dùng nó thì ngàn quân phải tránh.",
+      desc: (lv) => [
+        `Du Long Chân Khí: xóa trạng thái xấu, giảm 30% sát thương nhận trong ${sk180Fmt(sk180Scale(lv, 1, 3), 1)} giây`
+      ]
+    },
+    1222: {
+      fac: "wudu",
+      n: "Sâm La Độc Hải",
+      trigger: "atk",
+      prob: [20, 80],
+      cd: [1, 1],
+      d: "Kỹ năng thất truyền của Ngũ Độc, dùng nó thì vạn vật sâm la.",
+      desc: (lv) => [
+        `Hồn Ảnh Tùng Sanh: độc lan ra mọi quái quanh mục tiêu (tầm 420), mỗi con trúng độc bằng ${sk180Fmt(sk180Scale(lv, 10, 40))}% sát thương đòn đó`
+      ]
+    },
+    1223: {
+      fac: "tangmen",
+      n: "Hấp Tinh Trận",
+      trigger: "low",
+      prob: [5, 20],
+      cd: [15, 15],
+      d: "Kỹ năng thất truyền của Đường Môn, khi sinh lực yếu có thể dùng nó.",
+      desc: (lv) => [
+        `Sinh lực dưới 35% bị đánh: hóa giải hoàn toàn sát thương trong ${sk180Fmt(sk180Scale(lv, 1, 2), 1)} giây`
+      ]
+    },
+    1224: {
+      fac: "emei",
+      n: "Ba La Tâm Kinh",
+      trigger: "atk",
+      prob: [10, 30],
+      cd: [3, 3],
+      d: "Kỹ năng thất truyền của Nga My, dùng nó thì có thể khử ma kháng tà.",
+      desc: (lv) => [
+        `Từ Hàng Phổ Độ: hồi ${sk180Fmt(sk180Scale(lv, 3, 8), 1)}% sinh lực tối đa trong 2 giây`
+      ]
+    },
+    1225: {
+      fac: "cuiyan",
+      n: "Huyền Băng Vô Tức",
+      trigger: "hurt",
+      prob: [3, 5],
+      cd: [20, 10],
+      d: "Kỹ năng thất truyền của Thúy Yên, dùng nó thì tuyết tan không còn dấu tích.",
+      desc: (lv) => [
+        `Dung Tuyết Vô Tung: tàng hình ${sk180Fmt(sk180Scale(lv, 2, 5), 1)} giây (quái đánh trượt)`
+      ]
+    },
+    1226: {
+      fac: "tianren",
+      n: "Liệt Hỏa Phẫn Thiên",
+      trigger: "hurt",
+      prob: [1, 3],
+      cd: [30, 20],
+      d: "Kỹ năng thất truyền của Thiên Nhẫn, dùng nó thì khắp trời khiếp sợ.",
+      desc: (lv) => [
+        `Ma Âm Phệ Phách: quái trong tầm 300 hoảng loạn (choáng) ${sk180Fmt(sk180Scale(lv, 1.5, 3), 1)} giây`
+      ]
+    },
+    1227: {
+      fac: "gaibang",
+      n: "Ô Y Quyết",
+      trigger: "hurt",
+      prob: [3, 10],
+      cd: [30, 20],
+      d: "Kỹ năng thất truyền của Cái Bang, dùng nó có thể ngăn chặn quần tà.",
+      desc: (lv) => [
+        `Thiên Hành Khí Công trong ${sk180Fmt(sk180Scale(lv, 5, 15))} giây: sát thương +${sk180Fmt(sk180Scale(lv, 6, 20))}%, tỉ lệ Hỗn Thiên Khí Công +${sk180Fmt(sk180Scale(lv, 2, 20))}%`
+      ]
+    },
+    1228: {
+      fac: "wudang",
+      n: "Chân Vũ Thất Tiệt",
+      trigger: "hurt",
+      prob: [3, 10],
+      cd: [30, 20],
+      d: "Kỹ năng thất truyền của Võ Đang, có thể mượn ngoại lực để dùng.",
+      desc: (lv) => [
+        `Âm Dương Khí Quyết trong ${sk180Fmt(sk180Scale(lv, 5, 15))} giây: chuyển ${sk180Fmt(sk180Scale(lv, 50, 200))}% sát thương nhận thành nội lực`
+      ]
+    },
+    1229: {
+      fac: "kunlun",
+      n: "Thiên Cương Khất Kính",
+      trigger: "hurt",
+      prob: [3, 5],
+      cd: [30, 20],
+      d: "Kỹ năng thất truyền của Côn Lôn, có thể mượn Cương Khí để bảo vệ.",
+      desc: (lv) => [
+        `Tiên Thiên Cương Khí trong ${sk180Fmt(sk180Scale(lv, 5, 15))} giây: sát thương +${sk180Fmt(sk180Scale(lv, 5, 15))}%, khiên Lưỡng Nghi Chân Khí +${sk180Fmt(sk180Scale(lv, 3, 15))}% sinh lực`
+      ]
+    }
+  };
+
+function init180Skills() {
+  if (typeof SK == "undefined") return;
+  for (const id in SK_180) {
+    const item = SK_180[id];
+    if (!SK[id]) {
+      SK[id] = {
+        id: +id,
+        n: item.n,
+        prop: "Hỗ trợ kích hoạt",
+        d: item.d,
+        f: item.fac,
+        series: (typeof FAC != "undefined" && FAC[item.fac] ? FAC[item.fac].series : 0),
+        req: SK_180_REQ,
+        max: SK_180_MAX,
+        style: 3,
+        melee: 0,
+        phys: 0,
+        aura: 0,
+        enemy: 0,
+        self: 1,
+        attr: {},
+        learn: "180",
+        exp: 1,
+        xp: SK_180_XP,
+        ic: `img/s/${id}.png`,
+        x180: 1,
+        k180: item.trigger
+      };
+    }
+    if (typeof FAC != "undefined" && FAC[item.fac] && !FAC[item.fac].skills.includes(+id)) {
+      FAC[item.fac].skills.push(+id);
+    }
+  }
+}
+
+const sk180IdOf = (fac) => {
+  for (const id in SK_180) {
+    if (SK_180[id].fac === fac) return +id;
+  }
+  return 0;
+};
+
+const sk180DescLines = (id, lv) => {
+  const sk = SK_180[id];
+  if (!sk) return [];
+  const trigText = `${SK_180_TRIGGERS[sk.trigger] || "Kích hoạt"}: ${sk180Fmt(sk180Scale(lv, sk.prob[0], sk.prob[1]))}% kích hoạt · hồi ${sk180Fmt(sk180Scale(lv, sk.cd[0], sk.cd[1]))} giây`;
+  return [trigText].concat(sk.desc(Math.max(1, lv)));
+};
+
 const skIsExp = (id) => !!(SK[id] && SK[id].exp),
   skTrainMap = () => (S.lx && typeof S.lx == "object" ? S.lx : (S.lx = {})),
   skTrainRec = (id) => skTrainMap()[id] || null,
@@ -485,6 +658,7 @@ const skIsExp = (id) => !!(SK[id] && SK[id].exp),
 function syncExpSkills() {
   if (!S || !S.sk || !S.fac) return;
   init120Skills();
+  init180Skills();
   const tm = skTrainMap();
   const skl = typeof SKL == "function" ? SKL() : (S.skL || {});
   for (const id in skl) {
@@ -537,6 +711,7 @@ function addSkillExp(id, xpAdd) {
 }
 
 init120Skills();
+init180Skills();
 document.readyState === "loading"
   ? document.addEventListener("DOMContentLoaded", () => setTimeout(syncExpSkills, 0))
   : setTimeout(syncExpSkills, 0);

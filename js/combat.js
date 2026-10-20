@@ -385,20 +385,23 @@ function heroHit(t, n) {
   for (const l in t.parts) {
     let d = t.parts[l] * rnd(0.85, 1.15);
     if (l === "poison") {
+      const pDmg = applyPart(d * (e && e.poison ? 1 + e.poison / 100 : 1), "poison", t.series, n.series, y, M, t.series5);
       const h = n.poison > 0 ? n.poisonDmg * n.poison : 0,
         p = t.poisonT || POISON_TIME;
       ((n.poisonDmg =
-        (h +
-          applyPart(d * (e && e.poison ? 1 + e.poison / 100 : 1), "poison", t.series, n.series, y, M, t.series5) *
-            cheatK()) /
+        (h + pDmg * cheatK() * 0.4) /
         Math.max(p, n.poison > 0 ? n.poison : 0)),
         (n.poison = Math.max(p, n.poison > 0 ? n.poison : 0)));
-      continue;
+      d = pDmg;
+    } else {
+      d = applyPart(d, l, t.series, n.series, y, M, t.series5);
+      o && l === "phys" && (d *= CRIT_MULT);
     }
-    ((d = applyPart(d, l, t.series, n.series, y, M, t.series5)),
-      o && l === "phys" && (d *= CRIT_MULT),
-      (s += d),
-      d > a && ((a = d), (r = l)));
+    s += d;
+    if (d > a) {
+      a = d;
+      r = l;
+    }
   }
   (counters(t.series, n.series) && (s += R.P.series5),
     i && (s *= 1.5),
@@ -417,7 +420,7 @@ function heroHit(t, n) {
   const k = isAnyBoss ? 0 : (1 + (R.P.stunLong || 0) / 100) * (1 - ((e && e.stunRed) || 0) / 100);
   if (
     (t.parts.light && !isAnyBoss && Math.random() < ELEM_STUN_P && (n.stun = Math.max(n.stun, ELEM_STUN_T * k)),
-    (s = Math.max(1, s * cheatK())),
+    (s = Math.max(1, s * cheatK() * (typeof sk180DmgMul == "function" ? sk180DmgMul() : 1))),
     (isWorldBoss ? (n.hp = n.max) : (n.hp = Math.max(0, n.hp - s))),
     R.tower && (R.stall = 0),
     isWorldBoss && typeof onHeroHitWb === "function" && onHeroHitWb(s),
@@ -459,6 +462,8 @@ function enemyHit(t) {
     addText(H.x, H.y - 30, "Bất tử", "#ffd24a", 11);
     return;
   }
+  // 180 Tàng hình (Thúy Yên) hoặc Hấp Tinh Trận (Đường Môn)
+  if (typeof sk180CheckDodge == "function" && sk180CheckDodge(t)) return;
   // 120 Thúy Yên - Ngự Tuyết Ẩn (quái đánh trượt)
   if (R.s120 && R.s120.stealth && R.s120.stealth > performance.now()) {
     addText(H.x, H.y - 30, "Ẩn thân", "#7fd0ff", 11);
@@ -539,6 +544,10 @@ function enemyHit(t) {
   ) {
     const i = Math.min(R.mana, (o * R.P.manaShield) / 100);
     ((R.mana -= i), (o -= i));
+  }
+  // 180 On hurt mechanics (Phản đòn Thiếu Lâm, Giảm sát thương Thiên Vương, Hút mana Võ Đang, Trigger buff 180)
+  if (typeof sk180OnHurt == "function") {
+    o = sk180OnHurt(t, o);
   }
   if (
     ((R.life -= o),
@@ -885,6 +894,8 @@ function heroAttack(pool) {
   for (const c of f) {
     const dmg = heroHit(o, c);
     recHit(dmg, o);
+    // 180 On hit triggers (Ngũ Độc: Sâm La Độc Hải, Nga My: Ba La Tâm Kinh)
+    if (typeof onHeroHit180 == "function") onHeroHit180(c, dmg);
     // 120 Ngũ Độc - Hấp Tinh Yểm (yểm độc theo sát thương)
     if (S.sk && S.sk[711] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[711], 1, 15)) {
       const pDmg = dmg * (sk120Scale(S.sk[711], 30, 85) / 100);
@@ -892,8 +903,9 @@ function heroAttack(pool) {
       c.poison = 3;
       addText(c.x, c.y - (c.r || 30) - 20, "Hấp Tinh Yểm", "#7cff7c", 11);
     }
-    // 120 Cái Bang - Hỗn Thiên Khí Công (giảm kháng quái)
-    if (S.sk && S.sk[714] && typeof sk120Scale == "function" && Math.random() * 100 < sk120Scale(S.sk[714], 1, 6) && !c.cb120) {
+    // 120 Cái Bang - Hỗn Thiên Khí Công (giảm kháng quái, 180 Ô Y Quyết tăng thêm xác suất)
+    const cbBonus = (typeof sk180CbBonus == "function") ? sk180CbBonus() : 0;
+    if (S.sk && S.sk[714] && typeof sk120Scale == "function" && Math.random() * 100 < (sk120Scale(S.sk[714], 1, 6) + cbBonus) && !c.cb120) {
       const pRed = sk120Scale(S.sk[714], 2, 10);
       const fRed = sk120Scale(S.sk[714], 3, 15);
       c.cb120 = { t: sk120Scale(S.sk[714], 3, 9), p: pRed, f: fRed };
@@ -931,7 +943,19 @@ function enemyAI(t, n) {
   }
   const e = t.slowT > 0 ? ((t.slowT -= n), ELEM_SLOW) : 1;
   const moveSpdMod = crs && crs.slowMove ? Math.max(0.2, 1 + crs.slowMove / 100) : 1;
-  if ((t.poison > 0 && ((t.poison -= n), (t.hp -= t.poisonDmg * n)), t.home && fieldIdle(t, n))) return;
+  if (t.poison > 0) {
+    t.poison -= n;
+    t.hp -= t.poisonDmg * n;
+    t.psTick = (t.psTick || 0) + n;
+    if (t.psTick >= 0.5) {
+      t.psTick = 0;
+      const dotDmg = Math.round(t.poisonDmg * 0.5);
+      if (dotDmg > 0) {
+        addText(t.x + (Math.random() * 20 - 10), t.y - t.r - 10, "-" + fmt(dotDmg), ELEM_COL.poison, 11);
+      }
+    }
+  }
+  if (t.home && fieldIdle(t, n)) return;
   // target: the nearest party member (js/party.js); T is its actor (H for the main character)
   const pk = typeof partyAggro == "function" ? partyAggro(t, n) : 0,
     T = pk ? pAct(pk).h : H,
@@ -1008,6 +1032,7 @@ function tick(t) {
     R.potCd && ((R.potCd.life = Math.max(0, R.potCd.life - t)), (R.potCd.mana = Math.max(0, R.potCd.mana - t))),
     goldBossTick(t),
     typeof skill120Tick == "function" && skill120Tick(t),
+    typeof sk180Tick == "function" && sk180Tick(t),
     typeof partyTick == "function" && partyTick(t),
     ghTick(t),
     typeof skillSysTick == "function" && skillSysTick(t),
@@ -1130,6 +1155,12 @@ function expSkillOnKill(t) {
     addSkillExp(sk120Id, xpBase);
   }
 
+  // 1.5 Kỹ năng 180 của môn phái nhận exp mỗi khi hạ bất kỳ quái nào
+  const sk180Id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  if (sk180Id && tm[sk180Id] && typeof addSkillExp == "function") {
+    addSkillExp(sk180Id, xpBase);
+  }
+
   // 2. Kỹ năng 150 đang đặt làm chiêu tấn công chính nhận exp khi đánh quái
   let castId = H.castSk || (R.P && R.P.main ? R.P.main.id : 0);
   if (typeof SK15_PART !== "undefined" && SK15_PART[castId]) castId = SK15_PART[castId];
@@ -1192,7 +1223,8 @@ function skill120Tick(t) {
 
   if (S.sk[717] && typeof sk120Scale == "function" && hpRatio < 0.3 && (s120.cd[717] || 0) <= now) {
     const lv = S.sk[717];
-    const shieldVal = (R.P.life || 1000) * (sk120Scale(lv, 10, 40) / 100);
+    const klBonus = (typeof sk180KlShieldBonus == "function") ? sk180KlShieldBonus() : 0;
+    const shieldVal = (R.P.life || 1000) * ((sk120Scale(lv, 10, 40) + klBonus) / 100);
     const dur = sk120Scale(lv, 5, 10) * 1000;
     const cd = 20 * 1000;
     s120.cd[717] = now + cd;
@@ -1206,6 +1238,150 @@ function skill120Tick(t) {
     const lv = S.sk[708];
     const regenRate = sk120Scale(lv, 0.2, 1) / 100;
     R.life = Math.min(R.P.life, R.life + R.P.life * regenRate * t);
+  }
+}
+
+// --- KỸ NĂNG 180 RUNTIME & TRIGGERS ---
+const sk180State = () => (R.s180 || (R.s180 = { cd: 0, until: 0, kind: "", hot: 0 }));
+const sk180HasBuff = (kind) => {
+  const s = R.s180;
+  return !!(s && s.kind === kind && s.until > performance.now());
+};
+function sk180Trigger(triggerKind) {
+  if (!S || !S.fac || !S.sk || R.deadT > 0 || R.town) return 0;
+  const id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  const lv = id && S.sk[id] ? (0 | S.sk[id]) : 0;
+  if (!lv) return 0;
+  const info = typeof SK_180 != "undefined" ? SK_180[id] : null;
+  if (!info || info.trigger !== triggerKind) return 0;
+  const s = sk180State();
+  const now = performance.now();
+  if (now < s.cd) return 0;
+  const chance = sk180Scale(lv, info.prob[0], info.prob[1]);
+  if (Math.random() * 100 >= chance) return 0;
+  s.cd = now + 1000 * sk180Scale(lv, info.cd[0], info.cd[1]);
+  return lv;
+}
+function sk180SetBuff(kind, durSec, toastText, color = "#ffe08a") {
+  const s = sk180State();
+  s.kind = kind;
+  s.until = performance.now() + 1000 * durSec;
+  if (toastText && typeof addText == "function") {
+    addText(H.x, H.y - 74, toastText, color, 13);
+  }
+}
+function sk180DmgMul() {
+  if (!sk180HasBuff("buff") || !S || !S.fac) return 1;
+  const id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  const lv = (S.sk && S.sk[id]) || 0;
+  if (!lv) return 1;
+  return 1 + sk180Scale(lv, id === 1227 ? 6 : 5, id === 1227 ? 20 : 15) / 100;
+}
+function sk180CbBonus() {
+  if (sk180HasBuff("buff") && S && typeof sk180IdOf == "function" && sk180IdOf(S.fac) === 1227) {
+    const lv = (S.sk && S.sk[1227]) || 0;
+    return sk180Scale(lv, 2, 20);
+  }
+  return 0;
+}
+function sk180KlShieldBonus() {
+  if (sk180HasBuff("buff") && S && typeof sk180IdOf == "function" && sk180IdOf(S.fac) === 1229) {
+    const lv = (S.sk && S.sk[1229]) || 0;
+    return sk180Scale(lv, 3, 15);
+  }
+  return 0;
+}
+function sk180CheckDodge(t) {
+  if (sk180HasBuff("hide") || sk180HasBuff("block")) {
+    if (Math.random() < 0.5 && typeof addText == "function") {
+      addText(H.x, H.y - 30, sk180HasBuff("hide") ? "Tàng hình" : "Hấp Tinh Trận", "#bfe8ff", 11);
+    }
+    return true;
+  }
+  if (R.P && R.life / Math.max(1, R.P.life) < 0.35) {
+    const lv = sk180Trigger("low");
+    if (lv) {
+      sk180SetBuff("block", sk180Scale(lv, 1, 2), "🕸 Hấp Tinh Trận");
+      return true;
+    }
+  }
+  return false;
+}
+function sk180OnHurt(enemy, incomingDmg) {
+  const id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  if (!id) return incomingDmg;
+  const lv = (S.sk && S.sk[id]) || 0;
+  if (sk180HasBuff("ret") && enemy && lv > 0) {
+    const retVal = incomingDmg * sk180Scale(lv, 10, 50) / 100;
+    if (retVal > 0 && enemy.hp > 0) enemy.hp -= retVal * cheatK();
+  }
+  if (sk180HasBuff("calm")) {
+    incomingDmg *= 0.7;
+  }
+  if (sk180HasBuff("mana") && lv > 0) {
+    R.mana = Math.min(R.P.mana, R.mana + incomingDmg * sk180Scale(lv, 50, 200) / 100);
+  }
+  const trigLv = sk180Trigger("hurt");
+  if (!trigLv) return incomingDmg;
+  if (id === 1220) {
+    sk180SetBuff("ret", sk180Scale(trigLv, 10, 15), "🛕 Minh Kính Vô Di");
+  } else if (id === 1221) {
+    R.slowT = 0;
+    R.stunT = 0;
+    sk180SetBuff("calm", sk180Scale(trigLv, 1, 3), "🐉 Du Long Chân Khí");
+    incomingDmg *= 0.7;
+  } else if (id === 1225) {
+    sk180SetBuff("hide", sk180Scale(trigLv, 2, 5), "❄ Dung Tuyết Vô Tung", "#bfe8ff");
+  } else if (id === 1226) {
+    const stunDur = sk180Scale(trigLv, 1.5, 3);
+    const foes = (typeof alive == "function") ? alive() : (R.enemies || []);
+    for (const foe of foes) {
+      if (Math.hypot(foe.x - H.x, foe.y - H.y) < 300 && !foe.wb && !foe.isWbBoss) {
+        foe.stun = Math.max(foe.stun || 0, stunDur);
+      }
+    }
+    sk180SetBuff("fear", stunDur, "🔥 Ma Âm Phệ Phách", "#ff9a6a");
+  } else if (id === 1227) {
+    sk180SetBuff("buff", sk180Scale(trigLv, 5, 15), "🥢 Thiên Hành Khí Công");
+  } else if (id === 1228) {
+    sk180SetBuff("mana", sk180Scale(trigLv, 5, 15), "☯ Âm Dương Khí Quyết", "#9fd6ff");
+  } else if (id === 1229) {
+    sk180SetBuff("buff", sk180Scale(trigLv, 5, 15), "⚡ Tiên Thiên Cương Khí");
+  }
+  return incomingDmg;
+}
+function onHeroHit180(target, dmg) {
+  if (!(dmg > 0 && target)) return;
+  const trigLv = sk180Trigger("atk");
+  if (!trigLv) return;
+  const id = typeof sk180IdOf == "function" ? sk180IdOf(S.fac) : 0;
+  if (id === 1222) {
+    const pct = sk180Scale(trigLv, 10, 40) / 100;
+    let cnt = 0;
+    const foes = (typeof alive == "function") ? alive() : (R.enemies || []);
+    for (const foe of foes) {
+      if (Math.hypot(foe.x - target.x, foe.y - target.y) < 420) {
+        foe.poisonDmg = (foe.poisonDmg || 0) + (dmg * pct) / 3;
+        foe.poison = 3;
+        cnt++;
+      }
+    }
+    cnt > 0 && addText(target.x, target.y - (target.r || 30) - 22, `☠ Hồn Ảnh Tùng Sanh ×${cnt}`, "#7cff7c", 11);
+  } else if (id === 1224) {
+    const s = sk180State();
+    s.hot = (R.P.life * sk180Scale(trigLv, 3, 8) / 100) / 2;
+    sk180SetBuff("hot", 2, "🪷 Từ Hàng Phổ Độ", "#ffd0f0");
+  }
+}
+function sk180Tick(t) {
+  const s = R.s180;
+  if (!s || !s.until) return;
+  if (performance.now() > s.until) {
+    s.until = 0;
+    s.kind = "";
+    s.hot = 0;
+  } else if (s.kind === "hot" && s.hot > 0 && R.deadT <= 0 && R.P) {
+    heal(s.hot * t, true);
   }
 }
 const XP_EVENT = 5;
