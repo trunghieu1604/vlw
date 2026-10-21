@@ -148,9 +148,8 @@ function netLogout(btn) {
   );
 }
 async function netUpload() {
-  if (typeof authCloudSave === "function" && typeof AUTH !== "undefined" && AUTH && AUTH.user) {
-    return authCloudSave(false);
-  }
+  // Đã tắt tự động lưu mây ngầm. Lưu mây chỉ thực hiện khi người chơi chủ động bấm nút Lưu.
+  return;
 }
 // The server changed the stored save (market / mail) after this copy was packed: it replayed
 // those changes (gold, knb, removed / added items) on the upload and tells us to do the same.

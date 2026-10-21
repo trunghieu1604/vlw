@@ -1843,7 +1843,6 @@ function createCharacter(n, t, e, dd) {
     dotGift(),
     closeModal("force"),
     save(),
-    typeof authCloudSave === "function" && authCloudSave(!1),
     showTab("log"),
     noticeModal(),
     S.party &&

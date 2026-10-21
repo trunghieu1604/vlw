@@ -62,19 +62,12 @@ async function initAuth() {
     showLoginOverlay();
   }
 
-  // Lên lịch tự động sync lên mây mỗi 60 giây nếu đã đăng nhập
-  if (AUTH.autoSaveTimer) clearInterval(AUTH.autoSaveTimer);
-  AUTH.autoSaveTimer = setInterval(() => {
-    if (AUTH.user) authCloudSave(false);
-  }, 60 * 1000);
-
-  // Lưu khi thoát hoặc ẩn tab
-  window.addEventListener("pagehide", () => {
-    if (AUTH.user) authCloudSave(false);
-  });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden && AUTH.user) authCloudSave(false);
-  });
+  // Đã tắt chế độ tự động lưu lên đám mây (tránh bị lưu đè dữ liệu cũ khi đổi máy).
+  // Người chơi chủ động bấm nút "Lưu" khi muốn cập nhật tiến độ lên Đám Mây.
+  if (AUTH.autoSaveTimer) {
+    clearInterval(AUTH.autoSaveTimer);
+    AUTH.autoSaveTimer = null;
+  }
 }
 
 /**
@@ -122,8 +115,8 @@ function authVerifySession(user, hash) {
           body: JSON.stringify(Date.now())
         }).catch(() => {});
       }
-      // Tự nạp bản lưu từ mây nếu máy chưa có nhân vật hoặc bản lưu trên mây mới hơn
-      if (data.saveData && (!S || !S.fac || !S.last || (data.saveAt && data.saveAt > S.last))) {
+      // Lưu/tải hoàn toàn thủ công. Chỉ nạp từ mây nếu máy này chưa có nhân vật nào.
+      if (data.saveData && (!S || !S.fac)) {
         authApplyCloudSave(data.saveData);
         if (data.stashData) authApplyCloudStash(data.stashData);
       } else if (!data.saveData && (!S || !S.fac)) {
@@ -684,15 +677,37 @@ async function authCloudSave(notify = false) {
 }
 
 /**
+ * Tải thủ công bản lưu từ Đám Mây về máy
+ */
+async function authCloudLoad(notify = true) {
+  if (!AUTH.user) {
+    if (notify && typeof toast === "function") toast("Vui lòng đăng nhập tài khoản!");
+    return;
+  }
+  try {
+    const val = await authFetchAccount(AUTH.user);
+    if (val && val.saveData) {
+      authApplyCloudSave(val.saveData);
+      if (val.stashData) authApplyCloudStash(val.stashData);
+      AUTH.cloudMeta = val;
+      if (notify && typeof toast === "function") {
+        toast(`☁ Đã tải thành công bản lưu từ Mây (${val.charName || "Nhân vật"} - Cấp ${val.lvl || 1})!`);
+      }
+      updateInGameAuthUI();
+    } else {
+      if (notify && typeof toast === "function") toast("Chưa có bản lưu nào trên Mây!");
+    }
+  } catch (e) {
+    console.warn("authCloudLoad err:", e);
+    if (notify && typeof toast === "function") toast("Lỗi khi tải từ Mây!");
+  }
+}
+
+/**
  * Đăng xuất tài khoản: Tự động lưu mây và xóa sạch bộ nhớ tạm trên máy
  */
 async function authLogout() {
-  if (AUTH.user) {
-    try {
-      await authCloudSave(false);
-    } catch (e) {}
-  }
-
+  // Không tự ý lưu đè lên mây khi đăng xuất để tránh đẩy nhầm dữ liệu máy cũ lên mây
   // Khóa lưu để game loop / sự kiện unload không ghi đè lại vào localStorage
   if (typeof SAVE_LOCK !== "undefined") SAVE_LOCK = true;
 
@@ -835,7 +850,7 @@ function openCloudAccountModal() {
         <button class="btn red" id="mBtnLogout" style="flex:1">⎋ Đăng xuất</button>
         <button class="btn red" id="mBtnDeleteAcc" style="background:#8b1a1a;border-color:#ff4444;flex:1">🗑 Xóa tài khoản</button>
       </div>
-      <p class="dim small" style="margin-top:8px">Tiến độ được tự động lưu lên đám mây mỗi khi lưu game hoặc thoát trang.</p>
+      <p class="dim small" style="margin-top:8px">Đã tắt tự động lưu mây ngầm. Vui lòng bấm <b>Lưu ngay</b> khi muốn lưu tiến độ lên Mây.</p>
     `, () => {
       const btnS = document.getElementById("mBtnSaveCloud");
       const btnL = document.getElementById("mBtnLoadCloud");
@@ -850,18 +865,8 @@ function openCloudAccountModal() {
       if (btnL) {
         btnL.onclick = () => {
           if (confirm("Tải lại bản lưu từ Mây sẽ ghi đè nhân vật trên máy này bằng bản lưu gần nhất trên Mây. Tiếp tục?")) {
-            const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
-            if (db && AUTH.user) {
-              db.ref("accounts/" + AUTH.user).once("value", (snap) => {
-                const val = snap.val();
-                if (val && val.saveData) {
-                  authApplyCloudSave(val.saveData);
-                } else {
-                  if (typeof toast === "function") toast("Chưa có bản lưu nào trên Mây!");
-                }
-                if (typeof closeModal === "function") closeModal(true);
-              });
-            }
+            authCloudLoad(true);
+            if (typeof closeModal === "function") closeModal(true);
           }
         };
       }
@@ -904,10 +909,10 @@ function updateInGameAuthUI() {
       card.innerHTML = `
         <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối☁)</div>
         <div class="btnrow">
-          <button class="btn on sm" onclick="authCloudSave(true)">Lưu</button>
+          <button class="btn on sm" onclick="authCloudSave(true)">Lưu Mây</button>
+          <button class="btn sm" onclick="authCloudLoad(true)">Tải Mây</button>
           <button class="btn sm" onclick="openCloudAccountModal()">Quản lý</button>
           <button class="btn red sm" onclick="authLogout()">Đăng xuất</button>
-          <button class="btn red sm" style="background:#8b1a1a" onclick="authDeleteAccount()">Xóa tài khoản</button>
         </div>
       `;
     } else {
@@ -931,6 +936,7 @@ window.switchLoginTab = switchLoginTab;
 window.handleAuthLogin = handleAuthLogin;
 window.handleAuthRegister = handleAuthRegister;
 window.authCloudSave = authCloudSave;
+window.authCloudLoad = authCloudLoad;
 window.authLogout = authLogout;
 window.authDeleteAccount = authDeleteAccount;
 window.openCloudAccountModal = openCloudAccountModal;
