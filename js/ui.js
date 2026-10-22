@@ -1377,14 +1377,17 @@ function renderMore() {
         <button class="btn" id="bCodex">Bách khoa</button>
         <button class="btn" id="bSug">Gợi ý cộng điểm</button>
       </div></div>
-    <h3>Trợ năng</h3><div class="card">
+    <h3>Cài Đặt</h3><div class="card">
       <div class="row" style="margin-bottom:8px">Cỡ chữ <select id="uFs">${UI_FS.map((e, s) => `<option value="${s}" ${uiPrefs().fs === s ? "selected" : ""}>${UI_FS_NAME[s]}</option>`).join("")}</select> <small class="dim">áp dụng cho bảng thông tin, thẻ và hộp thoại</small></div>
       <label style="display:block;margin-bottom:6px"><input type="checkbox" id="uSaver" ${uiPrefs().saver ? "checked" : ""}> Tiết kiệm pin (30FPS)</label>
       <label style="display:block"><input type="checkbox" id="cZflip" ${typeof zflipOn == "function" && zflipOn() ? "checked" : ""}> Chế độ màn vuông</label>
+      <label style="display:block;margin-bottom:6px"><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label>
+      <label style="display:block"><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label>
+	  <div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
     </div>
-    <h3>Điều khiển & Hiển thị</h3><div class="card">
+    <h3>Hiển thị</h3><div class="card">
       <div class="row" style="margin-bottom:6px">
-        <b>🔍 Thu phóng sân đấu:</b> <span id="lblArenaZoom" style="color:#f3d88a;font-weight:bold">${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}%</span>
+        <b>🔍 Thu phóng:</b> <span id="lblArenaZoom" style="color:#f3d88a;font-weight:bold">${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}%</span>
         <input type="range" id="slArenaZoom" min="40" max="140" step="5" value="${Math.round((typeof getArenaZoom == "function" ? getArenaZoom() : 1) * 100)}" style="flex:1; margin:0 8px; cursor:pointer">
       </div>
       <div class="btnrow" id="grpArenaZoom" style="margin-bottom:8px">
@@ -1396,10 +1399,8 @@ function renderMore() {
         <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 1.25) < 0.04 ? " on" : ""}" data-zoom="1.25">125%</button>
       </div>
       <small class="dim" style="display:block;margin-bottom:10px">Giảm % xuống để nhân vật nhỏ lại, bao quát sân đấu rộng hơn.</small>
-      <div class="row" style="margin-bottom:6px">Điều khiển di chuyển <span class="seg"><button class="btn sm${mouseMode() ? " on" : ""}" id="bInMouse">🖱 Chuột</button><button class="btn sm${!mouseMode() ? " on" : ""}" id="bInJoy">🕹 Joystick</button></span></div>
-      <label style="display:block;margin-bottom:6px"><input type="checkbox" id="cJoy" ${joyFixed() ? "checked" : ""}> Joystick cố định ở góc trái dưới (bỏ chọn: joystick nổi theo ngón tay)</label>
-      <label style="display:block"><input type="checkbox" id="cLowFx" ${S.lowFx ? "checked" : ""}> Giảm hiệu ứng (mượt hơn trên máy yếu / đông quái)</label></div>
-    <h3>Nguồn dữ liệu</h3><div class="card small dim">Kỹ năng, quái, trang bị, thuộc tính và tỉ lệ rơi đồ trích từ dữ liệu Võ Lâm Truyền Kỳ 1 (phi thương mại).</div>
+	</div>
+    <h3>Giới thiệu</h3><div class="card small dim">Game được Public với mục đích vui là chính. Không kinh doanh dưới bất kì hình thức nào. Hãy là một người chơi thông thái và đừng sử dụng hack/cheat để biến bản thân thành tuất.</div>
 `;
   const t = (e, s) => {
     const a = $(e);
