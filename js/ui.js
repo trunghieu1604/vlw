@@ -1398,7 +1398,6 @@ function renderMore() {
         <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 1.0) < 0.04 ? " on" : ""}" data-zoom="1.0">100%</button>
         <button class="btn sm${Math.abs((typeof getArenaZoom == "function" ? getArenaZoom() : 1) - 1.25) < 0.04 ? " on" : ""}" data-zoom="1.25">125%</button>
       </div>
-      <small class="dim" style="display:block;margin-bottom:10px">Giảm % xuống để nhân vật nhỏ lại, bao quát sân đấu rộng hơn.</small>
 	</div>
     <h3>Giới thiệu</h3><div class="card small dim">Game được Public với mục đích vui là chính. Không kinh doanh dưới bất kì hình thức nào. Hãy là một người chơi thông thái và đừng sử dụng hack/cheat để biến bản thân thành tuất.</div>
 `;
