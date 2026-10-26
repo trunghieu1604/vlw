@@ -1009,6 +1009,41 @@ textarea {
 .pbtn.tp {
   background: radial-gradient(#c9a23a, #3a2a08);
 }
+.pbtn.kc {
+  background: radial-gradient(#2a7a6a, #0b2a22);
+  border-color: #4ecdc4aa;
+  font-size: 18px;
+  color: #a0ffe8;
+}
+.pbtn.kc::before {
+  content: "✦";
+  position: absolute;
+  font-size: 20px;
+  line-height: 1;
+  z-index: 0;
+  filter: drop-shadow(0 0 4px #4ecdc4);
+}
+.pbtn.kc small {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9px;
+  color: #fff;
+  z-index: 2;
+}
+.pbtn.kc.off {
+  opacity: 0.6;
+}
+.pbtn.kc .cd {
+  background: #000a;
+  z-index: 1;
+  bottom: 0;
+  top: auto;
+  height: 0%;
+  transition: height 0.25s linear;
+}
 .pbtn .cd {
   position: absolute;
   inset: 0;
@@ -2393,5 +2428,201 @@ body.saver .it.r4, body.saver .it.r5, body.saver .dslot.r4, body.saver .dslot.r5
 body.saver .u2s.r4, body.saver .u2s.r5, body.saver .slot.r4, body.saver .slot.r5 {
   animation: none !important;
 }
+
+/* Khinh công (Qinggong) */
+#pad #bKc {
+  background: url("ui/kc.png?v=3") center / 100% no-repeat;
+  display: grid;
+  place-items: center;
+  font: 700 9px/1.05 Arial, sans-serif;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+  text-align: center;
+  width: 44px;
+  height: 44px;
+  position: relative;
+  cursor: pointer;
+}
+#pad #bKc .cd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  background: #000a;
+  border-radius: inherit;
+  pointer-events: none;
+}
+#pad #bKc small {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 700 13px Arial, sans-serif;
+  color: #ffe07a;
+  pointer-events: none;
+}
+#pad #bKc.off {
+  filter: grayscale(0.6) brightness(0.75);
+}
+body.pc.jxui #pad #bKc {
+  display: grid;
+  top: 24px;
+  left: 410px;
+  background: url("ui/kc.png?v=3") center / 100% no-repeat, #050806;
+}
+
+/* Đồng hành (pets.js) */
+.petpane {
+  background: linear-gradient(180deg, #1c1f18, #121511);
+  border: 1px solid #3d4a33;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.petpane .pethead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.petpane .pethead img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+.petpane .pethead span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.petpane .pethead small {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #8a948e;
+}
+.petpane .pethead b {
+  color: #e6c67a;
+  font-size: 14px;
+}
+.petrole {
+  border: 1px solid #3d5a2c;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #141a12;
+}
+.petrole small {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #9fe36a;
+}
+.petrole p {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.pettag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  margin: 1px 2px 1px 0;
+  border-radius: 8px;
+  border: 1px solid #4a6a3a;
+  color: #bfe8a0;
+  background: #1a2416;
+}
+.petskills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.petsk {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #2c3530;
+  border-radius: 6px;
+  background: #101411;
+}
+.petsk b {
+  color: #e6c67a;
+  font-size: 13px;
+}
+.petsk small {
+  color: #9aa49e;
+  font-size: 11px;
+}
+.petsk.off {
+  opacity: 0.55;
+}
+.petzone {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 12px 0 6px;
+  color: #e6c67a;
+  border-bottom: 1px solid #2c3530;
+  padding-bottom: 3px;
+}
+.petzone small {
+  color: #8a948e;
+  font-weight: normal;
+  font-size: 11px;
+}
+.petgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+.petcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border: 1px solid #2c3530;
+  border-radius: 7px;
+  background: #121614;
+  color: #d8d0bc;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+.petcard img {
+  height: 52px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.petcard b {
+  font-size: 12px;
+  color: #e8e0d0;
+}
+.petcard small {
+  font-size: 10px;
+  color: #7f8a84;
+}
+.petcard.on {
+  border-color: #e6c67a;
+  box-shadow: 0 0 8px #e6c67a44;
+}
+.petcard.mine {
+  background: linear-gradient(180deg, #1e2414, #121614);
+}
+.petcard.lock {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+@media (max-width: 520px) {
+  .petskills {
+    grid-template-columns: 1fr;
+  }
+  .petgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 
 
