@@ -229,7 +229,10 @@ function calc(t) {
     (a.manaLeech = av(n, "stealmana_p") + av(n, "stealmanaenhance_p")),
     (a.ignoreDef = av(n, "ignoredefense_p")),
     (a.retMelee = av(n, "meleedamagereturn_v")),
-    (a.retMeleeP = av(n, "meleedamagereturn_p")),
+    (() => {
+      const petTank = typeof petTankBuff === "function" ? petTankBuff() : { sorb: 0, ret: 0 };
+      (a.retMeleeP = av(n, "meleedamagereturn_p") + petTank.ret);
+    })(),
     (a.series5 = av(n, "five_elements_enhance_v")),
     (a.res5 = av(n, "five_elements_resist_v")),
     (a.seriesSkill = 0),
@@ -241,7 +244,7 @@ function calc(t) {
     (a.heavy = clamp(av(n, "enhancehit_rate"), 0, 50)),
     (a.block = clamp(av(n, "block_rate"), 0, 50)),
     (a.dmgShield = av(n, "dynamicmagicshield_v")),
-    (a.sorb = clamp(av(n, "sorbdamage_p"), 0, 60)),
+    (a.sorb = clamp(av(n, "sorbdamage_p") + (typeof petTankBuff === "function" ? petTankBuff().sorb : 0), 0, 60)),
     (a.anti = {}));
   for (const r of ELEM)
     a.anti[r] =

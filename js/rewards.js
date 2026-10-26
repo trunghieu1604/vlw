@@ -250,6 +250,8 @@ const ACH = [
   ["reborn1", "Chuyển sinh", () => RW().stat.reborn >= 1, { fd: 50, knb: 20 }, ["lifemax_p", 8]],
   ["gold5", "Săn trùm Hoàng Kim", () => RW().stat.goldBoss >= 5, { fd: 20, ht: 4, knb: 8 }, ["lucky_v", 10]],
   ["login30", "Giang hồ lão luyện", () => RW().login.total >= 30, { set: 1, knb: 10 }, ["manamax_p", 6]],
+  ["pet20", "Bạn đồng hành", () => RW().pet && RW().pet.lvl >= 20, { fd: 20, knb: 5 }, ["fastwalkrun_p", 2]],
+  ["pet60", "Linh thú thông tuệ", () => RW().pet && RW().pet.lvl >= 60, { fd: 50, knb: 15 }, ["fastwalkrun_p", 4]],
 ];
 function achCheck() {
   if (!S || !S.fac) return;
@@ -527,6 +529,7 @@ function rwOnKill(t) {
     const o = eventNow();
     addText(t.x, t.y - 50, "+1 " + o.token, o.col, 11);
   }
+  typeof petOnKill == "function" && petOnKill(t);
   (n.stat.kills % 25 === 0 || t.cls === "boss") && achCheck();
 }
 function giftCounts() {
@@ -536,6 +539,7 @@ function giftCounts() {
     login: t.login.claimed ? 0 : 1,
     lvms: lvMsReady().length,
     chest: Math.floor(t.fd / 10),
+    pet: (S.lvl >= 20 && !(t.pet && t.pet.tid)) ? 1 : 0,
     event: EVENT_SHOP.filter(([o]) => n >= o).length,
   };
 }
@@ -617,6 +621,9 @@ function giftBody(t) {
     const n = eventNow();
     return `<p class="desc">Sự kiện: <b style="color:${n.col}">${n.n}</b>. Quái rơi ${n.token} (5%). Đang có: <b>${t.stat.tokens}</b>.</p>${EVENT_SHOP.map(([o, s], i) => `<div class="qrow"><span>${giftText(s)}</span><small>${o} ${n.token}</small><button class="btn sm" data-e="${i}" ${t.stat.tokens >= o ? "" : "disabled"}>Đổi</button></div>`).join("")}`;
   }
+  if (giftTab === "pet") {
+    return typeof renderPetTab === "function" ? renderPetTab(t) : "";
+  }
   if (giftTab === "giftcode") {
     return `<p class="desc">Nhập mã Giftcode để nhận phần thưởng trực tiếp vào <b>Hành trang</b>.</p>
       <div class="btnrow"><input id="gcIn" maxlength="32" placeholder="NHẬP MÃ VÀO ĐÂY" style="flex:1;text-transform:uppercase;padding:6px 10px;background:#0d1411;border:1px solid #3d6052;color:#ffe9b0;user-select:text;-webkit-user-select:text;cursor:text" autocomplete="off"><button class="btn on" id="gcOk">Nhận quà</button></div>
@@ -641,6 +648,7 @@ const GIFT_TABS = [
   ["lvms", "Mốc cấp"],
   ["chest", "Phúc Duyên"],
   ["event", "Sự kiện"],
+  ["pet", "Đồng hành"],
   ["ach", "Thành tựu"],
   ["giftcode", "Giftcode"],
 ];
@@ -682,6 +690,7 @@ function giftModal(t) {
             }),
         ),
         document.querySelectorAll("#mBody [data-e]").forEach((i) => (i.onclick = () => eventBuy(+i.dataset.e))));
+      typeof setupPetTabEvents == "function" && setupPetTabEvents(n, giftModal);
 
       const sGc = async () => {
         const gcIn = $("#gcIn"),

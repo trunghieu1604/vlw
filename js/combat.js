@@ -1031,6 +1031,8 @@ function tick(t) {
     R.tpCd > 0 && (R.tpCd -= t),
     R.potCd && ((R.potCd.life = Math.max(0, R.potCd.life - t)), (R.potCd.mana = Math.max(0, R.potCd.mana - t))),
     goldBossTick(t),
+    typeof kcTick == "function" && kcTick(t),
+    typeof petTick == "function" && petTick(t),
     typeof skill120Tick == "function" && skill120Tick(t),
     typeof sk180Tick == "function" && sk180Tick(t),
     typeof partyTick == "function" && partyTick(t),
@@ -1066,8 +1068,10 @@ function tick(t) {
     killCheck();
     return;
   }
-  (manual() && moveManual(t),
+  const isJumping = typeof KC_STATE !== "undefined" && KC_STATE && KC_STATE.j;
+  (!isJumping && manual() && moveManual(t),
     (e && R.pickTarget) ||
+      isJumping ||
       (manual() ||
         (R.moveTo &&
           R.moveTo.hp > 0 &&
@@ -1397,7 +1401,7 @@ function gainXp(t) {
     xpSlow(Math.min(BASE_CAP, S.lvl));
   const rb = typeof rebornN === "function" ? rebornN() : ((S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0);
   if (S.lvl < 200) {
-    e = Math.min(200000, e);
+    e = Math.min(1000000, e);
   } else if (rb >= 10 && S.lvl >= 200) {
     e = Math.min(2500, e);
   }

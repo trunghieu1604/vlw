@@ -602,6 +602,7 @@ function drawMinimap(i) {
       const a = pAct(k).h;
       ((i.fillStyle = partyCol[k] || "#9fe8ff"), i.fillRect(n + a.x * e - 1.5, o + a.y * e - 1.5, 3, 3));
     }
+  R.petPos && ((i.fillStyle = "#9fe36a"), i.fillRect(n + R.petPos.x * e - 1.5, o + R.petPos.y * e - 1.5, 3, 3));
   const r = n + H.x * e,
     s = o + H.y * e,
     f = Math.PI / 2 + ((H.dir || 0) * Math.PI) / 4;
@@ -926,7 +927,18 @@ function bar(i, t, n, o, e, l) {
 // the main character (k = 0) or a disciple swapped in by withChar (js/party.js): same JX1 drawing, name label at
 // the fixed JX1 pate height (heroLabelLift / heroStateLift read the swapped-in sex / mount)
 function drawHeroEnt(t, i, k) {
-  H.shOk || ((t.fillStyle = "#0007"), t.beginPath(), t.ellipse(H.x, H.y, 16, 6, 0, 0, 7), t.fill());
+  const jumpH = !k && typeof kcHeight === "function" ? kcHeight() : 0;
+  if (jumpH > 0) {
+    t.save();
+    t.fillStyle = `rgba(0,0,0,${0.35 - (jumpH / 56) * 0.15})`;
+    t.beginPath();
+    t.ellipse(H.x, H.y, 16 - (jumpH / 56) * 5, 6 - (jumpH / 56) * 2, 0, 0, 7);
+    t.fill();
+    t.restore();
+  } else {
+    H.shOk || ((t.fillStyle = "#0007"), t.beginPath(), t.ellipse(H.x, H.y, 16, 6, 0, 0, 7), t.fill());
+  }
+  const hy = H.y - jumpH;
   const a = heroGfx();
   H.animKey = a && a.anim;
   const h = H.x - (H.px ?? H.x),
@@ -943,16 +955,16 @@ function drawHeroEnt(t, i, k) {
     R.dashTrail && a && a.anim)
   )
     for (const p of R.dashTrail)
-      drawHeroAnim(a.anim, "run", p.dir || 0, 0, p.x, p.y, HERO_SCALE, 0.45 * (1 - p.t / 0.3));
+      drawHeroAnim(a.anim, "run", p.dir || 0, 0, p.x, p.y - jumpH, HERO_SCALE, 0.45 * (1 - p.t / 0.3));
   const x = entTint(R.slowT > 0, R.hpDotT > 0),
     m =
       a &&
       a.anim &&
-      drawTinted(x, H.x - 170, H.y - 215, 340, 340, () =>
-        drawHeroAnim(a.anim, H.act || "st", H.dir || 0, H.actT || 0, H.x, H.y, HERO_SCALE),
+      drawTinted(x, H.x - 170, hy - 215, 340, 340, () =>
+        drawHeroAnim(a.anim, H.act || "st", H.dir || 0, H.actT || 0, H.x, hy, HERO_SCALE),
       );
   (drawHeroStates(t, "over", m ? Math.min(m, 130) : 60), drawLookFx(t, i));
-  const M = H.y - heroLabelLift(),
+  const M = hy - heroLabelLift(),
     d = !k && typeof titleWorn == "function" && titleWorn();
   (label(
     H.x,
@@ -968,10 +980,10 @@ function drawHeroEnt(t, i, k) {
     k ? mainSkIcon() : "",
   ),
     !m &&
-      !(a && drawSprite(img(a.img), a.sz, H.x, H.y, 0.9, H.face < 0, R.deadT > 0 ? 0.35 : 1)) &&
-      ((t.fillStyle = SERIES_COL[heroSeries()]), t.beginPath(), t.arc(H.x, H.y - 20, 14, 0, 7), t.fill()),
-    R.stunT > 0 && drawStun(H.x, H.y - Math.round(heroPate() * 0.866), ACT_FX_SCALE),
-    R.hurtT > 0 && ((t.fillStyle = "#f004"), t.beginPath(), t.arc(H.x, H.y - 24, 20, 0, 7), t.fill()));
+      !(a && drawSprite(img(a.img), a.sz, H.x, hy, 0.9, H.face < 0, R.deadT > 0 ? 0.35 : 1)) &&
+      ((t.fillStyle = SERIES_COL[heroSeries()]), t.beginPath(), t.arc(H.x, hy - 20, 14, 0, 7), t.fill()),
+    R.stunT > 0 && drawStun(H.x, hy - Math.round(heroPate() * 0.866), ACT_FX_SCALE),
+    R.hurtT > 0 && ((t.fillStyle = "#f004"), t.beginPath(), t.arc(H.x, hy - 24, 20, 0, 7), t.fill()));
 }
 function draw(i) {
   const t = CX;
@@ -1034,6 +1046,7 @@ function draw(i) {
       .filter((e) => !e.dead)
       .concat(
         [{ hero: !0, y: H.y }],
+        R.petPos && S && S.rw && S.rw.pet && typeof MON !== "undefined" && MON[S.rw.pet.tid] ? [{ pet: !0, y: R.petPos.y }] : [],
         typeof partyEnts == "function" ? partyEnts() : [],
         typeof othEnts == "function" ? othEnts() : [],
       ),
@@ -1045,6 +1058,10 @@ function draw(i) {
     }
     if (e.oth) {
       othDraw(t, e.oth, i);
+      continue;
+    }
+    if (e.pet) {
+      typeof drawPet == "function" && drawPet(t, i);
       continue;
     }
     if (e.hero) {

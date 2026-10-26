@@ -909,8 +909,8 @@ function updateInGameAuthUI() {
       card.innerHTML = `
         <div style="font-size:13px;margin-bottom:6px">Tài khoản: <b style="color:#7ee07e">${AUTH.user}</b> (Đã kết nối☁)</div>
         <div class="btnrow">
-          <button class="btn on sm" onclick="authCloudSave(true)">Lưu</button>
-          <button class="btn sm" onclick="authCloudLoad(true)">Tải</button>
+          <button class="btn on sm" onclick="authCloudSave(true)">Lưu Mây</button>
+          <button class="btn sm" onclick="authCloudLoad(true)">Tải Mây</button>
           <button class="btn sm" onclick="openCloudAccountModal()">Quản lý</button>
           <button class="btn red sm" onclick="authLogout()">Đăng xuất</button>
         </div>
