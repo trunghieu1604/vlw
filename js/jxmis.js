@@ -1,9 +1,14 @@
-"use strict";
-const JM_FPS = 18,
-  JM_MAX = 160,
-  JM_DIR = (Math.PI * 2) / 64,
-  JM_Z = 0.5,
-  jmK = (t) => (JFX.k && JFX.k[t]) || null,
+(function (window) {
+  "use strict";
+  const drawFxSprite = (...args) => (window.drawFxSprite || window.drawFxSpriteSheet || (typeof drawFxSpriteSheet === "function" ? drawFxSpriteSheet : () => false))(...args),
+    dir16 = (dx, dy) => (window.dir16 || ((x, y) => ((Math.round(Math.atan2(-x, y) / (Math.PI / 8)) % 16) + 16) % 16))(dx, dy),
+    animDur = (s) => (window.animDur || ((x) => (x && x.n && x.ms ? Math.max(0.2, (x.n * x.ms) / 1000) : 0.6)))(s),
+    castFx = (sk) => (window.castFx || (() => {}))(sk),
+    JM_FPS = 18,
+    JM_MAX = 160,
+    JM_DIR = (Math.PI * 2) / 64,
+    JM_Z = 0.5,
+    jmK = (t) => ((typeof JFX !== "undefined" && JFX.k) ? JFX.k[t] : null) || null,
   JM_SHADOW = {
     10: 5,
     11: 5,
@@ -289,10 +294,20 @@ function jmCast(t, a, n, s, l, u, i) {
 // Buff / curse cast (js/skillsys.js) for skills whose missile comes from the JX1 tables: the cast
 // picture (PreCastSpr) on the caster and the missile's collision picture on the target.
 function jmSupFx(id, tgt, pre) {
-  const f = JFX.f && JFX.f[id],
-    m = f && JFX.m[f.c];
-  if (!m || !m.nat || R.quiet || S.lowFx) return;
+  const f = typeof JFX !== "undefined" && JFX.f && JFX.f[id],
+    m = f && JFX.m && JFX.m[f.c];
+  if (!m || !m.nat || R.quiet || (typeof S !== "undefined" && S && S.lowFx)) return;
   pre && castFx({ id });
   const s = m.hit || m.van;
   tgt && s && R.fx.length < 160 && R.fx.push({ k: "boom", s, x: tgt.x, y: tgt.y, t: -0.1, life: animDur(s), dir: 0 });
 }
+
+if (typeof window !== "undefined") {
+  window.jmCast = jmCast;
+  window.jmStep = jmStep;
+  window.jmDraw = jmDraw;
+  window.jmSpawn = jmSpawn;
+  window.jmSupFx = jmSupFx;
+}
+})(typeof window !== "undefined" ? window : globalThis);
+

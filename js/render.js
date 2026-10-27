@@ -50,6 +50,10 @@ const JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} },
   dir16 = (dx, dy) => ((Math.round(Math.atan2(-dx, dy) / (Math.PI / 8)) % 16) + 16) % 16,
   animDur = (s) => (s && s.n && s.ms ? Math.max(0.2, (s.n * s.ms) / 1000) : 0.6),
   PRELOADED_SKILLS = new Set();
+if (typeof window !== "undefined") {
+  window.dir16 = dir16;
+  window.animDur = animDur;
+}
 
 function preloadSkillFx(id, depth = 0) {
   const f = JFX.f && JFX.f[id];
@@ -331,7 +335,7 @@ function getFeatheredSheet(image, sheet) {
   const padX = Math.min(18, Math.floor(w * 0.08));
   const padY = Math.min(18, Math.floor(h * 0.08));
 
-  if (padX < 3 && padY < 3) {
+  if (sheet.k || (padX < 3 && padY < 3)) {
     FEATHER_CACHE.set(key, image);
     return image;
   }
@@ -404,10 +408,11 @@ function drawFxSpriteSheet(sheet, dir, t, x, y, loop) {
   const row = d > 1 ? (((Math.round((dir * d) / 16) % d) + d) % d) : 0;
   const image = getFeatheredSheet(rawImg, sheet);
 
-  const dw = Math.round(sheet.w * FX_SCALE);
-  const dh = Math.round(sheet.h * FX_SCALE);
-  const dx = Math.round(x - sheet.ax * FX_SCALE);
-  const dy = Math.round(y - sheet.ay * FX_SCALE);
+  const sc = sheet.k ? 1 : FX_SCALE;
+  const dw = Math.round(sheet.w * sc);
+  const dh = Math.round(sheet.h * sc);
+  const dx = Math.round(x - sheet.ax * sc);
+  const dy = Math.round(y - sheet.ay * sc);
 
   CX.imageSmoothingEnabled = true;
   CX.imageSmoothingQuality = "high";
@@ -424,6 +429,10 @@ function drawFxSpriteSheet(sheet, dir, t, x, y, loop) {
     dh
   );
   return true;
+}
+if (typeof window !== "undefined") {
+  window.drawFxSprite = drawFxSpriteSheet;
+  window.drawFxSpriteSheet = drawFxSpriteSheet;
 }
 
 function drawFx(fx) {
@@ -450,6 +459,16 @@ function skillFx(launcher, target, skill) {
   if (skill.id) preloadSkillFx(skill.id);
   castFx(skill);
   if (R.quiet) return;
+  const f = skill.id && JFX.f && JFX.f[skill.id];
+  const m = f && f.c && JFX.m && JFX.m[f.c];
+  if (f && m && m.nat && typeof jmCast === "function") {
+    const g = (JFX.g && JFX.g[skill.id]) || null;
+    jmCast(f.c, f.form || 1, f.num || 1, g, launcher, target, target);
+    if (f.start && typeof jmCast === "function") {
+      jmCast(f.start.c, f.start.form || 1, f.start.num || 1, f.start.g, launcher, target, target);
+    }
+    return;
+  }
   if (skill.id && JFX.f && JFX.f[skill.id]) {
     spawnSkillChain(
       skill.id,
@@ -1171,6 +1190,10 @@ function draw(i) {
   const fxList = R.fx;
   R.fx = [];
   const kept = fxList.filter((e) => {
+    if (e.k === "jm") {
+      const l = typeof jmStep === "function" ? jmStep(e, i) : false;
+      return (l && typeof jmDraw === "function" && jmDraw(e), l);
+    }
     if (e.k !== "mis" && e.k !== "boom") return true;
     const l = stepFx(e, i);
     return (l && drawFx(e), l);

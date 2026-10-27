@@ -263,3 +263,10 @@ function jxPreload() {
         r && JXL.sheets[jxSheetKey(n.sx, r)] && img("img/jx/" + jxSheetKey(n.sx, r) + ".webp" + SPR_V);
       }
 }
+
+if (typeof window !== "undefined") {
+  window.drawJxHero = drawJxHero;
+  window.jxSetup = jxSetup;
+  window.jxPreload = jxPreload;
+  window.jxOn = jxOn;
+}

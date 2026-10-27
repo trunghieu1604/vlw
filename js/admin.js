@@ -861,10 +861,24 @@ function admTabWorld() {
     <button class="btn sm red" data-a="wbkill">💀 Kết Thúc Boss Thế Giới</button>
   </div>
   <div class="admh">Bản Đồ & Luyện Công</div>
-  <div class="btnrow">
+  <div class="btnrow" style="margin-bottom:8px">
     <button class="btn sm on" data-a="unlock">Mở mọi bãi luyện công</button>
     <button class="btn sm" data-a="cd">Đặt lại Thổ Địa / Thần Hành</button>
     <button class="btn sm" data-a="thmodal">📜 Thần Hành Phù (Dịch Chuyển)</button>
+  </div>
+  <div class="admh">🌸 Hệ Thống 4 Sự Kiện Mùa (Tự Động / Tùy Chọn)</div>
+  <div style="font-size:12px;color:#9eb3a8;margin-bottom:6px">
+    Hiện tại: <b style="color:${typeof eventNow === 'function' ? eventNow().col : '#ffd24a'}">${typeof eventNow === 'function' ? eventNow().n : 'Sự kiện'}</b> (${(typeof S !== 'undefined' && S.eventSeason && S.eventSeason !== 'auto') ? 'Thủ công: ' + S.eventSeason : 'Tự động theo lịch'})
+  </div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm ${(typeof S !== 'undefined' && (!S.eventSeason || S.eventSeason === 'auto')) ? 'on' : ''}" data-a="evseason:auto">🔄 Tự Động Theo Lịch</button>
+    <button class="btn sm ${(typeof S !== 'undefined' && S.eventSeason === 'tet') ? 'on' : ''}" data-a="evseason:tet">🌸 Tết Nguyên Đán</button>
+    <button class="btn sm ${(typeof S !== 'undefined' && S.eventSeason === 'volam') ? 'on' : ''}" data-a="evseason:volam">⚔️ Hội Võ Lâm</button>
+    <button class="btn sm ${(typeof S !== 'undefined' && S.eventSeason === 'trungthu') ? 'on' : ''}" data-a="evseason:trungthu">🥮 Tết Trung Thu</button>
+    <button class="btn sm ${(typeof S !== 'undefined' && S.eventSeason === 'noel') ? 'on' : ''}" data-a="evseason:noel">🎄 Giáng Sinh</button>
+  </div>
+  <div class="btnrow">
+    <button class="btn sm on" data-a="evaddtokens">🎁 +100 Vật Phẩm Sự Kiện</button>
   </div>`;
 }
 
@@ -1494,6 +1508,22 @@ function admAct(a) {
         }
         if (typeof handleBossDefeated === "function") handleBossDefeated();
         return "Đã kết thúc Boss Thế Giới!";
+      }
+      case "evseason": {
+        if (typeof setServerEventSeason === "function") {
+          setServerEventSeason(x);
+        } else {
+          S.eventSeason = x;
+        }
+        const ev = typeof eventNow === "function" ? eventNow() : null;
+        return `Đã chuyển toàn server sang sự kiện: ${ev ? ev.n : x}!`;
+      }
+      case "evaddtokens": {
+        const rw = typeof RW === "function" ? RW() : (S.rw || (S.rw = { stat: {} }));
+        rw.stat = rw.stat || {};
+        rw.stat.tokens = (rw.stat.tokens || 0) + 100;
+        const ev = typeof eventNow === "function" ? eventNow() : { token: "Vật phẩm sự kiện" };
+        return `Đã thêm 100 ${ev.token}! (Hiện có: ${rw.stat.tokens})`;
       }
       case "pe_reload": {
         admPePlayersList = [];

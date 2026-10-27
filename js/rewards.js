@@ -405,16 +405,180 @@ function doReborn() {
     refresh(),
     save());
 }
-function eventNow() {
-  const t = new Date().getMonth() + 1;
-  return t === 1 || t === 2
-    ? { n: "Tết Nguyên Đán", token: "Bánh Chưng", col: "#ff5a4a" }
-    : t === 9 || t === 10
-      ? { n: "Tết Trung Thu", token: "Bánh Trung Thu", col: "#ffd24a" }
-      : t === 12
-        ? { n: "Giáng Sinh", token: "Chuông Bạc", col: "#9fe3ff" }
-        : { n: "Hội Võ Lâm", token: "Lệnh Bài Võ Lâm", col: "#c8a2ff" };
+const EVENT_SEASONS = {
+  tet: {
+    id: "tet",
+    season: "Xuân",
+    n: "Tết Nguyên Đán",
+    sub: "Mừng Xuân Như Ý · Bánh Chưng Đón Tết",
+    token: "Bánh Chưng",
+    col: "#ff5a4a",
+    icon: "🌸",
+    months: [1, 2, 3],
+    shop: [
+      [10, { gold: 3000 }],
+      [15, { knb: 3 }],
+      [20, { pot: { kind: "both", tier: 1, n: 30 } }],
+      [25, { ht: 4 }],
+      [30, { item: 7 }],
+      [40, { fd: 40 }],
+      [50, { knb: 10 }],
+      [60, { set: 1, common: 1 }],
+      [80, { buff: { luck: [30, 60] } }],
+    ],
+  },
+  volam: {
+    id: "volam",
+    season: "Hạ",
+    n: "Hội Võ Lâm",
+    sub: "Đại Hội Quần Hùng · Tranh Đoạt Lệnh Bài",
+    token: "Lệnh Bài Võ Lâm",
+    col: "#c8a2ff",
+    icon: "⚔️",
+    months: [4, 5, 6, 7, 8],
+    shop: [
+      [10, { gold: 2500 }],
+      [15, { knb: 2 }],
+      [20, { pts: 10 }],
+      [25, { ht: 3 }],
+      [30, { skp: 1 }],
+      [40, { fd: 35 }],
+      [50, { knb: 8 }],
+      [60, { set: 1, common: 1 }],
+      [80, { buff: { tt: [0.5, 60] } }],
+    ],
+  },
+  trungthu: {
+    id: "trungthu",
+    season: "Thu",
+    n: "Tết Trung Thu",
+    sub: "Đêm Trăng Rằm · Thưởng Bánh Trông Trăng",
+    token: "Bánh Trung Thu",
+    col: "#ffd24a",
+    icon: "🥮",
+    months: [9, 10],
+    shop: [
+      [10, { gold: 2000 }],
+      [15, { knb: 2 }],
+      [20, { pot: { kind: "both", tier: 1, n: 20 } }],
+      [25, { ht: 3 }],
+      [30, { item: 6 }],
+      [40, { fd: 30 }],
+      [50, { knb: 8 }],
+      [60, { set: 1, common: 1 }],
+      [80, { buff: { luck: [25, 60] } }],
+    ],
+  },
+  noel: {
+    id: "noel",
+    season: "Đông",
+    n: "Giáng Sinh & Năm Mới",
+    sub: "Mùa Đông Ấm Áp · Tiếng Chuông Bạc Reo",
+    token: "Chuông Bạc",
+    col: "#9fe3ff",
+    icon: "🎄",
+    months: [11, 12],
+    shop: [
+      [10, { gold: 3000 }],
+      [15, { knb: 3 }],
+      [20, { pot: { kind: "both", tier: 1, n: 30 } }],
+      [25, { ht: 4 }],
+      [30, { item: 7 }],
+      [40, { fd: 40 }],
+      [50, { knb: 10 }],
+      [60, { set: 1, common: 1 }],
+      [80, { buff: { luck: [30, 60], tt: [0.3, 60] } }],
+    ],
+  },
+};
+
+function eventSeasonAuto() {
+  const m = new Date().getMonth() + 1;
+  if (m >= 1 && m <= 3) return "tet";
+  if (m >= 4 && m <= 8) return "volam";
+  if (m >= 9 && m <= 10) return "trungthu";
+  return "noel";
 }
+
+window.GLOBAL_EVENT_SEASON = window.GLOBAL_EVENT_SEASON || null;
+
+function eventNow() {
+  const globalSeason = (typeof window !== "undefined" && window.GLOBAL_EVENT_SEASON) ? window.GLOBAL_EVENT_SEASON : null;
+  const sKey = (globalSeason && globalSeason !== "auto")
+    ? globalSeason
+    : ((typeof S !== "undefined" && S && S.eventSeason && S.eventSeason !== "auto") ? S.eventSeason : eventSeasonAuto());
+  return EVENT_SEASONS[sKey] || EVENT_SEASONS.volam;
+}
+
+function setServerEventSeason(sId) {
+  if (typeof S !== "undefined" && S) S.eventSeason = sId;
+  if (typeof window !== "undefined") window.GLOBAL_EVENT_SEASON = sId;
+  const ev = (sId && sId !== "auto" && EVENT_SEASONS[sId]) ? EVENT_SEASONS[sId] : EVENT_SEASONS[eventSeasonAuto()];
+
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (db) {
+    try {
+      db.ref("server/event").set({
+        season: sId,
+        by: (typeof S !== "undefined" && S && S.name) || "Võ Lâm Minh Chủ",
+        ts: Date.now()
+      });
+      db.ref("chat/msgs").push({
+        cid: "sys",
+        sys: true,
+        name: "Hệ Thống",
+        msg: `📢 [VÕ LÂM MINH CHỦ]: ${(typeof S !== "undefined" && S && S.name) || "Minh Chủ"} đã chuyển sự kiện máy chủ sang ${ev.icon || ""} ${ev.n}! Toàn server đánh quái rơi ${ev.token}!`,
+        ts: Date.now()
+      });
+    } catch (e) {
+      console.warn("setServerEventSeason err:", e);
+    }
+  }
+
+  if (typeof toast === "function") {
+    toast(`Đã chuyển toàn server sang sự kiện: ${ev.n}!`);
+  }
+  if (typeof save === "function") save();
+  if (typeof refreshGift === "function") refreshGift();
+}
+
+function initServerEventListener() {
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
+  if (!db) {
+    if (!window._serverEventRetryCount) window._serverEventRetryCount = 0;
+    if (window._serverEventRetryCount < 10) {
+      window._serverEventRetryCount++;
+      setTimeout(initServerEventListener, 1500);
+    }
+    return;
+  }
+  if (window._serverEventListening) return;
+  window._serverEventListening = true;
+
+  try {
+    db.ref("server/event").on("value", (snap) => {
+      const val = snap.val();
+      if (val && val.season) {
+        const oldSeason = window.GLOBAL_EVENT_SEASON;
+        window.GLOBAL_EVENT_SEASON = val.season;
+        if (typeof S !== "undefined" && S) S.eventSeason = val.season;
+        if (oldSeason && oldSeason !== val.season) {
+          const ev = (val.season !== "auto" && EVENT_SEASONS[val.season]) ? EVENT_SEASONS[val.season] : EVENT_SEASONS[eventSeasonAuto()];
+          if (typeof toast === "function") {
+            toast(`📢 Sự kiện toàn server đã đổi sang: ${ev.n} (${ev.token})!`);
+          }
+          if (typeof refreshGift === "function") refreshGift();
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("initServerEventListener err:", e);
+  }
+}
+initServerEventListener();
+window.setServerEventSeason = setServerEventSeason;
+window.initServerEventListener = initServerEventListener;
+
 const EVENT_SHOP = [
   [10, { gold: 2e3 }],
   [15, { knb: 2 }],
@@ -425,14 +589,19 @@ const EVENT_SHOP = [
   [50, { knb: 8 }],
   [60, { set: 1, common: 1 }],
 ];
+
 function eventBuy(t) {
-  const [n, o] = EVENT_SHOP[t],
+  const ev = eventNow();
+  const shop = ev.shop || EVENT_SHOP;
+  const item = shop[t];
+  if (!item) return;
+  const [n, o] = item,
     s = RW().stat;
   if (s.tokens < n) {
-    toast(`Cần ${n} ${eventNow().token}`);
+    toast(`Cần ${n} ${ev.token}`);
     return;
   }
-  ((s.tokens -= n), grant(o, eventNow().n), refreshGift());
+  ((s.tokens -= n), grant(o, ev.n), refreshGift());
 }
 const FD_TABLE = [
     [40, { gold: 2e3 }],
@@ -535,13 +704,15 @@ function rwOnKill(t) {
 }
 function giftCounts() {
   const t = RW(),
-    n = t.stat.tokens || 0;
+    n = t.stat.tokens || 0,
+    ev = eventNow(),
+    shop = ev.shop || EVENT_SHOP;
   return {
     login: t.login.claimed ? 0 : 1,
     lvms: lvMsReady().length,
     chest: Math.floor(t.fd / 10),
     pet: (S.lvl >= 20 && !(t.pet && t.pet.tid)) ? 1 : 0,
-    event: EVENT_SHOP.filter(([o]) => n >= o).length,
+    event: shop.filter(([o]) => n >= o).length,
   };
 }
 function giftPending() {
@@ -619,8 +790,42 @@ function giftBody(t) {
       <div class="chips">${FD_TABLE.map(([n, o]) => `<span class="chip2">${giftText(o)} · ${n}%</span>`).join("")}</div>
       <div class="btnrow"><button class="btn" id="gChest" ${t.fd >= 10 ? "" : "disabled"}>Mở ×1</button><button class="btn" data-ch="10" ${t.fd >= 100 ? "" : "disabled"}>Mở ×10</button><button class="btn" data-ch="100" ${t.fd >= 1e3 ? "" : "disabled"}>Mở ×100</button><button class="btn" data-ch="999999" ${t.fd >= 20 ? "" : "disabled"}>Mở hết (${Math.floor(t.fd / 10)})</button></div>`;
   if (giftTab === "event") {
-    const n = eventNow();
-    return `<p class="desc">Sự kiện: <b style="color:${n.col}">${n.n}</b>. Quái rơi ${n.token} (5%). Đang có: <b>${t.stat.tokens}</b>.</p>${EVENT_SHOP.map(([o, s], i) => `<div class="qrow"><span>${giftText(s)}</span><small>${o} ${n.token}</small><button class="btn sm" data-e="${i}" ${t.stat.tokens >= o ? "" : "disabled"}>Đổi</button></div>`).join("")}`;
+    const ev = eventNow();
+    const curSeasonKey = (typeof S !== "undefined" && S && S.eventSeason) || "auto";
+    const shop = ev.shop || EVENT_SHOP;
+    const isVlmc = (typeof isHeroWearingVlmc === "function" && isHeroWearingVlmc()) ||
+      ((typeof RW === "function" ? RW() : (typeof S !== "undefined" && S && S.rw))?.title === "vlmc") ||
+      ((typeof titleWorn === "function" && titleWorn())?.[0] === "vlmc");
+    const seasonsList = [
+      { id: "auto", n: "🔄 Tự động (Mùa " + (EVENT_SEASONS[eventSeasonAuto()] ? EVENT_SEASONS[eventSeasonAuto()].season : "này") + ")" },
+      { id: "tet", n: "🌸 Tết Nguyên Đán" },
+      { id: "volam", n: "⚔️ Hội Võ Lâm" },
+      { id: "trungthu", n: "🥮 Tết Trung Thu" },
+      { id: "noel", n: "🎄 Giáng Sinh" },
+    ];
+    const headerHtml = isVlmc
+      ? `
+      <div style="background:linear-gradient(135deg, rgba(20,28,26,0.95), rgba(10,16,14,0.98));border:1px solid #ffd24a;border-radius:6px;padding:10px 12px;margin-bottom:10px;box-shadow:0 0 10px rgba(255,210,74,0.15)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:${ev.col}">${ev.icon} ${ev.n} <span style="font-size:11px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:#ccc">Mùa ${ev.season}</span> <span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#ffd24a;color:#111;font-weight:700">👑 VÕ LÂM MINH CHỦ</span></div>
+            <div style="font-size:11px;color:#9eb3a8">${ev.sub}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#9eb3a8">Vật phẩm sự kiện</div>
+            <div style="font-size:16px;font-weight:700;color:${ev.col}"><b>${t.stat.tokens}</b> <span style="font-size:12px">${ev.token}</span></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.1)">
+          <span style="font-size:11px;color:#ffd24a;font-weight:600">Quyền năng Minh Chủ (Chuyển mùa):</span>
+          ${seasonsList.map(s => `
+            <button class="btn sm ${curSeasonKey === s.id ? "on" : ""}" data-evseason="${s.id}" style="padding:2px 8px;font-size:11px">${s.n}</button>
+          `).join("")}
+        </div>
+        <div style="font-size:11px;color:#7e9a8d;margin-top:4px">💡 Đánh bại quái dã ngoại có cơ hội rơi <b style="color:${ev.col}">+1 ${ev.token}</b> (5%). Đổi các vật phẩm hấp dẫn bên dưới:</div>
+      </div>`
+      : `<p class="desc">Sự kiện: <b style="color:${ev.col}">${ev.icon} ${ev.n}</b>. Quái rơi <b style="color:${ev.col}">${ev.token}</b> (5%). Đang có: <b>${t.stat.tokens}</b>.</p>`;
+    return `${headerHtml}${shop.map(([o, s], i) => `<div class="qrow"><span>${giftText(s)}</span><small style="color:${ev.col}">${o} ${ev.token}</small><button class="btn sm" data-e="${i}" ${t.stat.tokens >= o ? "" : "disabled"}>Đổi</button></div>`).join("")}`;
   }
   if (giftTab === "pet") {
     return typeof renderPetTab === "function" ? renderPetTab(t) : "";
@@ -690,7 +895,13 @@ function giftModal(t) {
               ((n.title = n.title === i.dataset.t ? "" : i.dataset.t), (R.dirty = !0), save(), refreshGift());
             }),
         ),
-        document.querySelectorAll("#mBody [data-e]").forEach((i) => (i.onclick = () => eventBuy(+i.dataset.e))));
+        document.querySelectorAll("#mBody [data-e]").forEach((i) => (i.onclick = () => eventBuy(+i.dataset.e))),
+        document.querySelectorAll("#mBody [data-evseason]").forEach(
+          (i) =>
+            (i.onclick = () => {
+              setServerEventSeason(i.dataset.evseason);
+            }),
+        ));
       typeof setupPetTabEvents == "function" && setupPetTabEvents(n, giftModal);
 
       const sGc = async () => {

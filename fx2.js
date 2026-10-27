@@ -1,6 +1,6 @@
 ((function () {
-  const f = window.JFX,
-    s = window.JXST,
+  const f = (window.JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} }),
+    s = (window.JXST = window.JXST || {}),
     x = {
       p13: { n: 9, w: 63, h: 76, ax: 31, ay: 58, f: "fx/c2_13.webp", d: 1, ms: 60 },
       p15: { n: 20, w: 44, h: 60, ax: 23, ay: 48, f: "fx/c2_15.webp", d: 1, ms: 60 },
@@ -80,7 +80,7 @@
   for (const a in w) s[a] = w[a];
 })(),
   (function () {
-    const f = window.JFX,
+    const f = (window.JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} }),
       s = {
         170: { fly: { f: "fx/m170_fly.webp", n: 35, d: 1, w: 202, h: 225, ax: 103, ay: 182, ms: 56 }, spd: 200 },
         176: {
@@ -197,9 +197,9 @@
     for (const w in x) f.f[w] = Object.assign({ form: 1, num: 1 }, f.f[w] || {}, { sub: x[w] });
     for (const w in p) f.f[w] = Object.assign({ form: 1, num: 1 }, f.f[w] || {}, { ev2c: p[w] });
   })(),
-  window.JFX.f[88] && (window.JFX.f[88].num = 3),
+  (window.JFX && window.JFX.f && window.JFX.f[88] && (window.JFX.f[88].num = 3)),
   (function () {
-    const f = window.JFX,
+    const f = (window.JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} }),
       s = {
         188: { fly: { f: "fx/m188_fly.webp", n: 22, d: 1, w: 101, h: 76, ax: 48, ay: 55, ms: 56 }, spd: 200 },
         195: { fly: { f: "fx/m195_fly.webp", n: 6, d: 1, w: 99, h: 68, ax: 50, ay: 47, ms: 56 }, spd: 200 },
@@ -211,7 +211,7 @@
     for (const p in x) f.f[p] = Object.assign({ form: 1, num: 1 }, f.f[p] || {}, { ev2c: x[p] });
   })(),
   (function () {
-    const f = window.JFX;
+    const f = (window.JFX = window.JFX || { m: {}, s: {}, c: {}, f: {} });
     (f.f[361] && (f.f[361].meleeFly = !0),
       f.f[368] && (f.f[368].meleeFly = !0),
       f.m[169] &&
