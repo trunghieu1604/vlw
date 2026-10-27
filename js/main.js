@@ -348,13 +348,7 @@ function init() {
         delete S.eqRebuildMsg,
         save());
     }
-    (S.petGold &&
-      (log(
-        `Đồng hành (thú nuôi) đã được thay bằng <b>đồ đệ</b>: thú cấp ${S.petGold[0]} đổi thành <b class="up">${fmtL(S.petGold[1])}</b> lượng.`,
-      ),
-      toast(`Thú đồng hành đổi thành ${fmtL(S.petGold[1])} lượng`),
-      delete S.petGold,
-      save()),
+    (S.petGold && delete S.petGold,
       S.banMsg &&
       (log(
         `Hoàng Kim biến thể ([Cực phẩm], [Hoàn Mỹ], [Tinh Xảo]…), Dương Thần và đồ sự kiện (Hắc Thần, Thương Khung, Long Tương…) đã xóa khỏi game: thu hồi <b>${S.banMsg}</b> món`,

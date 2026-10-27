@@ -1390,6 +1390,8 @@ function sk180Tick(t) {
 }
 const XP_EVENT = 5;
 function gainXp(t) {
+  if (!t || isNaN(t) || t <= 0) return 0;
+  if (isNaN(S.xp)) S.xp = 0;
   const n = levelCap();
   if (S.lvl >= n) return 0;
   let e =
@@ -1402,8 +1404,8 @@ function gainXp(t) {
   const rb = typeof rebornN === "function" ? rebornN() : ((S && S.rw && S.rw.stat && S.rw.stat.reborn) || 0);
   if (S.lvl < 200) {
     e = Math.min(1000000, e);
-  } else if (rb >= 10 && S.lvl >= 200) {
-    e = Math.min(2500, e);
+  } else if (S.lvl >= 200) {
+    e = Math.min(500000, e);
   }
   let upCount = 0;
   for (S.xp += e; S.lvl < n && S.xp >= lvNeed(S.lvl) && upCount < 50; upCount++) {

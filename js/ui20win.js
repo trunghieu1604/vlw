@@ -257,7 +257,7 @@ function renderSkill20() {
         f = canLearn(l),
         mn = R.P.main.id === +e,
         mk = r && isAttack(l) && (mn || R.P.actives.some((x) => x.id === +e));
-      return `<div class="u2k ${[skReqOk(l) ? "" : "lock", mn ? "main" : "", r ? "on" : ""].join(" ")}" data-id="${e}" title="${esc(l.n)}"><img src="${esc(l.ic || "")}" alt=""><i>${r ? r + b : ""}</i>${l.tier === 90 ? sk9BarHTML(e, "c") : ""}${l.exp && r ? `<small class="sk-exp-tag" style="font-size:9px;color:#8fe34a;display:block;text-align:center;position:absolute;bottom:0;width:100%">${r}/${l.max}</small>` : ""}${mk ? `<button class="u2mk${mn ? " on" : ""}${mn && S.mainLock ? " lk" : ""}" data-mk="${e}" title="${mn ? (S.mainLock ? "Chiêu chính (đã khóa) · bấm để bỏ khóa" : "Chiêu chính (tự chọn) · bấm để khóa") : "Đặt làm chiêu chính"}">★</button>` : ""}${f ? `<button class="plus" data-id="${e}" title="Cộng 1 điểm">+</button>` : ""}${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? `<button class="u2dt" data-dt="${e}" title="Dùng Đại Thành Bí Kíp">📕</button>` : ""}</div>`;
+      return `<div class="u2k ${[skReqOk(l) ? "" : "lock", mn ? "main" : "", r ? "on" : ""].join(" ")}" data-id="${e}" title="${esc(l.n)}"><img src="${esc(l.ic || "")}" alt=""><i>${r ? r + b : ""}</i>${(l.tier === 90 || l.exp) && r ? sk9BarHTML(e, "c") : ""}${mk ? `<button class="u2mk${mn ? " on" : ""}${mn && S.mainLock ? " lk" : ""}" data-mk="${e}" title="${mn ? (S.mainLock ? "Chiêu chính (đã khóa) · bấm để bỏ khóa" : "Chiêu chính (tự chọn) · bấm để khóa") : "Đặt làm chiêu chính"}">★</button>` : ""}${f ? `<button class="plus" data-id="${e}" title="Cộng 1 điểm">+</button>` : ""}${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? `<button class="u2dt" data-dt="${e}" title="Dùng Đại Thành Bí Kíp">📕</button>` : ""}</div>`;
     },
     o = R.P && R.P.basic,
     d = S.mainLock && S.main === "basic",
@@ -276,21 +276,20 @@ function renderSkill20() {
         const r = S.sk[e] || 0,
           b = r ? skillBonusLv(e) : 0,
           f = canLearn(l),
-          mn = R.P.main.id === +e;
+          mn = R.P.main.id === +e,
+          reqLv = (l.tier === 90 || l.learn === "90") ? 90 : l.req;
         return `<div class="skl${skReqOk(l) ? "" : " lock"}${mn ? " main" : ""}" data-id="${e}">
           <img class="sic" src="${esc(l.ic || "")}" alt="">
           <div class="info">
             <b>${esc(l.n)}</b>
-            <small class="dim">Lv${l.req}${l.prop ? ` · ${l.prop}` : ""}</small>
+            <small class="dim">Lv${reqLv}${l.prop ? ` · ${l.prop}` : ""}</small>
             ${l.tier === 90 && r && r < l.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${e}" style="display:inline-block;padding:0 4px;font-size:10px">📕</button>` : ""}
-            ${l.tier === 90 ? sk9BarHTML(e, "r") : ""}
-            ${l.exp && r ? `<span class="sk-exp-tag" style="font-size:10px;color:#8fe34a;display:inline-block">${r}/${l.max}</span>` : ""}
+            ${(l.tier === 90 || l.exp) && r ? sk9BarHTML(e, "r") : ""}
           </div>
           <span class="lvl">${r ? `<b class="skb">${r + b}</b><small>/${l.max}</small>` : `<small class="dim">0/${l.max}</small>`}</span>
           <span class="pm">
             <button class="plus" data-id="${e}" title="Cộng 1 điểm" ${f ? "" : "disabled"}>+</button>
             <button class="minus" data-id="${e}" title="Rút điểm" ${r > 0 ? "" : "disabled"}>−</button>
-            <button class="skinfo" data-id="${e}" title="Chi tiết">i</button>
           </span>
         </div>`;
       }).join("")}</div>`

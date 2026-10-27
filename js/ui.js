@@ -950,8 +950,8 @@ function renderSkill() {
         ? `<div class="sk-exp-tag" style="font-size:11px;color:#8fe34a;margin-top:2px">${i >= c.max ? "Đại thành" : `Luyện: ${fmt(expRec ? expRec.xp : 0)} / ${fmt(expNeed)}`}</div>`
         : "";
       return `<div class="skl${skReqOk(c) ? "" : " lock"}${R.P.main.id === +a ? " main" : ""}" data-id="${a}">
-      <img class="sic" src="${esc(c.ic || "")}" alt=""><div class="info"><b>${esc(c.n)}</b>${c.book && !bookOk(c) ? ' <small class="reqbad">cần Mật Tịch</small>' : ""}${c.tier === 90 && i && i < c.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${a}">📕</button>` : ""}${c.tier === 90 ? sk9BarHTML(a, "r") : ""}${expBarHtml}</div>
-      <span class="lvl">${u ? `<b class="skb" title="Cấp hiệu lực = ${i} + ${u} từ trang bị">${i + u}</b><small>/${c.max} (${i}+${u})</small>` : `${i}/${c.max}`}</span><span class="pm">${isExp ? `<button class="skinfo" data-id="${a}" title="Thông tin kỹ năng">i</button>` : `<button class="plus" data-id="${a}" title="Cộng 1 điểm" ${canLearn(c) ? "" : "disabled"}>+</button><button class="minus" data-id="${a}" title="Rút lại 1 điểm" ${i > 0 ? "" : "disabled"}>−</button><button class="skinfo" data-id="${a}" title="Thông tin kỹ năng">i</button>`}</span>
+      <img class="sic" src="${esc(c.ic || "")}" alt=""><div class="info"><b>${esc(c.n)}</b>${c.book && !bookOk(c) ? ' <small class="reqbad">cần Mật Tịch</small>' : ""}${c.tier === 90 && i && i < c.max && matHave("misc", "dtbk") > 0 ? ` <button class="btn sm" data-dt="${a}">📕</button>` : ""}${(c.tier === 90 || isExp) ? sk9BarHTML(a, "r") : ""}</div>
+      <span class="lvl">${u ? `<b class="skb" title="Cấp hiệu lực = ${i} + ${u} từ trang bị">${i + u}</b><small>/${c.max} (${i}+${u})</small>` : `${i}/${c.max}`}</span><span class="pm">${isExp ? "" : `<button class="plus" data-id="${a}" title="Cộng 1 điểm" ${canLearn(c) ? "" : "disabled"}>+</button><button class="minus" data-id="${a}" title="Rút lại 1 điểm" ${i > 0 ? "" : "disabled"}>−</button>`}</span>
       </div>`;
     })
     .join("");
@@ -1596,9 +1596,12 @@ function updateTop() {
   }
   const cap = typeof levelCap === "function" ? levelCap() : 200,
     isMax = S.lvl >= cap,
-    t = lvNeed(S.lvl) || 1;
-  (($("#xpBar").style.width = isMax ? "100%" : Math.min(100, (S.xp / t) * 100) + "%"),
-    ($("#xpTxt").textContent = isMax ? "Tối đa" : `${((S.xp / t) * 100).toFixed(1)}%`),
+    t = (typeof lvNeed === "function" ? lvNeed(S.lvl) : 0) || 1;
+  if (isNaN(S.xp)) S.xp = 0;
+  const curXp = Math.max(0, S.xp || 0),
+    xpPct = isMax ? 100 : Math.min(100, Math.max(0, (curXp / t) * 100));
+  (($("#xpBar").style.width = xpPct + "%"),
+    ($("#xpTxt").textContent = isMax ? "Tối đa" : `${xpPct.toFixed(1)}%`),
     ($("#hpBar").style.width = (R.life / n.life) * 100 + "%"),
     ($("#hpTxt").textContent = `${fmt(R.life)} / ${fmt(n.life)}`),
     ($("#mpBar").style.width = (R.mana / n.mana) * 100 + "%"),

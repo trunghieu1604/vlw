@@ -138,13 +138,6 @@ function migrate(n) {
   ))
     t && (t.mag || []).some((o) => o.pre === void 0) && (t.leg = !0);
   for (const t of e.inv.concat(Object.values(e.eq), e.epBox || [])) vioDedupe(t);
-  // the monster pet ("Đồng hành") was replaced by the disciples (js/party.js): refund it as gold, once
-  if (e.rw && e.rw.pet) {
-    const t = e.rw.pet,
-      o = clamp(t.lvl | 0, 1, 999),
-      r = Math.round(2e3 * o * (1 + o / 10));
-    ((e.gold = (Number.isFinite(+e.gold) ? +e.gold : 0) + r), (e.petGold = [o, r]), delete e.rw.pet);
-  }
   (n.autoPtsOff || ((e.autoPts = !1), (e.autoPtsOff = 1)),
     (e.mats = {
       ht: Object.assign({}, (n.mats || {}).ht),
@@ -153,6 +146,11 @@ function migrate(n) {
       misc: Object.assign({}, (n.mats || {}).misc),
     }),
     (e.rw = n.rw && typeof n.rw == "object" ? n.rw : {}),
+    (e.rw.pet && typeof e.rw.pet === "object" && (
+      e.rw.pet.tid = +e.rw.pet.tid || 0,
+      e.rw.pet.lvl = Math.max(1, e.rw.pet.lvl | 0),
+      e.rw.pet.xp = Math.max(0, e.rw.pet.xp | 0)
+    )),
     // Thu hồi danh hiệu Võ Lâm Minh Chủ cũ từ ANDYTRAN (chỉ ai nhập giftcode mới VLMC mới được sở hữu)
     ((!e.gc || !e.gc.VLMC) && e.rw && (e.rw.titles && delete e.rw.titles.vlmc, e.rw.title === "vlmc" && (e.rw.title = ""))),
     (e.gc && e.gc.ANDYTRAN && delete e.gc.ANDYTRAN),

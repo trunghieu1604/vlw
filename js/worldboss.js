@@ -2,7 +2,7 @@
 
 // === BOSS THẾ GIỚI: TRUNG HIẾU (WORLD BOSS) ===
 // Map độc quyền: img/z/337.jpg (Phong Lăng Độ · Thuyền)
-// Xuất hiện 20:00 (8h tối) mỗi ngày 1 lần duy nhất
+// Xuất hiện 19:00 (7h tối) mỗi ngày 1 lần duy nhất
 // Danh hiệu TOP 1 BTG & Vòng Sáng Tử Vân (zw) hiệu lực 1 ngày
 
 const WB_BOSS_CONFIG = {
@@ -74,20 +74,20 @@ function wbFormatTime(sec) {
 }
 
 /**
- * 8:00 PM (20:00) Schedule calculation (Vietnam UTC+7)
+ * 7:00 PM (19:00) Schedule calculation (Vietnam UTC+7)
  */
 function getWbSchedule() {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
   const todayKey = `${y}-${m + 1}-${d}`;
-  const startToday = new Date(y, m, d, 20, 0, 0, 0).getTime();
-  const endToday = startToday + 10 * 60 * 1000; // 20:10 (10 mins duration)
+  const startToday = new Date(y, m, d, 19, 0, 0, 0).getTime();
+  const endToday = startToday + 10 * 60 * 1000; // 19:10 (10 mins duration)
   const nowMs = now.getTime();
 
   const killedToday = !!(S && S.rw && S.rw.wbKilledDate === todayKey);
 
   if (killedToday) {
-    const startTomorrow = new Date(y, m, d + 1, 20, 0, 0, 0).getTime();
+    const startTomorrow = new Date(y, m, d + 1, 19, 0, 0, 0).getTime();
     return { st: "dead", next: startTomorrow, end: 0, killedToday: true, todayKey: todayKey };
   }
 
@@ -96,7 +96,7 @@ function getWbSchedule() {
   } else if (nowMs < startToday) {
     return { st: "soon", next: startToday, end: 0, killedToday: false, todayKey: todayKey };
   } else {
-    const startTomorrow = new Date(y, m, d + 1, 20, 0, 0, 0).getTime();
+    const startTomorrow = new Date(y, m, d + 1, 19, 0, 0, 0).getTime();
     return { st: "gone", next: startTomorrow, end: 0, killedToday: false, todayKey: todayKey };
   }
 }
@@ -1008,7 +1008,7 @@ function openWorldBossModal() {
         ` : `
           <div style="background:rgba(255,215,140,0.08);border:1px solid rgba(176,138,58,0.3);border-radius:6px;padding:12px;text-align:center;margin-bottom:12px">
             <p style="margin:0 0 6px;color:#ffcc00;font-size:15px">
-              ${sched.killedToday ? "🏆 Boss hôm nay đã kết thúc thời gian khiêu chiến!" : "⏰ Giờ xuất hiện: <b>20:00 (8h tối)</b> mỗi ngày (1 lần duy nhất)."}
+              ${sched.killedToday ? "🏆 Boss hôm nay đã kết thúc thời gian khiêu chiến!" : "⏰ Giờ xuất hiện: <b>19:00 (7h tối)</b> mỗi ngày (1 lần duy nhất)."}
             </p>
             <p style="margin:0;color:#aaa;font-size:13px">
               Lần tiếp theo: <b>${new Date(sched.next).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</b> (còn <b class="wbt" style="color:#ffd700">${wbFormatTime(remSec)}</b>)

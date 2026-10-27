@@ -149,15 +149,29 @@ function sk9OnKill(n) {
 function sk9Prog(id, sk, L) {
   const t = SK[id],
     s = sk && sk[id];
-  if (!t || t.tier !== 90 || SK9_BRANCH[id] || !s) return null;
-  const e = L && L[id],
-    lv = Math.max(s, (e && e.lv) || 0),
-    max = t.max,
-    done = lv >= max,
-    need = done ? 0 : SK9_NEED(lv),
-    xp = done ? 0 : Math.max(0, Math.min(need, (e && e.xp) || 0)),
-    pct = done ? 100 : (xp / need) * 100;
-  return { lv, max, xp, need, pct, done };
+  if (!t || !s) return null;
+  if (t.tier === 90 && !SK9_BRANCH[id]) {
+    const e = L && L[id],
+      lv = Math.max(s, (e && e.lv) || 0),
+      max = t.max,
+      done = lv >= max,
+      need = done ? 0 : SK9_NEED(lv),
+      xp = done ? 0 : Math.max(0, Math.min(need, (e && e.xp) || 0)),
+      pct = done ? 100 : (xp / need) * 100;
+    return { lv, max, xp, need, pct, done };
+  }
+  if (t.exp) {
+    const tm = typeof skTrainMap == "function" ? skTrainMap() : (S && S.lx),
+      e = tm && tm[id],
+      lv = Math.max(s, (e && e.lv) || 1),
+      max = t.max,
+      done = lv >= max,
+      need = done ? 0 : (typeof skExpNeeded == "function" ? skExpNeeded(t, lv) : (t.xp && t.xp[Math.min(lv - 1, (t.xp.length || 1) - 1)]) || 1e9),
+      xp = done ? 0 : Math.max(0, Math.min(need, (e && e.xp) || 0)),
+      pct = done ? 100 : Math.min(100, (xp / need) * 100);
+    return { lv, max, xp, need, pct, done };
+  }
+  return null;
 }
 const sk9Pct = (p) => (Math.floor(p.pct * 10) / 10).toFixed(1).replace(".", ","),
   sk9Line = (p) =>
@@ -173,7 +187,7 @@ function sk9BarHTML(id, kind) {
     w = `<span class="sk9b${p.done ? " done" : ""}" data-sk9="${k}"><b style="width:${p.pct}%"></b></span>`;
   return kind === "c"
     ? `<span class="sk9c" title="${sk9Line(p)}"><em data-sk9s="${k}">${sk9Short(p)}</em>${w}</span>`
-    : `<div class="sk9${kind}">${w}<span class="sk9t" data-sk9t="${k}">${sk9Line(p)}${kind === "d" && !p.done ? ` · ${Math.floor(p.xp)}/${p.need} điểm` : ""}</span>${kind === "d" && !p.done ? `<small class="dim">Mỗi quái cấp ≥ ${Math.max(1, sk9MinL())} bị hạ: +${sk9Cfg("normal", 1)} điểm (tinh anh +${sk9Cfg("elite", 3)}, trùm +${sk9Cfg("boss", 20)})${isAttack(SK[id]) ? "; chiêu phải đánh trúng quái đó" + (sk9Cfg("offline", !0) ? ", lúc vắng mặt chỉ luyện chiêu chính" : "") : ""}${sk9Cfg("offline", !0) ? "" : "; vắng mặt không luyện"}.</small>` : ""}</div>`;
+    : `<div class="sk9${kind}">${w}<span class="sk9t" data-sk9t="${k}">${sk9Line(p)}${kind === "d" && !p.done ? ` · ${Math.floor(p.xp)}/${p.need} điểm` : ""}</span>${kind === "d" && !p.done && SK[id] && SK[id].tier === 90 ? `<small class="dim">Mỗi quái cấp ≥ ${Math.max(1, sk9MinL())} bị hạ: +${sk9Cfg("normal", 1)} điểm (tinh anh +${sk9Cfg("elite", 3)}, trùm +${sk9Cfg("boss", 20)})${isAttack(SK[id]) ? "; chiêu phải đánh trúng quái đó" + (sk9Cfg("offline", !0) ? ", lúc vắng mặt chỉ luyện chiêu chính" : "") : ""}${sk9Cfg("offline", !0) ? "" : "; vắng mặt không luyện"}.</small>` : ""}</div>`;
 }
 // Võ công window, under the "Chiêu chính" bar: training of the current main skill when it is a 90 skill
 function sk9MainHTML() {

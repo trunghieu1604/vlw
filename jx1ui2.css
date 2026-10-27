@@ -592,6 +592,29 @@ body.nochat #modeSw {
 #pad .pbtn.tp i {
   background-image: url(img/ep/ldp.png);
 }
+#pad .pbtn.kc,
+#pad #bKc {
+  background: #030303 url(ui/kc.png?v=3) center / cover no-repeat !important;
+}
+#pad .pbtn.kc i,
+#pad #bKc i {
+  background-image: url(ui/kc.png?v=3);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  inset: 1px;
+}
+#pad .hb.hb-kc,
+#pad .hb:has(#bKc) {
+  margin-left: 8px !important;
+  padding-left: 8px !important;
+  border-left: 1px solid #000;
+  box-shadow: -1px 0 0 #45423a;
+}
+#pad .pbtn.kc b,
+#pad #bKc b {
+  font-size: 8px;
+}
 #pad .pbtn.empty {
   opacity: 1;
   border-style: solid !important;

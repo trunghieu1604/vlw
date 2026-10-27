@@ -378,6 +378,10 @@ function setupPetTabEvents(rw, refreshFn) {
       const tid = +b.dataset.p;
       const cur = rw.pet;
       rw.pet = { tid, lvl: cur ? cur.lvl : 1, xp: cur ? cur.xp : 0 };
+      if (typeof S !== "undefined" && S) {
+        S.rw = S.rw || {};
+        S.rw.pet = rw.pet;
+      }
       if (typeof R !== "undefined") {
         R.petPos = null;
         R.dirty = !0;

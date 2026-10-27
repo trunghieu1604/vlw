@@ -71,7 +71,8 @@ function grant(t, n) {
     }
   if ((t.skp && ((S.skPts = (S.skPts || 0) + t.skp), o.push(`${t.skp} điểm kỹ năng`)), t.xp && S.lvl < levelCap())) {
     const s = S.lvl;
-    (gainXp((J.exp[S.lvl - 1] * t.xp * expCfg("questMul", 1) * xpSlow(S.lvl)) / xpDrag()),
+    const baseExp = typeof lvNeed === "function" ? lvNeed(S.lvl) : ((J.exp && J.exp[Math.min(S.lvl - 1, 199)]) || 2e9);
+    (gainXp((baseExp * t.xp * expCfg("questMul", 1) * xpSlow(S.lvl)) / xpDrag()),
       o.push(S.lvl > s ? `kinh nghiệm (lên cấp ${S.lvl})` : `${Math.round(t.xp * 1e3) / 10}% kinh nghiệm`));
   }
   if (t.misc)
@@ -523,7 +524,7 @@ function rwOnKill(t) {
     questTick("kills"),
     t.cls === "boss" && (n.stat.bosses++, questTick("bosses")),
     t.goldBoss && (n.stat.goldBoss++, grant({ set: 1, fd: 10 }, "Hạ Trùm Hoàng Kim")),
-    Math.random() < dropCfg("event", 0.05))
+    Math.random() < Math.max(0.05, dropCfg("event", 0.05)))
   ) {
     n.stat.tokens++;
     const o = eventNow();

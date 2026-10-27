@@ -103,15 +103,51 @@ function initKhinhCongUi() {
   if (!pad) return;
   let btn = document.getElementById("bKc");
   if (!btn) {
+    let hb = pad.querySelector(".hb-kc");
+    if (!hb) {
+      hb = document.createElement("div");
+      hb.className = "hb hb-kc";
+      pad.appendChild(hb);
+    }
     btn = document.createElement("button");
     btn.className = "pbtn kc";
     btn.id = "bKc";
     btn.title = "Khinh công (Space) · hồi 15 giây";
-    btn.innerHTML = '<div class="cd"></div><small></small>';
+    btn.innerHTML = '<i></i><div class="cd"></div><small></small><b>Space</b>';
     btn.dataset.key = "Space";
-    pad.appendChild(btn);
+    hb.appendChild(btn);
+  } else {
+    if (!btn.parentElement || !btn.parentElement.classList.contains("hb")) {
+      const hb = document.createElement("div");
+      hb.className = "hb hb-kc";
+      btn.parentElement.insertBefore(hb, btn);
+      hb.appendChild(btn);
+    }
+    if (!btn.querySelector("i")) {
+      const i = document.createElement("i");
+      btn.insertBefore(i, btn.firstChild);
+    }
+    if (!btn.querySelector(".cd")) {
+      const cd = document.createElement("div");
+      cd.className = "cd";
+      btn.appendChild(cd);
+    }
+    if (!btn.querySelector("small")) {
+      const sm = document.createElement("small");
+      btn.appendChild(sm);
+    }
+    if (!btn.querySelector("b")) {
+      const b = document.createElement("b");
+      b.textContent = "Space";
+      btn.appendChild(b);
+    }
   }
   btn.onpointerdown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    khinhCong();
+  };
+  btn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     khinhCong();
