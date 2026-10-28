@@ -105,7 +105,7 @@ function addItem(n, t, e, s) {
     ? ((invDirty = !0), !0)
     : !e && !lootMatch(n)
       ? ((S.gold += itemValue(n)), !1)
-      : (S.inv.length >= INV_MAX && (n.set || n.vio || n.plv) && makeRoom(n, !0),
+      : (S.inv.length >= INV_MAX && (n.set || (typeof isVioKept == "function" ? isVioKept(n) : n.vio) || n.plv) && makeRoom(n, !0),
         S.inv.length >= INV_MAX
           ? ((S.gold += itemValue(n)), t || log('<span class="dim">Túi đầy, tự bán ' + esc(n.n) + "</span>"), !1)
           : !s && S.autoJunk !== !1 && isJunk(n)
@@ -153,7 +153,7 @@ function unequip(n) {
   }
 }
 const sellProtected = (n) =>
-  !!(n.d === 11 || (n.set && setKept(n)) || n.vio || n.plv || n.lock || n.thanma || (typeof dtNeed == "function" && dtNeed(n)));
+  !!(n.d === 11 || (n.set && setKept(n)) || (typeof isVioKept == "function" ? isVioKept(n) : n.vio) || n.plv || n.lock || n.thanma || (typeof dtNeed == "function" && dtNeed(n)));
 function sellUnmatched() {
   const n = S.inv.filter((e) => !lootMatch(e) && !sellProtected(e));
   let t = 0;
@@ -1123,7 +1123,11 @@ function renderInv() {
       <div class="btnrow presets">${p.map((l, r) => `<span class="pslot"><button class="btn sm" data-pl="${r}" ${l ? "" : "disabled"}>Bộ ${r + 1}${l ? "" : " (trống)"}</button><button class="btn sm" data-ps="${r}" title="Lưu bộ lọc hiện tại vào bộ ${r + 1}">💾</button></span>`).join("")}</div>
       <label><input type="checkbox" id="fAuto" ${n.auto ? "checked" : ""}> Tự đi nhặt đồ khi hết quái</label>
       <label><input type="checkbox" id="fAll" ${n.pickAll ? "checked" : ""}> <b>Nhặt toàn bộ</b>, bán theo bộ lọc: nhặt mọi món rơi ra; khi hành trang đầy hoặc bấm Bán thì chỉ bán món không khớp bộ lọc (bỏ chọn: chỉ nhặt món khớp bộ lọc)</label>
-      <label><input type="checkbox" id="fRare" ${n.keepRare ? "checked" : ""}> Luôn nhặt đồ quý (Hoàng Kim, Tím, ngựa hiếm)</label>
+      <label><input type="checkbox" id="fRare" ${n.keepRare ? "checked" : ""}> Luôn nhặt đồ quý (Hoàng Kim, ngựa hiếm)</label>
+      ${verVio() ? `
+      <label><input type="checkbox" id="fKeepVio" ${n.keepVio !== false ? "checked" : ""}> 🟣 <b>Giữ đồ Tím (đã khảm)</b> <small class="dim">(bỏ chọn: tự bán khi đầy túi hoặc bấm Bán nhanh, trừ món tốt hơn đang mặc hoặc có khóa 🔒)</small></label>
+      <label><input type="checkbox" id="fKeepPhoi" ${n.keepPhoi !== false ? "checked" : ""}> 🟣 <b>Giữ phôi Tím (chưa khảm)</b> <small class="dim">(bỏ chọn: tự bán khi đầy túi hoặc bấm Bán nhanh)</small></label>
+      ` : ""}
       <label><input type="checkbox" id="fSmart" ${n.smartUp ? "checked" : ""}> ⭐ <b>Giữ đồ nâng cấp</b> (lọc thông minh): món làm nhân vật mạnh hơn đồ đang mặc (▲), kể cả món sắp mặc được (cấp yêu cầu ≤ cấp + 10, đúng giới tính / phái / loại vũ khí) và món cường hóa lên sẽ mạnh hơn (△) <small class="dim">· hành trang có ${S.inv.filter(isUpgrade).length} món</small></label>
       <label><input type="checkbox" id="fCustom" ${n.custom ? "checked" : ""}> ⚙ <b>Giữ thêm đồ khớp điều kiện tùy chỉnh</b> bên dưới</label>
       <div class="lc row">Độ hiếm từ <select id="fRar">${t}</select> · cấp đồ từ <select id="fLvl">${e}</select> · ít nhất <select id="fMag">${s}</select> dòng</div>
@@ -1157,6 +1161,12 @@ function renderInv() {
     ($("#fRare").onchange = (l) => {
       ((n.keepRare = l.target.checked), h());
     }),
+    (() => {
+      const v = $("#fKeepVio");
+      v && (v.onchange = (l) => { ((n.keepVio = l.target.checked), h()); });
+      const p = $("#fKeepPhoi");
+      p && (p.onchange = (l) => { ((n.keepPhoi = l.target.checked), h()); });
+    })(),
     ($("#fWear").onchange = (l) => {
       ((n.wear = l.target.checked), h());
     }),

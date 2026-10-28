@@ -423,6 +423,8 @@ const GROUND_MAX = 40,
     accrue: !1,
     facW: !1,
     keepRare: !0,
+    keepVio: !0,
+    keepPhoi: !0,
     setOnly: !1,
     setKeep: [],
     setMine: !1,
@@ -532,6 +534,8 @@ function lootFilter() {
     for (const t in e) n[t] === void 0 && (n[t] = e[t]);
     (S.epAuto === !1 && (n.ep.white = !1), S.epAutoJ === !1 && (n.ep.jew = !1), delete S.epAuto, delete S.epAutoJ);
   }
+  if (n.keepVio === void 0) n.keepVio = !0;
+  if (n.keepPhoi === void 0) n.keepPhoi = !0;
   return n;
 }
 let LF_KEY = null,
@@ -552,7 +556,22 @@ function lootWant(n) {
     LF_WANT
   );
 }
-const lootRare = (n) => !!((n.set && setKept(n)) || n.vio || n.plv || (n.d === 10 && (n.r >= 3 || n.rareH)));
+function isVioKept(n, lf) {
+  if (!n || !n.vio) return !1;
+  if (n.enh > 0) return !0;
+  lf = lf || (typeof lootFilter == "function" ? lootFilter() : null);
+  const isPhoi = !(n.mag || []).length;
+  if (isPhoi) {
+    return !lf || lf.keepPhoi !== false;
+  }
+  return !lf || lf.keepVio !== false;
+}
+if (typeof window !== "undefined") window.isVioKept = isVioKept;
+const lootRare = (n) => {
+  const lf = typeof lootFilter == "function" ? lootFilter() : null;
+  const vioKept = isVioKept(n, lf);
+  return !!((n.set && setKept(n)) || vioKept || n.plv || (n.d === 10 && (n.r >= 3 || n.rareH)));
+};
 function epWant(n) {
   const e = lootFilter().ep;
   return !e || typeof verVio != "function" || !verVio() || !n || n.set || n.vio || n.thanma || !(n.d >= 0 && n.d <= 9)
@@ -641,6 +660,7 @@ function lootMatch(n) {
   if (typeof dtNeed == "function" && dtNeed(n)) return !0;
   const e = lootFilter();
   if (n.set && !setKept(n)) return !1;
+  if (n.vio && !isVioKept(n, e) && !(e.smartUp && (isUpgrade(n) || isPotential(n)))) return !1;
   if ((e.keepRare && lootRare(n)) || (e.smartUp && (isUpgrade(n) || isPotential(n)))) return !0;
   if (
     !e.custom ||
@@ -692,7 +712,7 @@ function dropToGround(n, e) {
     r = rnd(10, 26),
     [o, u] = inWorld(e.x + Math.cos(t) * r, e.y + Math.sin(t) * r);
   if ((R.ground.push({ it: n, x: o, y: u, age: 0 }), R.ground.length > GROUND_MAX)) {
-    let a = R.ground.findIndex((c) => !c.it.set && !c.it.vio && !c.it.plv);
+    let a = R.ground.findIndex((c) => !c.it.set && !isVioKept(c.it) && !c.it.plv);
     a < 0 && (a = 0);
     const l = R.ground.splice(a, 1)[0];
     S.gold += itemValue(l.it);
@@ -704,7 +724,7 @@ function makeRoom(n, e) {
   let t = null;
   for (const r of S.inv)
     !(r.set && setKept(r)) &&
-      !r.vio &&
+      !isVioKept(r) &&
       !r.plv &&
       !r.lock &&
       !r.thanma &&

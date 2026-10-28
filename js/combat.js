@@ -1133,7 +1133,11 @@ function onKill(t) {
     i > 0 && t.cls !== "boss" && log(`<span class="gdl">Nhặt được <b>${fmtL(i)}</b> lượng</span>`),
     burst(t.x, t.y, SERIES_COL[t.series]));
   for (const r of rollDrops(t)) dropToGround(r, t);
-  for (const r of allDrops(t)) log(`Nhặt được <b style="color:#7fd0ff">${esc(r)}</b>`);
+  for (const r of allDrops(t)) {
+    const txt = typeof r === "object" && r ? r.txt || r.text : r;
+    const col = (typeof r === "object" && r && r.col) || "#7fd0ff";
+    if (txt) log(`Nhặt được <b style="color:${col}">${esc(txt)}</b>`);
+  }
   const s = rollSetDrop(t);
   (s && (dropToGround(s, t), log(`<b style="color:${RAR_COL[s.r]}">${esc(s.n)}</b> rơi ra!`)),
     t.cls === "boss" && log(`Hạ <b class="boss">${esc(t.n)}</b> (+${fmtL(i)} lượng)`),

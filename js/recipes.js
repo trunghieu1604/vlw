@@ -672,16 +672,16 @@ function oreDrop(n) {
       a = clamp(Math.floor(n.L / 12) + rcInt(0, 1), 1, ORE_MAX),
       u = e && l.length ? bestOreAttr(e, o, [...new Set(l)], a) : l.length ? pick([...new Set(l)]) : pick(orePool(o)),
       f = oreKey(o, u, a, o % 2 ? (r ? r.s : rcInt(0, 4)) : -1);
-    (matAdd("ore", f), t.push(`${oreStoneName(f)} cấp ${a}`));
+    (matAdd("ore", f), t.push({ txt: `${oreStoneName(f)} cấp ${a}`, col: "#7fd0ff" }));
   }
   if (Math.random() < dropP("ht", n)) {
     const e = clamp(Math.floor(n.L / 15) + 1, 1, HT_MAX);
-    (matAdd("ht", e), t.push(`Huyền Tinh Khoáng Thạch cấp ${e}`));
+    (matAdd("ht", e), t.push({ txt: `Huyền Tinh Khoáng Thạch cấp ${e}`, col: "#c77bff" }));
   }
   if (Math.random() < (PHOI_DROP[n.cls] || 0) * dropMul())
     if (S.inv.concat(epBox()).filter((e) => e.vio && !(e.mag || []).length).length >= (typeof EP_BOX_MAX == "number" ? EP_BOX_MAX : 120)) {
       const e = clamp(Math.floor(n.L / 15) + 1, 1, HT_MAX);
-      (matAdd("ht", e), t.push(`Huyền Tinh Khoáng Thạch cấp ${e}`));
+      (matAdd("ht", e), t.push({ txt: `Huyền Tinh Khoáng Thạch cấp ${e}`, col: "#c77bff" }));
     } else {
       const e = phoiFromDrop(n.L);
       e &&
@@ -690,9 +690,9 @@ function oreDrop(n) {
           : S.inv
         ).push(e),
         (invDirty = !0),
-        t.push(`<b style="color:#d47fff">Phôi Tím ${e.n} (${e.vslots} dòng)</b>`));
+        t.push({ txt: `Phôi ${e.n} (${e.vslots} dòng)`, col: "#d47fff" }));
     }
-  return t.length ? t.join(", ") : null;
+  return t.length ? t : null;
 }
 function bestOreAttr(n, t, e, o) {
   const s = Object.keys(mats().ht).map(Number),
@@ -777,7 +777,7 @@ function shardDrop(n, t) {
   }
   if (!s.length) return null;
   const l = pick(c.length && s === c ? c.sort((a, u) => matHave("shard", u.n) - matHave("shard", a.n)).slice(0, 2) : s);
-  return (matAdd("shard", l.n), `Mảnh ${l.n} (${matHave("shard", l.n)}/${SHARDS[l.n]})`);
+  return (matAdd("shard", l.n), { txt: `Mảnh ${l.n} (${matHave("shard", l.n)}/${SHARDS[l.n]})`, col: "#ffcc00" });
 }
 function combineShards(n) {
   const t = SHARDS[n],
@@ -891,9 +891,9 @@ function platDrop(n) {
   if (!verPlat() || (n.L < 60 && n.cls !== "boss")) return null;
   const t = [];
   return (
-    Math.random() < dropP("wc", n) && (matAdd("misc", "wc", 1), t.push("1 Thủy Tinh Trắng")),
-    Math.random() < dropP("mys", n) && (matAdd("misc", "mys", 1), t.push("1 Thần Bí Khoáng Thạch")),
-    t.length ? t.join(", ") : null
+    Math.random() < dropP("wc", n) && (matAdd("misc", "wc", 1), t.push({ txt: "1 Thủy Tinh Trắng", col: "#9fe8ff" })),
+    Math.random() < dropP("mys", n) && (matAdd("misc", "mys", 1), t.push({ txt: "1 Thần Bí Khoáng Thạch", col: "#9fe8ff" })),
+    t.length ? t : null
   );
 }
-const allDrops = (n) => [oreDrop(n), shardDrop(n), platDrop(n)].filter(Boolean);
+const allDrops = (n) => [oreDrop(n), shardDrop(n), platDrop(n)].flat().filter(Boolean);
