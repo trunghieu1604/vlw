@@ -163,11 +163,13 @@ function migrate(n) {
     (e.inv = (Array.isArray(e.inv) ? e.inv : [])
       .filter((t) => t && typeof t == "object" && Array.isArray(t.base) && Array.isArray(t.mag))
       .slice(0, INV_MAX)));
-  // Cập nhật mặt nạ (d === 11) sang danh sách model người và icon mới nhất
-  const maskList = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  // Cập nhật mặt nạ (d === 12) sang danh sách model người và icon mới nhất
+  const maskList = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
   if (maskList.length) {
     const updateMask = (it) => {
-      if (!it || it.d !== 11) return;
+      if (!it || it.ca) return;
+      if (it.d !== 12 && !(it.anim || it.expireAt || it.perm)) return;
+      it.d = 12;
       const def = maskList.find((m) => m.k === it.k) || maskList[0];
       if (def) {
         it.n = def.n;

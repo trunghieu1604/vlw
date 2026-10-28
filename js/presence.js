@@ -811,7 +811,7 @@ function presView(p, sel) {
       })
       .join("")}</div>`,
     doll = SLOTS.map(([sl, nm]) => {
-      const [x, y, w, h] = U2_DOLL[sl],
+      const [x, y, w, h] = (typeof U2_DOLL !== "undefined" && U2_DOLL[sl]) || [0, 0, 46, 40],
         it = c.eq[sl];
       return `<div class="u2s slot${it ? ` r${it.r}` : ""}" data-ps="${sl}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${it ? netCell(it).replace(/data-uid="[^"]*"/, `data-ps="${sl}"`) : `<span>${nm}</span>`}</div>`;
     }).join(""),

@@ -2,7 +2,7 @@
 
 const KC_DUR = 0.5,
   KC_HEIGHT = 56,
-  KC_CD = 15,
+  KC_CD = 5,
   KC_STATE = { j: null, cd: 0 };
 
 function kcHeight() {
@@ -112,7 +112,7 @@ function initKhinhCongUi() {
     btn = document.createElement("button");
     btn.className = "pbtn kc";
     btn.id = "bKc";
-    btn.title = "Khinh công (Space) · hồi 15 giây";
+    btn.title = "Khinh công (Space) · hồi 5 giây";
     btn.innerHTML = '<i></i><div class="cd"></div><small></small><b>Space</b>';
     btn.dataset.key = "Space";
     hb.appendChild(btn);
@@ -142,6 +142,7 @@ function initKhinhCongUi() {
       btn.appendChild(b);
     }
   }
+  btn.title = "Khinh công (Space) · hồi 5 giây";
   btn.onpointerdown = (e) => {
     e.preventDefault();
     e.stopPropagation();

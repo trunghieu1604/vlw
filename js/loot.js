@@ -135,6 +135,15 @@ function rollDrops(n) {
       c = l && makeItem(l[1], l[2], itemTier(n.L, e), irnd(0, 2), n.series);
     c && u.push(c);
   }
+  if (
+    typeof verVio == "function" &&
+    verVio() &&
+    typeof phoiFromDrop == "function" &&
+    Math.random() < (n.cls === "boss" ? 0.2 : n.cls === "elite" ? 0.05 : 0.002) * r * (n.bonusDrop || 1)
+  ) {
+    const ph = phoiFromDrop(n.L);
+    ph && u.push(ph);
+  }
   return u;
 }
 const JEWEL_DROP = { normal: 0.04, elite: 0.35, boss: 1 };
@@ -199,6 +208,8 @@ function itemPower(n) {
   return e * enhMul(n);
 }
 function slotFor(n) {
+  if (n.d === 11 && (n.anim || n.expireAt || n.perm)) return "mask";
+  if (n.d === 12) return "mask";
   const e = DETAIL_SLOT[n.d];
   return e === "ring"
     ? S.eq.ring1
@@ -270,7 +281,7 @@ function itemLines(n) {
         : magText(Object.assign({}, s, { p: s.p.map((i, f) => (i === -1 || f > 1 ? i : Math.round(i * o))) }));
   (n.s >= 0 && e.push(["b", "Ngũ hành thuộc tính: " + SERIES[n.s], SERIES_COL[n.s]]),
     r && r.d && e.push(["b in", r.d]));
-  if (n.d === 11) {
+  if (n.d === 12 || (n.d === 11 && (n.anim || n.expireAt || n.perm))) {
     if (n.perm) {
       e.push(["m", "Thời hạn: Vĩnh viễn", "#ffcc00"]);
     } else if (n.expireAt) {
@@ -301,11 +312,23 @@ function itemLines(n) {
       ((s === 37 || s === 38 || s === 39) && i < 0) ||
       (s !== 37 && s !== 38 && s !== 39 && !(i > 0)) ||
       e.push([reqLineOk(s, i) ? "b" : "rq", reqLineText(s, i)]);
-  const l = n.d === 10 ? 3 : typeof hiddenActive == "function" ? hiddenActive(n) : 0;
-  n.mag.forEach((s, i) => {
-    const f = i % 2 === 0 || i >> 1 < l;
-    e.push([f ? "m" : "h", u(s)]);
-  });
+
+  if (n.ca) {
+    const tier = (n.ca && n.ca.lvl) || 1;
+    const cap = (typeof I0 !== "undefined" && I0.cap && I0.cap[tier]) || (tier >= 2 ? 15 : 10);
+    const maxC = (n.ca && n.ca.max) || (typeof I0 !== "undefined" && I0.max && I0.max[tier]) || (tier >= 2 ? 32 : 12);
+    e.push(["r", `Số lần khắc: ${n.ca.carve || 0}/${maxC}`]);
+    (n.mag || []).forEach((s) => {
+      e.push(["m", `${magText(s)} (${s.lv || 1}/${cap})`]);
+    });
+  } else {
+    const l = n.d === 10 ? 3 : typeof hiddenActive == "function" ? hiddenActive(n) : 0;
+    n.mag.forEach((s, i) => {
+      const f = i % 2 === 0 || i >> 1 < l;
+      e.push([f ? "m" : "h", u(s)]);
+    });
+  }
+
   const c = [];
   if (
     (n.plv && c.push(["h on", `Bạch Kim +${n.plv}: thuộc tính gốc +${Math.round(n.plv * PLAT_STEP * 100)}%`]),
@@ -321,7 +344,7 @@ function itemLines(n) {
         "h on",
         `Thuần dưỡng cấp ${horseLv(n)}/${HORSE_MAX}: chỉ số ngựa +${Math.round(horseLv(n) * HORSE_UP * 100)}%, phạt né −${Math.min(100, Math.round(horseLv(n) * HORSE_PEN * 100))}%`,
       ]),
-    Math.floor((n.mag || []).length / 2) && !n.leg && n.d !== 10 && n.s >= 0 && typeof ACCRUE < "u")
+    Math.floor((n.mag || []).length / 2) && !n.leg && !n.ca && n.d !== 10 && n.d !== 11 && n.s >= 0 && typeof ACCRUE < "u")
   ) {
     const s = +Object.keys(ACCRUE).find((d) => ACCRUE[d] === n.s),
       i = slotOfEquipped(n, S.eq) || slotFor(n),

@@ -230,7 +230,7 @@ function autoEquipAll() {
     for (const c of S.inv.concat(
       typeof epBox == "function" ? epBox().filter((i) => i.vio && (i.mag || []).length) : [],
     )) {
-      if (!reqOk(c) || c.d === 11) continue;
+      if (!reqOk(c) || c.d === 12 || ((c.anim || c.expireAt) && !c.ca)) continue;
       const i = FAC[S.fac];
       if (DETAIL_SLOT[c.d] === "weapon" && i && !weaponFits(c)) continue;
       const d = equipGain(c);
@@ -256,7 +256,7 @@ function itemModal(n, t) {
     s = !t && typeof enhGain == "function" && !isUpgrade(n) && enhGain(n);
   modal(
     `${itemHTML(n)}${cmpLines(n, t)}${s ? `<div class="cp small">△ Cường hóa lên +${s.enh}: mạnh hơn đồ đang mặc ${(s.gain * 100).toFixed(1)}% · ước tính ${enhExpected(n, s.enh)} KNB</div>` : ""}${e ? `<div class="cmp"><small class="dim">Đang mặc:</small>${itemHTML(e)}</div>` : ""}
-    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `${n.d === 11 && n.expireAt && n.expireAt <= Date.now() ? '<button class="btn red" id="bDelExp">Bỏ mặt nạ hết hạn</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>`}${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}${owned(n) && typeof chatShowItem == "function" && !document.body.classList.contains("nochat") ? '<button class="btn" id="bChatShow">💬 Khoe</button>' : ""}</div>`,
+    <div class="btnrow">${t ? '<button class="btn" id="bUn">Tháo</button>' : `${(n.d === 12 || n.anim) && n.expireAt && n.expireAt <= Date.now() ? '<button class="btn red" id="bDelExp">Bỏ mặt nạ hết hạn</button>' : `<button class="btn" id="bEq" ${reqOk(n) ? "" : "disabled"}>Trang bị</button>`}${!reqOk(n) && Object.keys(reqDeficit(n)).length && reqProblems(n).length === Object.keys(reqDeficit(n)).length ? '<button class="btn" id="bReqPts">Cộng điểm</button>' : ""}<button class="btn red" id="bSell" ${n.lock ? "disabled" : ""}>Bán (${fmt(itemValue(n))})</button>${S.inv.includes(n) ? '<button class="btn" id="bStashIt">Gửi kho</button>' : ""}${S.inv.includes(n) && typeof partyN == "function" && partyN() ? '<button class="btn" id="bGive">Chuyển cho…</button>' : ""}${S.inv.includes(n) && n.d === 10 ? '<button class="btn" id="bStable">Cất vào Mã Trường</button>' : ""}`}${findItem(n.uid) && n.d === 11 && n.ca ? '<button class="btn on" id="bCarveSeal">Thợ Khắc Ấn</button>' : ""}${findItem(n.uid) && n.d <= 10 ? '<button class="btn" id="bForge">Rèn đồ</button>' : ""}${owned(n) ? `<button class="btn" id="bLock">${n.lock ? "🔓 Mở khóa" : "🔒 Khóa"}</button>` : ""}${owned(n) && typeof chatShowItem == "function" && !document.body.classList.contains("nochat") ? '<button class="btn" id="bChatShow">💬 Khoe</button>' : ""}</div>`,
     () => {
       const bDelExp = $("#bDelExp");
       bDelExp &&
@@ -267,6 +267,12 @@ function itemModal(n, t) {
           toast("Đã bỏ mặt nạ hết hạn");
           closeModal();
           refresh();
+        });
+      const bCarve = $("#bCarveSeal");
+      bCarve &&
+        (bCarve.onclick = () => {
+          closeModal();
+          if (typeof caModal === "function") caModal("carve", n.uid);
         });
       const a = $("#bEq"),
         c = $("#bSell"),
@@ -449,7 +455,7 @@ function renderChar() {
 function maskPickModal() {
   if (typeof migrateMasks == "function") migrateMasks();
   const m = S.eq && S.eq.mask;
-  const list = (S.inv || []).filter((it) => it && it.d === 11);
+  const list = (S.inv || []).filter((it) => it && (it.d === 12 || ((it.anim || it.expireAt || it.perm) && !it.ca)));
   const timeDesc = (it) => {
     if (it.perm) return '<span style="color:#ffd24a;font-weight:bold">Vĩnh viễn</span>';
     if (!it.expireAt) return '<span style="color:#ffd24a;font-weight:bold">Vĩnh viễn</span>';

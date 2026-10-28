@@ -280,10 +280,11 @@ const STAGES = ZONES.length * ZONE_STAGES,
     ["ring2", "Nhẫn 2"],
     ["pendant", "Ngọc bội"],
     ["horse", "Ngựa"],
+    ["an", "Ấn"],
     ["mask", "Mặt nạ"],
   ],
   SLOT_VI = Object.fromEntries(SLOTS),
-  DETAIL_SLOT = ["weapon", "weapon", "armor", "ring", "amulet", "boot", "belt", "helm", "cuff", "pendant", "horse", "mask"],
+  DETAIL_SLOT = ["weapon", "weapon", "armor", "ring", "amulet", "boot", "belt", "helm", "cuff", "pendant", "horse", "an", "mask"],
   MELEE_KIND = ["sword", "blade", "wand", "spear", "hammer", "dualblades"],
   RANGE_KIND = ["darts", "knife", "crossbow"],
   AFFIX_KEY = {
@@ -321,8 +322,10 @@ function isGodMode() {
 }
 window.isGodMode = isGodMode;
 
-// Danh sách mặt nạ ngoại trang Võ Lâm (DetailType = 11: mask)
-J.items[11] = {
+// Danh sách mặt nạ ngoại trang Võ Lâm (DetailType = 12: mask)
+J.items[12] = {
+  detail: 12,
+  file: "mask",
   n: "Mặt nạ",
   list: [
     { k: 1, n: "Mặt nạ Nguyệt Ca Đảo Chủ", anim: "boss093", d: "Đeo vào hóa thân thành Nguyệt Ca Đảo Chủ tuyệt sắc toạ trên trăng khuyết huyền ảo, phong thái vương giả cái thế.", ic: "img/ep/ldt.png", duration: 3 * 86400 * 1000 },
@@ -341,19 +344,38 @@ J.items[11] = {
   ],
 };
 
+function getMaskList() {
+  if (typeof J !== "undefined" && J.items) {
+    if (J.items[12] && J.items[12].list) return J.items[12].list;
+    if (J.items[11] && J.items[11].file === "mask" && J.items[11].list) return J.items[11].list;
+  }
+  return [];
+}
+window.getMaskList = getMaskList;
+
+function isMaskItem(it) {
+  return !!(it && (it.d === 12 || ((it.anim || it.expireAt || it.perm) && !it.ca)));
+}
+window.isMaskItem = isMaskItem;
+
+function isSealItem(it) {
+  return !!(it && (it.ca || (it.d === 11 && !it.anim && !it.expireAt && !it.perm)));
+}
+window.isSealItem = isSealItem;
+
 function makeMaskItem(k, perm = false) {
-  const list = J.items[11].list;
+  const list = getMaskList();
   const def = list.find((m) => m.k === k) || list[0];
   const isPerm = !!perm;
   const it = {
     uid: typeof genUid === "function" ? genUid() : Date.now() + Math.floor(Math.random() * 10000),
-    d: 11,
-    k: def.k,
+    d: 12,
+    k: def ? def.k : k,
     lvl: 1,
     r: isPerm ? 4 : 3,
-    n: def.n,
-    anim: def.anim,
-    ic: def.ic,
+    n: def ? def.n : "Mặt nạ",
+    anim: def ? def.anim : "boss093",
+    ic: def ? def.ic : "img/ep/ldt.png",
     mag: [],
     base: [],
     req: [],
@@ -361,7 +383,7 @@ function makeMaskItem(k, perm = false) {
   if (isPerm) {
     it.perm = true;
   } else {
-    it.expireAt = Date.now() + (def.duration || 3 * 86400 * 1000);
+    it.expireAt = Date.now() + (def && def.duration ? def.duration : 3 * 86400 * 1000);
   }
   return it;
 }
@@ -369,17 +391,20 @@ window.makeMaskItem = makeMaskItem;
 
 function migrateMasks() {
   if (typeof S === "undefined" || !S) return;
-  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  const list = getMaskList();
   if (!list.length) return;
 
   const updateItem = (it) => {
-    if (!it || it.d !== 11) return;
-    const def = list.find((m) => m.k === it.k) || list[0];
-    if (def) {
-      it.n = def.n;
-      it.anim = def.anim;
-      it.ic = def.ic;
-      if (def.perm) it.perm = true;
+    if (!it || it.ca) return;
+    if (it.anim || it.expireAt || it.perm || it.d === 12) {
+      it.d = 12;
+      const def = list.find((m) => m.k === it.k) || list[0];
+      if (def) {
+        it.n = def.n;
+        it.anim = def.anim;
+        it.ic = def.ic;
+        if (def.perm) it.perm = true;
+      }
     }
   };
 
@@ -395,12 +420,13 @@ function getActive3DayMask() {
   if (S.eq && S.eq.mask && !S.eq.mask.perm && S.eq.mask.expireAt && S.eq.mask.expireAt > now) {
     return S.eq.mask;
   }
+  const isMask = (it) => it && (it.d === 12 || it.anim) && !it.perm && it.expireAt && it.expireAt > now;
   if (S.inv && Array.isArray(S.inv)) {
-    const found = S.inv.find((it) => it && it.d === 11 && !it.perm && it.expireAt && it.expireAt > now);
+    const found = S.inv.find(isMask);
     if (found) return found;
   }
   if (S.stash && Array.isArray(S.stash)) {
-    const found = S.stash.find((it) => it && it.d === 11 && !it.perm && it.expireAt && it.expireAt > now);
+    const found = S.stash.find(isMask);
     if (found) return found;
   }
   return null;
@@ -414,7 +440,7 @@ window.maskBoxHave = maskBoxHave;
 
 function maskBoxOpen() {
   if (typeof S === "undefined" || !S) return null;
-  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  const list = getMaskList();
   if (!list.length) return null;
 
   // Tỷ lệ 3% mở ra mặt nạ VĨNH VIỄN (trừ Nguyệt Ca Đảo Chủ)

@@ -688,12 +688,13 @@ function openChest() {
 function rwOnKill(t) {
   if (!S.fac) return;
   const n = RW();
+  const evRate = t.goldBoss ? 1.0 : t.cls === "boss" ? 0.5 : (t.cls === "elite" || t.cls === "leader") ? 0.05 : 0.005;
   if (
     (n.stat.kills++,
     questTick("kills"),
     t.cls === "boss" && (n.stat.bosses++, questTick("bosses")),
     t.goldBoss && (n.stat.goldBoss++, grant({ set: 1, fd: 10 }, "Hạ Trùm Hoàng Kim")),
-    Math.random() < Math.max(0.05, dropCfg("event", 0.05)))
+    Math.random() < dropCfg("event", evRate))
   ) {
     n.stat.tokens++;
     const o = eventNow();

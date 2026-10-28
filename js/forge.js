@@ -18,11 +18,12 @@ function enhExpected(n, a) {
 const rerollCost = (n) => Math.round((500 + n.lvl * 400) * (1 + (n.mag || []).length * 0.5) * (1 + S.lvl / 15)),
   REROLL_KEEP = 0.75,
   rerollCostKeep = (n, a) => Math.round(rerollCost(n) * (1 + REROLL_KEEP * a)),
-  canReroll = (n) => !n.set && !n.vio && !n.thanma && (n.mag || []).length > 0;
+  isSeal = (n) => typeof isSealItem === "function" ? isSealItem(n) : !!(n && (n.ca || n.d === 11)),
+  canReroll = (n) => !n.set && !n.vio && !n.thanma && !isSeal(n) && (n.mag || []).length > 0;
 function payGold(n) {
   return S.gold < n ? (toast("Không đủ ngân lượng"), !1) : ((S.gold -= n), !0);
 }
-const enhAllowed = (n) => !!n && n.d !== 10;
+const enhAllowed = (n) => !!n && n.d !== 10 && !isSeal(n);
 function enhTry(n) {
   return !enhAllowed(n) || (n.enh || 0) >= ENH_MAX || (S.knb | 0) < enhCost(n)
     ? null
@@ -36,7 +37,7 @@ function enhance(n) {
     closeModal();
     return;
   }
-  if (!enhAllowed(n)) return toast("Ngựa không cường hóa được");
+  if (!enhAllowed(n)) return toast(isSeal(n) ? "Ấn không cường hóa được" : "Ngựa không cường hóa được");
   if ((n.enh || 0) >= ENH_MAX) return;
   if ((S.knb | 0) < enhCost(n)) return toast("Không đủ Kim Nguyên Bảo");
   const a = n.enh || 0,
@@ -221,7 +222,9 @@ function forgeModal(n) {
         )
         .join("")}
       <div class="btnrow"><button class="btn red" id="fRe" ${S.gold >= d && i < n.mag.length ? "" : "disabled"}>Tẩy luyện (${fmtL(d)} lượng${i ? `, giữ ${i} dòng` : ""})</button></div>`
-      : '<small class="dim">Đồ trắng / đồ bộ / đồ Tím không tẩy luyện được</small>';
+      : isSeal(n)
+        ? '<small class="dim">Chiến ấn không tẩy luyện ở Lò Rèn. Hãy dùng <b>Thợ Khắc Ấn</b> để nâng cấp hoặc tạo ấn mới.</small><div class="btnrow"><button class="btn on" id="fCa">⚒️ Mở Thợ Khắc Ấn</button></div>'
+        : '<small class="dim">Đồ trắng / đồ bộ / đồ Tím không tẩy luyện được</small>';
   modal(
     `<h3>Rèn đồ <small>${S.knb | 0} KNB · ${fmtL(S.gold)} lượng</small></h3>${itemHTML(n)}
     ${
@@ -230,7 +233,7 @@ function forgeModal(n) {
       ${e ? '<small class="dim">Đã cường hóa tối đa</small>' : `<small>Giá ${enhCost(n)} KNB (có ${S.knb | 0}) · thành công ${Math.round(enhChance(n) * 100)}% · ${enhDrops(a) ? '<b class="cn">thất bại tụt về +' + (a - 1) + "</b>" : "thất bại chỉ mất KNB"}${t != null ? ` · sức mạnh <b class="cp">${pctTxt(t)}</b>` : ""}</small>`}
       <div class="btnrow"><button class="btn" id="fEnh" ${e || (S.knb | 0) < enhCost(n) ? "disabled" : ""}>Cường hóa lên +${a + 1}</button></div>
       ${e ? "" : `<div class="btnrow"><small>Liên tục tới</small>${l}<button class="btn" id="fEnhTo" ${(S.knb | 0) < enhCost(n) ? "disabled" : ""}>Cường hóa liên tục</button></div><small class="dim">≈ KNB kỳ vọng. Từ +6 trở lên thất bại tụt 1 cấp. Dừng khi đạt mức hoặc hết KNB.</small>`}</div>`
-        : '<div class="card"><b>Cường hóa</b><br><small class="dim">Ngựa không cường hóa được</small></div>'
+        : `<div class="card"><b>Cường hóa</b><br><small class="dim">${isSeal(n) ? "Ấn không cường hóa được" : "Ngựa không cường hóa được"}</small></div>`
     }
     <div class="card"><b>Tẩy luyện</b> <small class="dim">gieo lại ${(n.mag || []).length} dòng thuộc tính</small><br>${k}</div>
     ${verVio() && !n.set && n.d >= 0 && n.d <= 9 && (isPhoiSrc(n) || n.vio) ? `<div class="card"><b>💎 Lò Ép Đồ</b> <small class="dim">${n.vio ? "khảm đá thuộc tính vào phôi Huyền Tinh này" : "lấy thuộc tính thành đá, hoặc chế tạo thành phôi Huyền Tinh"}</small><div class="btnrow"><button class="btn" id="fEp">Mở Lò Ép Đồ</button></div></div>` : ""}${platCard(n)}`,
@@ -273,6 +276,8 @@ function forgeModal(n) {
       g && (g.onclick = () => epModal(n.vio ? "kham" : isHutSrc(n) ? "hut" : "phoi", n.uid));
       const b = $("#fPlat");
       b && (b.onclick = () => afterRc(upgradePlatina(n), () => forgeModal(n)));
+      const fCa = $("#fCa");
+      fCa && (fCa.onclick = () => { closeModal(); typeof caModal === "function" && caModal("carve", n.uid); });
     },
   );
 }

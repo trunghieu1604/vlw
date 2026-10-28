@@ -29,17 +29,18 @@ const fmtVan = (n) => (
   },
   U2_DOLL = {
     helm: [92, 8, 64, 64],
-    amulet: [180, 8, 60, 40],
-    cuff: [12, 34, 46, 66],
+    an: [187, 8, 46, 40],
+    amulet: [180, 54, 60, 40],
+    cuff: [12, 8, 46, 62],
     armor: [92, 80, 64, 98],
-    weapon: [180, 56, 60, 112],
-    ring1: [12, 108, 46, 40],
-    ring2: [12, 154, 46, 40],
+    weapon: [180, 100, 60, 96],
+    ring1: [12, 76, 46, 40],
+    ring2: [12, 122, 46, 40],
     belt: [92, 186, 64, 34],
-    pendant: [12, 200, 46, 66],
-    boot: [180, 176, 60, 62],
+    pendant: [12, 168, 46, 62],
+    boot: [180, 202, 60, 62],
     horse: [92, 228, 64, 64],
-    mask: [180, 242, 60, 50],
+    mask: [12, 236, 46, 56],
   };
 function u2DrawDoll() {
   const n = $("#u2doll");
@@ -101,7 +102,7 @@ function renderChar20() {
     s = calc({}),
     i = { life: Math.round(n.life - s.life), mana: Math.round(n.mana - s.mana) },
     t = SLOTS.map(([e, l]) => {
-      const [r, b, f, p] = U2_DOLL[e];
+      const [r, b, f, p] = U2_DOLL[e] || [0, 0, 46, 40];
       const it = S.eq[e];
       return `<div class="u2s slot${it ? ` r${it.r}` : ""}" data-slot="${e}" style="left:${r}px;top:${b}px;width:${f}px;height:${p}px">${it ? itemCell(it) : `<span>${l}</span>`}</div>`;
     }).join(""),
@@ -169,12 +170,16 @@ function renderChar20() {
               ? horsePickModal()
               : e.parentNode.dataset.slot === "mask"
                 ? (typeof maskPickModal == "function" ? maskPickModal() : itemModal(findItem(e.dataset.uid), "mask"))
-                : itemModal(findItem(e.dataset.uid), e.parentNode.dataset.slot)),
+                : e.parentNode.dataset.slot === "an"
+                  ? itemModal(findItem(e.dataset.uid), "an")
+                  : itemModal(findItem(e.dataset.uid), e.parentNode.dataset.slot)),
       ));
   const h = document.querySelector('#t-char .slot[data-slot="horse"]');
   (h && !S.eq.horse && (h.onclick = () => horsePickModal()));
   const mk = document.querySelector('#t-char .slot[data-slot="mask"]');
   (mk && !S.eq.mask && (mk.onclick = () => (typeof maskPickModal == "function" ? maskPickModal() : ktcModal())));
+  const anSlot = document.querySelector('#t-char .slot[data-slot="an"]');
+  (anSlot && !S.eq.an && (anSlot.onclick = () => (typeof caModal == "function" ? caModal("make") : null)));
   u2DrawDoll();
   typeof ptCampBind == "function" && ptCampBind($("#t-char"));
 }
@@ -422,7 +427,7 @@ function renderForge20() {
             ["box", "Kho Rèn"],
           ]
         : []
-    ).concat([["ht", "Hoàng Kim"]]),
+    ).concat([["ht", "Hoàng Kim"]], typeof caModal == "function" ? [["ca", "Thợ Khắc Ấn"]] : []),
     u = o.length,
     m = o
       .map((l, r) => {
@@ -444,7 +449,7 @@ function renderForge20() {
         ${n.ench ? '<div class="cp">Có thể khảm nạm</div>' : ""}${n.up ? '<div class="cp">Huyền Tinh thăng cấp được</div>' : ""}
         <div class="u2h">Quy tắc</div><div class="dim small">Cường hóa +1…+${ENH_MAX}, mỗi cấp +${Math.round(ENH_STEP * 100)}% thuộc tính gốc, +${Math.round(ENH_LINE_STEP * 100)}% các dòng thuộc tính. Bấm món đồ trên vòng pháp trận để rèn riêng (cường hóa, tẩy luyện).</div>
         <div class="u2btns"><button class="btn sm" id="u2fgOpt">Tự động rèn…</button></div></div></div>`;
-  const e = { ht: () => htModal(), batch: () => batchForgeModal() };
+  const e = { ht: () => htModal(), batch: () => batchForgeModal(), ca: () => (typeof caModal == "function" ? caModal() : null) };
   (document
     .querySelectorAll("#t-forge [data-fg]")
     .forEach((l) => (l.onclick = () => (e[l.dataset.fg] || (() => epModal(l.dataset.fg)))())),
@@ -605,6 +610,7 @@ const KTC_CAT = [
   ["Đặc biệt", ["ldp", "dgt"]],
   ["Rương Thần Bí", ["rngua", "rmatna"]],
   ["Rương Hoàng Kim", ["rfullhk", "rhk"]],
+  ["Chiến Ấn", ["hthTc", "cahtTui", "bnnTui", "caht"]],
 ];
 let u2KtcCat = 0;
 function ktcModal20(cat) {
@@ -615,18 +621,22 @@ function ktcModal20(cat) {
   } else if (cat === "ruonghoankim" || cat === "Rương Hoàng Kim" || cat === "rhk" || cat === "rfullhk") {
     const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàng Kim" || (Array.isArray(val) && (val.includes("rhk") || val.includes("rfullhk"))));
     if (idx >= 0) u2KtcCat = idx;
+  } else if (cat === "chienan" || cat === "Chiến Ấn" || cat === "ca") {
+    const idx = KTC_CAT.findIndex(([t]) => t === "Chiến Ấn");
+    if (idx >= 0) u2KtcCat = idx;
   } else if (typeof cat === "number" && cat >= 0 && cat < KTC_CAT.length) {
     u2KtcCat = cat;
   }
   const isRuongTb = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Rương Thần Bí";
   const isRuongHk = KTC_CAT[u2KtcCat] && (KTC_CAT[u2KtcCat][0] === "Rương Hoàng Kim" || KTC_CAT[u2KtcCat][0] === "Rương Hoàn Kim");
+  const isChienAn = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Chiến Ấn";
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
-        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150", "bk180"].includes(t)
+        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150", "bk180", "hthTc", "cahtTui", "bnnTui", "caht"].includes(t)
           ? matHave("misc", t)
           : null,
-    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", bk180: "ktcBk180", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk" },
+    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", bk180: "ktcBk180", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk", hthTc: "ktcHthTc", cahtTui: "ktcCahtTui", bnnTui: "ktcBnnTui", caht: "ktcCaht" },
     c = !1,
     s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
@@ -642,7 +652,7 @@ function ktcModal20(cat) {
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
     <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${cardsHtml}</div>`}
-    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• <b style="color:#ffd24a">Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% TRỌN BỘ CÁC MÓN Hoàng Kim theo đúng môn phái (gồm cả bộ Tống Kim, phẩm cấp 10/10), tự do chọn bộ phù hợp.<br>• <b style="color:#ffd24a">Rương Hoàng Kim (500 KNB)</b>: Mở 100% nhận ngẫu nhiên 1 trang bị Hoàng Kim Lộ Trình Cấp (cấp 120–180), tỷ lệ 0.5% ra trọn bộ.<br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (50 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày (có tỷ lệ 3% mở ra VĨNH VIỄN). Cất vào túi, bấm Dùng để mở.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
+    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• <b style="color:#ffd24a">Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% TRỌN BỘ CÁC MÓN Hoàng Kim theo đúng môn phái (gồm cả bộ Tống Kim, phẩm cấp 10/10), tự do chọn bộ phù hợp.<br>• <b style="color:#ffd24a">Rương Hoàng Kim (500 KNB)</b>: Mở 100% nhận ngẫu nhiên 1 trang bị Hoàng Kim Lộ Trình Cấp (cấp 120–180), tỷ lệ 0.5% ra trọn bộ.<br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (50 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày (có tỷ lệ 3% mở ra VĨNH VIỄN). Cất vào túi, bấm Dùng để mở.</p>` : isChienAn ? `<p class="dim small">Nguyên liệu chế tạo và khắc Chiến ấn: Túi Chiến ấn Hồn Thạch (mở ra đủ 5 hệ), Bạch Nguyệt Ngọc (nguyên liệu khắc ấn). Bấm vào Lò Rèn → <b>Thợ Khắc Ấn</b> để chế tạo và cường hóa Chiến ấn.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
     () => {
       (document.querySelectorAll("#mBody [data-kc]").forEach(
         (o) =>
@@ -699,6 +709,18 @@ function ktcModal20(cat) {
         }),
         t("ktcRfullhk", () => {
           if (typeof fullHkBoxUse === "function") fullHkBoxUse(1);
+        }),
+        t("ktcHthTc", () => {
+          if (typeof useHthTcModal === "function") useHthTcModal();
+        }),
+        t("ktcCahtTui", () => {
+          if (typeof useCahtTui === "function") { useCahtTui(1); ktcModal(); }
+        }),
+        t("ktcBnnTui", () => {
+          if (typeof useBnnTui === "function") { useBnnTui(1); ktcModal(); }
+        }),
+        t("ktcCaht", () => {
+          if (typeof useCaht === "function") { useCaht(1); ktcModal(); }
         }));
     },
   ),

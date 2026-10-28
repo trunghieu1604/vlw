@@ -274,7 +274,7 @@
         return `${nm()}lỗi khi tạo mặt nạ`;
       }
       case "give_all_masks": {
-        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const list = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
         const perm = !!g.perm;
         let added = 0;
         S.inv = S.inv || [];
@@ -294,6 +294,63 @@
         typeof save === "function" && save();
         typeof refresh === "function" && refresh();
         return `${nm()}nhận trọn bộ <b>${added} mặt nạ Võ Lâm</b>${perm ? " (Vĩnh viễn)" : ""}`;
+      }
+      case "give_ca": {
+        const k = g.caKind != null ? +g.caKind : 0;
+        const it = typeof generateChienAnItem === "function" ? generateChienAnItem(k) : null;
+        if (it) {
+          S.inv = S.inv || [];
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(it);
+          } else if (Array.isArray(S.stash)) {
+            S.stash.push(it);
+          }
+          R.dirty = !0;
+          typeof invDirty !== "undefined" && (invDirty = !0);
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
+          return `${nm()}nhận được Chiến Ấn <b>${esc(it.n)}</b>`;
+        }
+        return `${nm()}lỗi khi tạo Chiến Ấn`;
+      }
+      case "give_all_ca": {
+        let added = 0;
+        S.inv = S.inv || [];
+        for (let k = 0; k <= 3; k++) {
+          const it = typeof generateChienAnItem === "function" ? generateChienAnItem(k) : null;
+          if (!it) continue;
+          if (S.inv.length < INV_MAX) {
+            S.inv.unshift(it);
+            added++;
+          } else if (Array.isArray(S.stash)) {
+            S.stash.push(it);
+            added++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}nhận đủ <b>${added} loại Chiến Ấn</b>`;
+      }
+      case "give_ca_mats": {
+        const addMat = typeof matAdd === "function" ? matAdd : (k, t, n) => {
+          const m = S.mats || (S.mats = {});
+          m[k] = m[k] || {};
+          m[k][t] = (m[k][t] || 0) + n;
+        };
+        ["hkim", "hmoc", "hthuy", "hhoa", "htho"].forEach((k) => addMat("misc", k, 20));
+        addMat("misc", "bnn", 100);
+        addMat("misc", "caht", 20);
+        addMat("misc", "cahtTui", 10);
+        addMat("misc", "bnnTui", 10);
+        addMat("misc", "hthTc", 10);
+        S.gold = (S.gold || 0) + 2000000;
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}nhận <b>Gói Nguyên Liệu Ấn (20 Ngũ Hồn Thạch, 100 BNN, 20 CAHT, 200 vạn lượng)</b>`;
       }
       case "give_set": {
         let setRows = null;
@@ -483,7 +540,8 @@
         const mName = g.maskName;
         let removed = 0;
         const matchMask = (it) => {
-          if (!it || it.d !== 11) return false;
+          if (!it || it.ca) return false;
+          if (it.d !== 12 && !(it.anim || it.expireAt || it.perm)) return false;
           if (k != null && Number(it.k) === Number(k)) return true;
           if (mName && (it.n === mName || (it.n && it.n.includes(mName)))) return true;
           return false;
@@ -516,14 +574,15 @@
           count++;
           if (typeof PRES !== "undefined") PRES.sT = 0;
         }
+        const isMask = (it) => !!(it && !it.ca && (it.d === 12 || it.anim || it.expireAt || it.perm));
         if (Array.isArray(S.inv)) {
           const before = S.inv.length;
-          S.inv = S.inv.filter((it) => !(it && it.d === 11));
+          S.inv = S.inv.filter((it) => !isMask(it));
           count += (before - S.inv.length);
         }
         if (Array.isArray(S.stash)) {
           const before = S.stash.length;
-          S.stash = S.stash.filter((it) => !(it && it.d === 11));
+          S.stash = S.stash.filter((it) => !isMask(it));
           count += (before - S.stash.length);
         }
         if (S.gc) delete S.gc["NGUYETCA"];
@@ -532,6 +591,59 @@
         typeof save === "function" && save();
         typeof refresh === "function" && refresh();
         return `${nm()}thu hồi toàn bộ mặt nạ (${count} chiếc)`;
+      }
+      case "revoke_ca": {
+        const k = g.caKind != null ? +g.caKind : null;
+        const caName = g.caName;
+        let removed = 0;
+        const isTarget = (it) => {
+          if (!it || !it.ca) return false;
+          if (k != null && Math.floor(it.k / 5) === k) return true;
+          if (caName && (it.n === caName || (it.n && it.n.includes(caName)))) return true;
+          return false;
+        };
+        if (S.eq && S.eq.an && isTarget(S.eq.an)) {
+          delete S.eq.an;
+          removed++;
+        }
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => !isTarget(it));
+          removed += (before - S.inv.length);
+        }
+        if (Array.isArray(S.stash)) {
+          const before = S.stash.length;
+          S.stash = S.stash.filter((it) => !isTarget(it));
+          removed += (before - S.stash.length);
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}thu hồi ${removed} [${esc(caName || "Chiến ấn")}]`;
+      }
+      case "revoke_all_ca": {
+        let count = 0;
+        if (S.eq && S.eq.an) {
+          delete S.eq.an;
+          count++;
+        }
+        const isCa = (it) => !!(it && (it.ca || it.d === 11));
+        if (Array.isArray(S.inv)) {
+          const before = S.inv.length;
+          S.inv = S.inv.filter((it) => !isCa(it));
+          count += (before - S.inv.length);
+        }
+        if (Array.isArray(S.stash)) {
+          const before = S.stash.length;
+          S.stash = S.stash.filter((it) => !isCa(it));
+          count += (before - S.stash.length);
+        }
+        R.dirty = !0;
+        typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}thu hồi toàn bộ Chiến Ấn (${count} chiếc)`;
       }
       case "revoke_set": {
         let setNames = [];

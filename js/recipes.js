@@ -679,7 +679,7 @@ function oreDrop(n) {
     (matAdd("ht", e), t.push(`Huyền Tinh Khoáng Thạch cấp ${e}`));
   }
   if (Math.random() < (PHOI_DROP[n.cls] || 0) * dropMul())
-    if (S.inv.concat(epBox()).filter((e) => e.vio && !(e.mag || []).length).length >= 4) {
+    if (S.inv.concat(epBox()).filter((e) => e.vio && !(e.mag || []).length).length >= (typeof EP_BOX_MAX == "number" ? EP_BOX_MAX : 120)) {
       const e = clamp(Math.floor(n.L / 15) + 1, 1, HT_MAX);
       (matAdd("ht", e), t.push(`Huyền Tinh Khoáng Thạch cấp ${e}`));
     } else {
@@ -690,7 +690,7 @@ function oreDrop(n) {
           : S.inv
         ).push(e),
         (invDirty = !0),
-        t.push(`Phôi Tím ${e.n} (${e.vslots} dòng)`));
+        t.push(`<b style="color:#d47fff">Phôi Tím ${e.n} (${e.vslots} dòng)</b>`));
     }
   return t.length ? t.join(", ") : null;
 }
@@ -722,7 +722,7 @@ function bestOreAttr(n, t, e, o) {
   }
   return a;
 }
-const PHOI_DROP = { boss: 0, elite: 0, normal: 0 };
+const PHOI_DROP = { boss: 0.35, elite: 0.08, normal: 0.005 };
 function phoiFromDrop(n) {
   const t = clamp(Math.round(n / 12), 1, 10),
     e = FAC[S.fac];

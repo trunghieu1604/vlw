@@ -15,7 +15,7 @@ function renderForge() {
       ${
         verVio()
           ? `<div class="small">Huyền Tinh <b>${o}</b> · đá thuộc tính <b>${e}</b> · phôi <b>${a}</b> · Kho Rèn <b>${epBox().length}</b>/${EP_BOX_MAX}${n.ench ? ' · <span class="cp">có thể khảm</span>' : ""}${n.up ? ' · <span class="cp">thăng cấp được</span>' : ""}</div>
-      <div class="btnrow"><button class="btn sm" data-ep="kham">Khảm nạm</button><button class="btn sm" data-ep="hut">Lấy thuộc tính</button><button class="btn sm" data-ep="phoi">Chế phôi</button><button class="btn sm" data-ep="tl">Tinh luyện</button><button class="btn sm" data-ep="box">Kho Rèn</button></div>`
+      <div class="btnrow"><button class="btn sm" data-ep="kham">Khảm nạm</button><button class="btn sm" data-ep="hut">Lấy thuộc tính</button><button class="btn sm" data-ep="phoi">Chế phôi</button><button class="btn sm" data-ep="tl">Tinh luyện</button><button class="btn sm" data-ep="box">Kho Rèn</button><button class="btn sm on" id="fgCa">Thợ Khắc Ấn</button></div>`
           : ""
       }</div></div>
     <div class="card fcard"><div class="fic"><img src="img/ep/mys.png" alt=""></div><div><b>🔥 Lò Hoàng Kim</b> <small class="dim">ghép mảnh Hoàng Kim (Bộ chung · Môn phái)</small>
@@ -28,6 +28,7 @@ function renderForge() {
       <label><input type="checkbox" id="fgAuto" ${S.autoForge ? "checked" : ""}> Tự động rèn đồ (ghép mảnh Hoàng Kim, khảm Tím, thăng cấp Huyền Tinh; mỗi 30 giây)</label></div>`),
     document.querySelectorAll("#t-forge [data-ep]").forEach((t) => (t.onclick = () => epModal(t.dataset.ep))),
     ($("#fgHt").onclick = () => htModal()),
+    ($("#fgCa") && ($("#fgCa").onclick = () => typeof caModal === "function" && caModal())),
     ($("#fgFuse").onchange = (t) => {
       ((S.autoFuse = t.target.checked), S.autoFuse && (autoFuse(), renderForge()), save());
     }),

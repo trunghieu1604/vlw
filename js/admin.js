@@ -601,7 +601,7 @@ function admHorseOpts(hs, cur) {
   return out;
 }
 function admMaskOpts(cur) {
-  const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+  const list = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
   return list.map((m) => `<option value="${m.k}"${Number(m.k) === Number(cur) ? " selected" : ""}>${m.k}. ${esc(m.n)} (3 ngày)</option>`).join("");
 }
 function admHorseGive() {
@@ -757,6 +757,22 @@ function admTabEq() {
   <div class="btnrow">
     <button class="btn sm on" data-a="mask_refresh" title="Cập nhật tất cả mặt nạ trong túi sang model người mới nhất">🔄 Cập Nhật Mặt Nạ Mới</button>
     <button class="btn sm red" data-a="mask_reset" title="Xóa toàn bộ mặt nạ trong túi/người và reset thời hạn 3 ngày ở Kỳ Trân Các để mua test">🗑️ Reset / Xóa Hết Mặt Nạ</button>
+  </div>
+  <div class="admh">⚔️ Chiến Ấn & Thợ Khắc Ấn</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admCaKind" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      <option value="0">Bạch ấn (cấp 60 · 3 dòng)</option>
+      <option value="1">Khiếu Hổ ấn (cấp 60 · 3 dòng · +1 tất cả kỹ năng)</option>
+      <option value="2">Thanh ấn (cấp 70 · 4 dòng)</option>
+      <option value="3">Bàn Long ấn (cấp 70 · 4 dòng · +1 tất cả kỹ năng)</option>
+    </select>
+    <button class="btn sm on" data-a="ca_give_kind">🎁 Nhận Ấn Này</button>
+    <button class="btn sm on" data-a="ca_give_all" title="Nhận trọn bộ 4 loại Chiến Ấn vào túi">⚡ Nhận Đủ 4 Ấn</button>
+  </div>
+  <div class="btnrow" style="margin-top:6px">
+    <button class="btn sm on" data-a="ca_mats" title="Nhận mỗi loại 10 Hồn Thạch, 50 Bạch Nguyệt Ngọc, 10 Chiến ấn Hồn Thạch">💎 Nhận Nguyên Liệu Ấn</button>
+    <button class="btn sm" data-a="ca_open" title="Mở bảng Thợ Khắc Ấn">⚒️ Mở Thợ Khắc Ấn</button>
+    <button class="btn sm on" data-a="ca_make" title="Tạo ngay 1 Chiến ấn ngẫu nhiên vào túi">✨ Tạo 1 Ấn Ngẫu Nhiên</button>
   </div>`;
 }
 
@@ -1156,6 +1172,23 @@ function admTabPlayers() {
     <button class="btn sm red" data-a="pe_revokeallmasks" title="Thu hồi toàn bộ mặt nạ trên người, trong túi và kho">🧹 Thu Hồi Hết Mặt Nạ</button>
   </div>
 
+  <div class="admh">⚔️ Chiến Ấn & Nguyên Liệu Ấn (Tặng / Thu Hồi)</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admPeCa" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      <option value="0">Bạch ấn (cấp 60 · 3 dòng)</option>
+      <option value="1">Khiếu Hổ ấn (cấp 60 · 3 dòng · +1 tất cả kỹ năng)</option>
+      <option value="2">Thanh ấn (cấp 70 · 4 dòng)</option>
+      <option value="3">Bàn Long ấn (cấp 70 · 4 dòng · +1 tất cả kỹ năng)</option>
+    </select>
+    <button class="btn sm on" data-a="pe_giveca">🎁 Tặng Ấn Này</button>
+    <button class="btn sm red" data-a="pe_revokeca" title="Thu hồi loại ấn đang chọn trong dropdown">🚫 Thu Hồi Ấn Này</button>
+  </div>
+  <div class="btnrow" style="margin-bottom:6px">
+    <button class="btn sm on" data-a="pe_giveallca" title="Tặng đủ 4 loại ấn cho người chơi">⚡ Tặng Đủ 4 Ấn</button>
+    <button class="btn sm on" data-a="pe_givecamats" title="Tặng gói nguyên liệu ấn (Hồn Thạch, BNN, CAHT)">💎 Tặng Nguyên Liệu Ấn</button>
+    <button class="btn sm red" data-a="pe_revokeallca" title="Thu hồi toàn bộ chiến ấn trên người và túi">🧹 Thu Hồi Hết Ấn</button>
+  </div>
+
   <div class="admh">🎁 Trang Bị & Bộ Trang Bị (Tặng / Thu Hồi)</div>
   <div class="admf" style="margin-bottom:6px">
     <select id="admPeSet" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
@@ -1381,7 +1414,7 @@ function admAct(a) {
         return `Đã thêm [${it.n}] vào hành trang!`;
       }
       case "mask_all": {
-        const list = (typeof J != "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const list = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
         let added = 0;
         for (const m of list) {
           if (admInvFree() < 1) break;
@@ -1394,6 +1427,68 @@ function admAct(a) {
         save();
         refresh();
         return `Đã thêm ${added} mặt nạ Võ Lâm vào hành trang!`;
+      }
+      case "ca_give_kind": {
+        if (admInvFree() < 1) return (toast("Hành trang đã đầy"), "");
+        const k = +($("#admCaKind") ? $("#admCaKind").value : 0) || 0;
+        const it = typeof generateChienAnItem === "function" ? generateChienAnItem(k) : null;
+        if (!it) return (toast("Lỗi tạo Chiến Ấn"), "");
+        S.inv.unshift(it);
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return `Đã thêm [${it.n}] vào hành trang!`;
+      }
+      case "ca_give_all": {
+        let added = 0;
+        for (let k = 0; k <= 3; k++) {
+          if (admInvFree() < 1) break;
+          const it = typeof generateChienAnItem === "function" ? generateChienAnItem(k) : null;
+          if (it) {
+            S.inv.unshift(it);
+            added++;
+          }
+        }
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return `Đã thêm ${added} Chiến Ấn vào hành trang!`;
+      }
+      case "ca_mats": {
+        if (typeof matAdd === "function") {
+          ["hkim", "hmoc", "hthuy", "hhoa", "htho"].forEach((k) => matAdd("misc", k, 10));
+          matAdd("misc", "bnn", 50);
+          matAdd("misc", "caht", 10);
+          matAdd("misc", "cahtTui", 5);
+          matAdd("misc", "bnnTui", 5);
+          matAdd("misc", "hthTc", 5);
+        }
+        S.gold = (S.gold || 0) + 1000000;
+        R.dirty = !0;
+        typeof invDirty != "undefined" && (invDirty = !0);
+        save();
+        refresh();
+        return "Đã nhận: Ngũ Hồn Thạch ×10, Bạch Nguyệt Ngọc ×50, Chiến ấn Hồn Thạch ×10, 100 vạn lượng!";
+      }
+      case "ca_open": {
+        setTimeout(() => typeof caModal === "function" && caModal(), 50);
+        return "Mở bảng Thợ Khắc Ấn";
+      }
+      case "ca_make": {
+        if (typeof generateChienAnItem === "function") {
+          const it = generateChienAnItem();
+          if (it) {
+            S.inv.unshift(it);
+            R.dirty = !0;
+            typeof invDirty != "undefined" && (invDirty = !0);
+            save();
+            refresh();
+            return `Tạo thành công [${it.n}] vào hành trang!`;
+          }
+        }
+        return "Hệ thống Chiến Ấn chưa sẵn sàng";
       }
       case "titleall":
         return admTitleAll();
@@ -1782,7 +1877,7 @@ function admAct(a) {
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         const maskK = +($("#admPeMask") ? $("#admPeMask").value : admPeMask) || admPeMask || 1;
         const isPerm = $("#admPeMaskPerm") ? $("#admPeMaskPerm").checked : admPeMaskPerm;
-        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const list = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
         const mDef = list.find((x) => x.k === maskK) || list[0];
         const mName = mDef ? mDef.n : "Mặt nạ";
         return sendPlayerEditCmd(pName, {
@@ -1807,7 +1902,7 @@ function admAct(a) {
         const pName = admPeSelectedName;
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         const maskK = +($("#admPeMask") ? $("#admPeMask").value : admPeMask) || admPeMask || 1;
-        const list = (typeof J !== "undefined" && J.items && J.items[11] && J.items[11].list) || [];
+        const list = typeof getMaskList === "function" ? getMaskList() : ((typeof J !== "undefined" && J.items && J.items[12] && J.items[12].list) || []);
         const mDef = list.find((x) => x.k === maskK) || list[0];
         const mName = mDef ? mDef.n : "Mặt nạ";
         return sendPlayerEditCmd(pName, {
@@ -1824,6 +1919,56 @@ function admAct(a) {
           op: "revoke_all_masks",
           by: S.name || "Admin"
         }, `Đã gửi lệnh thu hồi toàn bộ mặt nạ của [${pName}]`);
+      }
+      case "pe_giveca": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const caKind = +($("#admPeCa") ? $("#admPeCa").value : 0) || 0;
+        const names = ["Bạch ấn", "Khiếu Hổ ấn", "Thanh ấn", "Bàn Long ấn"];
+        const caName = names[caKind] || "Chiến ấn";
+        return sendPlayerEditCmd(pName, {
+          op: "give_ca",
+          caKind: caKind,
+          caName: caName,
+          by: S.name || "Admin"
+        }, `Đã tặng [${caName}] cho [${pName}]`);
+      }
+      case "pe_giveallca": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "give_all_ca",
+          by: S.name || "Admin"
+        }, `Đã gửi tặng đủ 4 loại Chiến Ấn cho [${pName}]`);
+      }
+      case "pe_givecamats": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "give_ca_mats",
+          by: S.name || "Admin"
+        }, `Đã gửi tặng Gói Nguyên Liệu Ấn cho [${pName}]`);
+      }
+      case "pe_revokeca": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const caKind = +($("#admPeCa") ? $("#admPeCa").value : 0) || 0;
+        const names = ["Bạch ấn", "Khiếu Hổ ấn", "Thanh ấn", "Bàn Long ấn"];
+        const caName = names[caKind] || "Chiến ấn";
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_ca",
+          caKind: caKind,
+          caName: caName,
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi [${caName}] của [${pName}]`);
+      }
+      case "pe_revokeallca": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_all_ca",
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi toàn bộ Chiến Ấn của [${pName}]`);
       }
       case "pe_giveset":
       case "pe_givesetwear": {

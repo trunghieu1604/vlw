@@ -417,7 +417,7 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-let APP_V = 470;
+let APP_V = 486;
 function getAppV() {
   try {
     const s = document.querySelector('script[src*="main.js"]');
@@ -426,7 +426,7 @@ function getAppV() {
       if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 470;
+  return APP_V || 486;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
@@ -437,16 +437,28 @@ function appVerCheck() {
       const cur = getAppV();
       const lastSeen = sessionStorage.getItem("jxidle_seen_ver") || localStorage.getItem("jxidle_seen_ver");
       if (lastSeen && +lastSeen >= +n.v) return;
-      if (+n.v > cur) {
-        sessionStorage.setItem("jxidle_seen_ver", String(n.v));
-        try { localStorage.setItem("jxidle_seen_ver", String(n.v)); } catch {}
-        APP_V = +n.v;
+      if (+n.v <= cur) {
         try {
-          save();
+          sessionStorage.setItem("jxidle_seen_ver", String(n.v));
+          localStorage.setItem("jxidle_seen_ver", String(n.v));
         } catch {}
-        (typeof toast == "function" && toast("Có bản cập nhật mới — đang tải lại…"),
-          setTimeout(() => (typeof deployReload == "function" ? deployReload("ver") : location.reload()), 3e3));
+        return;
       }
+      // Anti-loop reload lock: never reload for the exact same target version more than once per tab session
+      const reloadLock = sessionStorage.getItem("jxidle_ver_reload_lock");
+      if (reloadLock && String(reloadLock) === String(n.v)) {
+        console.warn("appVerCheck: already attempted reload for version " + n.v + ", preventing loop");
+        return;
+      }
+      try { sessionStorage.setItem("jxidle_ver_reload_lock", String(n.v)); } catch {}
+      sessionStorage.setItem("jxidle_seen_ver", String(n.v));
+      try { localStorage.setItem("jxidle_seen_ver", String(n.v)); } catch {}
+      APP_V = +n.v;
+      try {
+        save();
+      } catch {}
+      (typeof toast == "function" && toast("Có bản cập nhật mới — đang tải lại…"),
+        setTimeout(() => (typeof deployReload == "function" ? deployReload("ver") : location.reload()), 3e3));
     })
     .catch(() => {});
 }
