@@ -3,8 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Võ Lâm Web - Trung Tâm Quản Trị Server</title>
+  <title>Võ Lâm Web - Quản Trị Server</title>
   <link rel="icon" type="image/png" href="../icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f4c442">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Admin VLW">
+  <link rel="apple-touch-icon" href="../icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="../icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="../icon-512.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,21 +24,24 @@
 
   <style>
     :root {
-      --bg: #0b0d13;
-      --bg-card: #141824;
-      --bg-hover: #1c2235;
-      --border: #2c3349;
-      --gold: #f4c442;
-      --gold-dim: #b89228;
-      --gold-glow: rgba(244, 196, 66, 0.25);
-      --red: #e74c3c;
-      --red-hover: #c0392b;
-      --green: #2ecc71;
-      --blue: #3498db;
-      --text: #e2e8f0;
-      --text-dim: #94a3b8;
+      --bg: #0b0a08;
+      --bg-panel: #141310;
+      --bg-panel-alt: #181713;
+      --bg-inner: #0a0907;
+      --border-dark: #000000;
+      --border-mid: #3d3625;
+      --border-light: #5d5238;
+      --border-gold: #8c7847;
+      --gold: #f0d890;
+      --gold-bright: #ffeaa7;
+      --gold-dim: #a6925e;
+      --text: #e8e2cc;
+      --text-dim: #9e947d;
+      --text-gold: #ffd970;
+      --red: #c0392b;
+      --green: #48bb78;
       --font-title: 'Cinzel', serif;
-      --font-body: 'Be Vietnam Pro', sans-serif;
+      --font-body: 'Be Vietnam Pro', Tahoma, sans-serif;
     }
 
     * {
@@ -41,6 +53,10 @@
 
     body {
       background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(93, 82, 56, 0.18) 0%, transparent 65%),
+        radial-gradient(circle at 20% 90%, rgba(61, 54, 37, 0.12) 0%, transparent 50%),
+        repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 2px, transparent 2px, transparent 6px);
       color: var(--text);
       font-family: var(--font-body);
       min-height: 100vh;
@@ -48,23 +64,20 @@
       flex-direction: column;
       line-height: 1.5;
       overflow-x: hidden;
-      background-image: 
-        radial-gradient(circle at 15% 20%, rgba(244, 196, 66, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 85% 80%, rgba(52, 152, 219, 0.05) 0%, transparent 40%);
     }
 
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+    /* SCROLLBAR JX1 */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #080807; }
+    ::-webkit-scrollbar-thumb { background: #3d3522; border: 1px solid #000; }
+    ::-webkit-scrollbar-thumb:hover { background: #5d5238; }
 
-    /* AUTH SCREEN */
+    /* AUTH OVERLAY JX1 */
     #authOverlay {
       position: fixed;
       inset: 0;
-      background: rgba(5, 7, 12, 0.95);
-      backdrop-filter: blur(12px);
+      background: rgba(4, 4, 3, 0.96);
+      backdrop-filter: blur(8px);
       z-index: 9999;
       display: flex;
       align-items: center;
@@ -73,83 +86,75 @@
     }
 
     .login-box {
-      background: linear-gradient(145deg, #161b2a, #0f131f);
-      border: 1.5px solid var(--gold);
-      box-shadow: 0 0 35px var(--gold-glow), 0 20px 40px rgba(0,0,0,0.8);
-      border-radius: 12px;
+      background: linear-gradient(to bottom, #231f17, #13120d 60%, #0d0c08);
+      border: 2px solid #7d6b41;
+      box-shadow: inset 0 0 0 1px #000, 0 12px 35px rgba(0,0,0,0.95);
+      border-radius: 2px;
       width: 100%;
-      max-width: 400px;
-      padding: 32px 28px;
+      max-width: 410px;
+      padding: 30px 26px;
       text-align: center;
       position: relative;
-      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    @keyframes popIn {
-      from { transform: scale(0.92); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
     }
 
     .login-icon {
-      font-size: 44px;
-      margin-bottom: 8px;
-      filter: drop-shadow(0 0 10px var(--gold));
+      font-size: 40px;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 0 6px #7d6b41);
     }
 
     .login-box h2 {
       font-family: var(--font-title);
       color: var(--gold);
-      font-size: 20px;
+      font-size: 21px;
       letter-spacing: 1px;
       margin-bottom: 4px;
-      text-transform: uppercase;
+      text-shadow: 1px 1px 2px #000;
     }
 
     .login-box p {
       color: var(--text-dim);
       font-size: 13px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
 
     .form-group {
       text-align: left;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .form-group label {
       display: block;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11.5px;
+      font-weight: 700;
       color: var(--gold-dim);
-      margin-bottom: 6px;
-      text-transform: uppercase;
+      margin-bottom: 5px;
       letter-spacing: 0.5px;
     }
 
     .input-control {
       width: 100%;
-      padding: 11px 14px;
-      background: #090c14;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: #fff;
-      font-size: 14px;
+      padding: 10px 12px;
+      background: #080807;
+      border: 1px solid #453c29;
+      color: #ffeaa7;
+      font-size: 13.5px;
       font-family: inherit;
-      transition: all 0.2s ease;
+      border-radius: 2px;
+      box-shadow: inset 0 1px 3px #000;
     }
 
     .input-control:focus {
       outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 10px rgba(244, 196, 66, 0.3);
-      background: #0d121f;
+      border-color: #c9a444;
+      box-shadow: inset 0 1px 3px #000, 0 0 6px rgba(201, 164, 68, 0.4);
     }
 
     .remember-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 13px;
+      font-size: 12.5px;
       color: var(--text-dim);
       margin-bottom: 20px;
       cursor: pointer;
@@ -157,52 +162,50 @@
 
     .remember-row input {
       accent-color: var(--gold);
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
+      width: 15px;
+      height: 15px;
     }
 
     .btn-login {
       width: 100%;
-      padding: 12px;
-      background: linear-gradient(135deg, #f4c442, #b8860b);
-      color: #0b0d13;
-      border: none;
-      border-radius: 6px;
+      padding: 11px;
+      background: linear-gradient(to bottom, #5a471f, #281e0b);
+      border: 1px solid #b58d34;
+      color: #ffeaa7;
+      border-radius: 2px;
       font-weight: 700;
       font-size: 14px;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       cursor: pointer;
       font-family: var(--font-title);
-      box-shadow: 0 4px 15px rgba(244, 196, 66, 0.3);
-      transition: all 0.2s ease;
+      box-shadow: inset 0 0 0 1px #000, inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 12px rgba(0,0,0,0.7);
+      text-shadow: 0 1px 2px #000;
+      transition: all 0.15s ease;
     }
 
     .btn-login:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-
-    .btn-login:active {
-      transform: translateY(1px);
+      background: linear-gradient(to bottom, #6d5626, #36290e);
+      border-color: #ffd768;
+      color: #fff;
     }
 
     .login-err {
       margin-top: 14px;
       font-size: 12px;
-      color: var(--red);
-      background: rgba(231, 76, 60, 0.1);
+      color: #ff8888;
+      background: rgba(88, 28, 21, 0.4);
       padding: 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(231, 76, 60, 0.3);
+      border-radius: 2px;
+      border: 1px solid #8f3224;
       display: none;
     }
 
-    /* HEADER */
+    /* HEADER JX1 */
     header {
-      background: #0e121d;
-      border-bottom: 1px solid var(--border);
-      padding: 12px 20px;
+      background: linear-gradient(to bottom, #2d281e, #161410 70%, #0d0c09);
+      border-bottom: 2px solid #635639;
+      box-shadow: inset 0 -1px 0 #000, 0 4px 15px rgba(0,0,0,0.7);
+      padding: 10px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -211,7 +214,6 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
 
     .brand {
@@ -223,113 +225,159 @@
     .brand-icon {
       width: 36px;
       height: 36px;
-      border-radius: 8px;
-      border: 1px solid var(--gold);
+      border-radius: 2px;
+      border: 1px solid #7d6b41;
+      box-shadow: inset 0 0 0 1px #000;
       padding: 2px;
-      background: #1a1e2d;
+      background: #14130f;
     }
 
     .brand-title {
       font-family: var(--font-title);
       font-size: 18px;
       font-weight: 800;
-      color: var(--gold);
+      color: #f0d890;
       letter-spacing: 1px;
+      text-shadow: 0 0 4px rgba(240, 216, 144, 0.4), 1px 1px 2px #000;
     }
 
     .brand-subtitle {
       font-size: 11px;
-      color: var(--text-dim);
+      color: #a89a77;
       font-weight: 600;
       letter-spacing: 0.5px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .header-badges {
       display: flex;
       align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 5px;
       padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 12px;
+      border-radius: 2px;
+      font-size: 11.5px;
       font-weight: 600;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--border);
+      background: #141310;
+      border: 1px solid #3d3522;
+      box-shadow: inset 0 0 0 1px #000;
+      color: var(--text);
+      white-space: nowrap;
     }
 
     .badge.green {
-      background: rgba(46, 204, 113, 0.12);
-      border-color: rgba(46, 204, 113, 0.4);
-      color: #2ecc71;
+      background: rgba(36, 70, 61, 0.45);
+      border-color: #4a7566;
+      color: #8ae48a;
+    }
+
+    .badge.gold {
+      background: rgba(84, 65, 27, 0.4);
+      border-color: #947731;
+      color: #ffd970;
     }
 
     .btn-header {
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 2px;
+      font-size: 11.5px;
       font-weight: 600;
       cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--bg-card);
-      color: var(--text);
-      transition: all 0.2s ease;
+      border: 1px solid #5a4c33;
+      border-top: 1px solid #7a6846;
+      background: linear-gradient(to bottom, #322b1f 0%, #211c14 50%, #17130e 52%, #221c13 100%);
+      color: #e2d8be;
+      box-shadow: inset 0 0 0 1px #000, 0 1px 2px rgba(0,0,0,0.6);
+      text-shadow: 0 1px 1px #000;
+      transition: all 0.12s ease;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      gap: 5px;
+      white-space: nowrap;
     }
 
     .btn-header:hover {
-      background: var(--bg-hover);
-      border-color: var(--gold-dim);
-      color: var(--gold);
+      background: linear-gradient(to bottom, #423929 0%, #2d261b 50%, #1f1913 52%, #2d251a 100%);
+      border-color: #7a6846;
+      border-top-color: #9c855a;
+      color: #ffffff;
+    }
+
+    .btn-header.danger {
+      border: 1px solid #573f3a;
+      border-top: 1px solid #6e4e48;
+      background: linear-gradient(to bottom, #302421 0%, #201715 50%, #140e0d 52%, #221815 100%);
+      color: #d6c0bb;
     }
 
     .btn-header.danger:hover {
-      background: rgba(231, 76, 60, 0.15);
-      border-color: var(--red);
-      color: var(--red);
+      background: linear-gradient(to bottom, #3d2c28 0%, #2a1c1a 50%, #1a100e 52%, #2b1c19 100%);
+      border-color: #734f48;
+      border-top-color: #8c6057;
+      color: #ffffff;
     }
 
-    /* NAVIGATION TABS */
+    /* NAVIGATION TABS JX1 */
     .tabs-bar {
-      background: #090c14;
-      border-bottom: 1px solid var(--border);
+      background: #0f0e0c;
+      border-bottom: 2px solid #4a3f28;
+      box-shadow: inset 0 -1px 0 #000;
       display: flex;
       padding: 0 16px;
-      gap: 6px;
+      gap: 3px;
       overflow-x: auto;
     }
 
     .tab-btn {
-      padding: 12px 18px;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--text-dim);
+      padding: 9px 16px;
+      background: #191814;
+      border: 1px solid #3d3623;
+      border-bottom: none;
+      border-radius: 2px 2px 0 0;
+      color: #a89e84;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       white-space: nowrap;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
 
     .tab-btn:hover {
-      color: #fff;
+      color: #f0d890;
+      background: #232019;
     }
 
     .tab-btn.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-      background: linear-gradient(to top, rgba(244, 196, 66, 0.08), transparent);
+      background: linear-gradient(to bottom, #4a3e20, #241d0c);
+      border: 1px solid #a88d40;
+      border-bottom: 1px solid #241d0c;
+      color: #ffe89e;
+      font-weight: 700;
+      text-shadow: 0 1px 2px #000;
+      box-shadow: inset 0 1px 0 #d4b25a;
     }
 
     /* MAIN CONTAINER */
@@ -338,7 +386,7 @@
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
-      padding: 18px 16px 40px;
+      padding: 16px 14px 40px;
     }
 
     .tab-pane {
@@ -347,122 +395,127 @@
 
     .tab-pane.active {
       display: block;
-      animation: fadeIn 0.2s ease;
+      animation: fadeIn 0.15s ease;
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
-    /* CARDS & GRIDS */
+    /* PANELS JX1 (Khung cửa sổ) */
     .grid-2 {
       display: grid;
       grid-template-columns: 360px 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 992px) {
-      .grid-2 {
-        grid-template-columns: 1fr;
-      }
+      gap: 14px;
     }
 
     .panel {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+      background: #141310;
+      border: 2px solid #554a33;
+      box-shadow: inset 0 0 0 1px #000, 0 6px 20px rgba(0,0,0,0.85);
+      border-radius: 2px;
+      padding: 14px 14px;
     }
 
     .panel-header {
+      background: linear-gradient(to bottom, #2c281e, #181611);
+      border: 1px solid #5a4e35;
+      border-bottom: 2px solid #383020;
+      box-shadow: inset 0 1px 0 #7b6d48;
+      padding: 7px 10px;
+      margin: -14px -14px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
     .panel-title {
       font-family: var(--font-title);
-      font-size: 15px;
-      color: var(--gold);
+      font-size: 14.5px;
+      color: #f0d890;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       font-weight: 700;
       letter-spacing: 0.5px;
+      text-shadow: 1px 1px 2px #000;
     }
 
-    /* PLAYER SELECTION LIST */
+    /* PLAYER SELECTION LIST JX1 */
     .search-box {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       position: relative;
     }
 
     .search-box input {
       width: 100%;
-      padding: 9px 12px 9px 34px;
-      background: #090c14;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: #fff;
-      font-size: 13px;
+      padding: 8px 10px 8px 30px;
+      background: #080807;
+      border: 1px solid #453c29;
+      border-radius: 2px;
+      color: #ffeaa7;
+      font-size: 12.5px;
+      box-shadow: inset 0 1px 3px #000;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #c9a444;
     }
 
     .search-box::before {
       content: "🔍";
       position: absolute;
-      left: 10px;
+      left: 8px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-dim);
     }
 
     .player-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
       max-height: 600px;
       overflow-y: auto;
-      padding-right: 4px;
+      padding-right: 3px;
     }
 
     .player-item {
-      background: #0d111c;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
+      background: #141310;
+      border: 1px solid #2d281a;
+      box-shadow: inset 0 0 0 1px #000;
+      border-radius: 2px;
+      padding: 8px 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: all 0.15s ease;
+      transition: all 0.12s ease;
     }
 
     .player-item:hover {
-      background: var(--bg-hover);
-      border-color: var(--gold-dim);
-      transform: translateX(2px);
+      background: #1f1c16;
+      border-color: #5a4e32;
     }
 
     .player-item.active {
-      background: linear-gradient(135deg, rgba(244, 196, 66, 0.15), rgba(20, 24, 36, 0.9));
-      border-color: var(--gold);
-      box-shadow: 0 0 10px rgba(244, 196, 66, 0.2);
+      background: linear-gradient(to right, #382d12, #1a1508);
+      border-color: #b58d34;
+      box-shadow: inset 0 0 0 1px #000, inset 0 0 8px rgba(181, 141, 52, 0.25);
     }
 
     .pi-name {
       font-weight: 700;
-      color: #fff;
+      color: #e8e2cc;
       font-size: 13px;
+      text-shadow: 1px 1px 1px #000;
     }
 
     .player-item.active .pi-name {
-      color: var(--gold);
+      color: #ffd970;
     }
 
     .pi-sub {
@@ -476,71 +529,75 @@
     }
 
     .badge-lv {
-      background: #252d42;
+      background: #23221a;
+      border: 1px solid #4a4430;
       color: #7ee07e;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-size: 10.5px;
       font-weight: 700;
     }
 
     .badge-cs {
-      background: rgba(244, 196, 66, 0.15);
-      color: var(--gold);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
+      background: #332710;
+      border: 1px solid #755b1f;
+      color: #ffd970;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-size: 10.5px;
       font-weight: 700;
-      margin-left: 4px;
+      margin-left: 3px;
     }
 
-    /* PLAYER CONTROL HERO BANNER */
+    /* PLAYER CONTROL HERO BANNER JX1 */
     .player-card {
-      background: linear-gradient(135deg, #171d2c, #0e121d);
-      border: 1.5px solid var(--gold);
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 16px;
+      background: linear-gradient(to bottom, #231f16, #14120e);
+      border: 2px solid #75653e;
+      box-shadow: inset 0 0 0 1px #000, 0 4px 12px rgba(0,0,0,0.6);
+      border-radius: 2px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 12px;
-      box-shadow: 0 4px 15px rgba(244, 196, 66, 0.12);
+      gap: 10px;
     }
 
     .pc-info {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
     .pc-avatar {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background: #090c14;
-      border: 1px solid var(--gold);
+      width: 44px;
+      height: 44px;
+      border-radius: 2px;
+      background: #090806;
+      border: 1px solid #5a4e32;
+      box-shadow: inset 0 0 0 1px #000;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
-      filter: drop-shadow(0 0 5px var(--gold));
+      font-size: 24px;
+      filter: drop-shadow(0 0 4px rgba(240, 216, 144, 0.4));
     }
 
     .pc-name {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
-      color: var(--gold);
+      color: #ffd970;
       font-family: var(--font-title);
+      text-shadow: 1px 1px 2px #000;
     }
 
     .pc-details {
       display: flex;
-      gap: 12px;
-      font-size: 12px;
+      gap: 10px;
+      font-size: 11.5px;
       color: var(--text-dim);
-      margin-top: 3px;
+      margin-top: 2px;
       flex-wrap: wrap;
     }
 
@@ -548,162 +605,409 @@
       color: #fff;
     }
 
-    /* ACTION SECTIONS */
+    /* ACTION SECTIONS JX1 */
     .action-group {
-      background: #0e121d;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 12px;
+      background: #11100d;
+      border: 1px solid #3a3220;
+      box-shadow: inset 0 0 0 1px #000;
+      border-radius: 2px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
     }
 
     .ag-header {
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 700;
-      color: var(--gold);
-      margin-bottom: 10px;
+      color: #f0d890;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #282316;
       display: flex;
       align-items: center;
       gap: 6px;
+      text-shadow: 1px 1px 2px #000;
     }
 
     .ag-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
 
     .ag-row:last-child {
       margin-bottom: 0;
     }
 
-    /* BUTTONS */
+    /* BUTTONS JX1: ĐỒNG BỘ 1 TÔNG MÀU GỖ MUN & ĐỒNG CỔ */
     .btn {
-      padding: 7px 14px;
-      border-radius: 5px;
+      padding: 6px 12px;
+      border-radius: 2px !important;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      border: 1px solid var(--border);
-      background: #1c2336;
-      color: #fff;
+      border: 1px solid #5a4c33 !important;
+      border-top: 1px solid #7a6846 !important;
+      background: linear-gradient(to bottom, #322b1f 0%, #211c14 50%, #17130e 52%, #221c13 100%) !important;
+      color: #e2d8be !important;
+      box-shadow: inset 0 0 0 1px #000, 0 1px 2px rgba(0,0,0,0.6) !important;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      transition: all 0.15s ease;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.1s ease;
       white-space: nowrap;
+      text-shadow: 0 1px 1px #000 !important;
     }
 
     .btn:hover {
-      background: #252f48;
-      border-color: #4a5568;
+      background: linear-gradient(to bottom, #423929 0%, #2d261b 50%, #1f1913 52%, #2d251a 100%) !important;
+      border-color: #7a6846 !important;
+      border-top-color: #9c855a !important;
+      color: #ffffff !important;
     }
 
-    .btn.primary {
-      background: linear-gradient(135deg, #f4c442, #d4a017);
-      color: #000;
-      font-weight: 700;
-      border-color: #ffd700;
+    .btn:active {
+      background: linear-gradient(to bottom, #17130e 0%, #211c14 100%) !important;
+      box-shadow: inset 0 1px 2px #000 !important;
     }
 
-    .btn.primary:hover {
-      filter: brightness(1.1);
+    /* Nút Hoàng Kim (Primary / Điểm nhấn hành động chính) */
+    .btn.primary, .btn.on, .btn.gold {
+      background: linear-gradient(to bottom, #4e3c1a 0%, #352810 50%, #221a08 52%, #382b11 100%) !important;
+      border: 1px solid #947731 !important;
+      border-top: 1px solid #b89843 !important;
+      color: #ffe699 !important;
+      box-shadow: inset 0 0 0 1px #000, 0 1px 2px rgba(0,0,0,0.6) !important;
+      font-weight: 700 !important;
     }
 
+    .btn.primary:hover, .btn.on:hover, .btn.gold:hover {
+      background: linear-gradient(to bottom, #614b21 0%, #443415 50%, #2c210b 52%, #463616 100%) !important;
+      border-color: #b89843 !important;
+      border-top-color: #d9b85c !important;
+      color: #ffffff !important;
+    }
+
+    /* Nút Thu Hồi / Hủy / Xóa: Đồng Sẫm / Tử Sa Cổ Điển (KHÔNG dùng màu đỏ sặc sỡ) */
+    .btn.danger, .btn.revoke {
+      background: linear-gradient(to bottom, #302421 0%, #201715 50%, #140e0d 52%, #221815 100%) !important;
+      border: 1px solid #573f3a !important;
+      border-top: 1px solid #6e4e48 !important;
+      color: #d6c0bb !important;
+      box-shadow: inset 0 0 0 1px #000, 0 1px 2px rgba(0,0,0,0.6) !important;
+    }
+
+    .btn.danger:hover, .btn.revoke:hover {
+      background: linear-gradient(to bottom, #3d2c28 0%, #2a1c1a 50%, #1a100e 52%, #2b1c19 100%) !important;
+      border-color: #734f48 !important;
+      border-top-color: #8c6057 !important;
+      color: #ffffff !important;
+    }
+
+    /* Success / Đồng Bích Cổ Điển (Đồng điệu với tông JX1, không dùng xanh lá hiện đại) */
     .btn.success {
-      background: #238636;
-      border-color: #2ea043;
-      color: #fff;
+      background: linear-gradient(to bottom, #2b3327 0%, #1c221a 50%, #111610 52%, #1e251b 100%) !important;
+      border: 1px solid #4a5944 !important;
+      border-top: 1px solid #62755b !important;
+      color: #d3ded0 !important;
+      box-shadow: inset 0 0 0 1px #000, 0 1px 2px rgba(0,0,0,0.6) !important;
     }
 
     .btn.success:hover {
-      background: #2ea043;
-    }
-
-    .btn.danger {
-      background: rgba(231, 76, 60, 0.2);
-      border-color: rgba(231, 76, 60, 0.6);
-      color: #ff6b6b;
+      background: linear-gradient(to bottom, #384233 0%, #252e22 50%, #171d15 52%, #273023 100%) !important;
+      border-color: #62755b !important;
+      border-top-color: #7c9474 !important;
+      color: #ffffff !important;
     }
 
     .btn.danger:hover {
-      background: #c0392b;
-      color: #fff;
-      border-color: #e74c3c;
+      background: linear-gradient(to bottom, #692119, #330e09) !important;
+      border-color: #b84332 !important;
+      color: #fff !important;
     }
 
+    /* INPUTS & SELECTS JX1 */
     select.input-sm, input.input-sm {
-      padding: 6px 10px;
-      background: #090c14;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: #fff;
+      padding: 5px 8px;
+      background: #080807 !important;
+      border: 1px solid #453c29 !important;
+      border-radius: 2px !important;
+      color: #ffeaa7 !important;
       font-size: 12px;
+      box-shadow: inset 0 1px 3px #000 !important;
     }
 
     select.input-sm:focus, input.input-sm:focus {
       outline: none;
-      border-color: var(--gold);
+      border-color: #c9a444 !important;
+      box-shadow: inset 0 1px 3px #000, 0 0 4px rgba(201, 164, 68, 0.4) !important;
     }
 
-    /* TABLE */
+    /* TABLES JX1 */
     .table-container {
       overflow-x: auto;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: #090c14;
+      border-radius: 2px;
+      border: 1px solid #3d3522;
+      background: #0a0907;
+      box-shadow: inset 0 0 0 1px #000;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12.5px;
       text-align: left;
     }
 
     th {
-      background: #141824;
-      color: var(--gold-dim);
+      background: linear-gradient(to bottom, #2b2518, #18150d);
+      color: #f0d890;
       font-weight: 700;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      border-bottom: 1px solid #4a4028;
       white-space: nowrap;
+      text-shadow: 1px 1px 1px #000;
     }
 
     td {
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 8px 12px;
+      border-bottom: 1px solid #1a1710;
       color: var(--text);
     }
 
     tr:hover td {
-      background: rgba(255,255,255,0.02);
+      background: rgba(240, 216, 144, 0.04);
     }
 
-    /* TOAST NOTIFICATION */
+    /* TOAST NOTIFICATION JX1 */
     #toast {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #1a2030;
-      color: #fff;
-      border: 1px solid var(--gold);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 13px;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(to bottom, #2c271c, #16140e);
+      color: #ffeaa7;
+      border: 2px solid #827042;
+      box-shadow: inset 0 0 0 1px #000, 0 6px 25px rgba(0,0,0,0.85);
+      padding: 10px 18px;
+      border-radius: 2px;
+      font-size: 12.5px;
       font-weight: 600;
       z-index: 10000;
       display: none;
-      animation: slideUp 0.25s ease;
+      animation: slideUp 0.2s ease;
       max-width: 90vw;
     }
 
     @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
+      from { transform: translateY(15px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* RESPONSIVE DESIGN FOR TABLETS & MOBILE */
+    .mobile-only {
+      display: none !important;
+    }
+
+    @media (max-width: 992px) {
+      .mobile-only {
+        display: flex !important;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      header {
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .brand {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .header-right {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .header-badges {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        width: 100%;
+      }
+
+      .header-badges .badge {
+        width: 100%;
+        justify-content: center;
+        padding: 5px 4px;
+        font-size: 11px;
+        text-align: center;
+        margin: 0;
+        box-sizing: border-box;
+      }
+
+      .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+      }
+
+      .header-actions .btn-header {
+        width: 100%;
+        justify-content: center;
+        padding: 6px 8px;
+        font-size: 11.5px;
+        margin: 0;
+        box-sizing: border-box;
+      }
+
+      .tabs-bar {
+        padding: 0 4px;
+        gap: 2px;
+        scrollbar-width: none;
+      }
+      .tabs-bar::-webkit-scrollbar {
+        display: none;
+      }
+      .tab-btn {
+        padding: 9px 10px;
+        font-size: 11.5px;
+        gap: 4px;
+        flex: 1 0 auto;
+      }
+
+      main {
+        padding: 8px 6px 30px;
+      }
+
+      .panel {
+        padding: 10px 10px;
+      }
+
+      .player-list {
+        max-height: 190px;
+      }
+
+      .player-card {
+        padding: 10px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .pc-info {
+        gap: 10px;
+        width: 100%;
+      }
+
+      .pc-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+
+      .pc-name {
+        font-size: 15px;
+      }
+
+      .pc-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3px 8px;
+        font-size: 11px;
+        margin-top: 3px;
+        width: 100%;
+      }
+
+      .player-card .btn.danger {
+        width: 100%;
+        justify-content: center;
+        padding: 7px;
+        font-size: 11.5px;
+      }
+
+      .action-group {
+        padding: 8px;
+        margin-bottom: 8px;
+      }
+
+      .ag-header {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+
+      .ag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+      }
+
+      .ag-row > label {
+        width: 100% !important;
+        margin-bottom: 2px !important;
+        display: block !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: var(--gold-dim) !important;
+      }
+
+      .ag-row > input[type="number"],
+      .ag-row > input[type="text"] {
+        height: 36px !important;
+        font-size: 12.5px !important;
+        padding: 5px 8px !important;
+        box-sizing: border-box !important;
+        max-width: 120px !important;
+        flex: 1 1 80px !important;
+      }
+
+      .ag-row > select {
+        width: 100% !important;
+        height: 36px !important;
+        font-size: 12px !important;
+        box-sizing: border-box !important;
+        flex: 1 1 100% !important;
+      }
+
+      .ag-row > .btn {
+        height: 36px !important;
+        padding: 0 8px !important;
+        font-size: 11.5px !important;
+        flex: 1 1 auto !important;
+        min-width: 95px !important;
+        justify-content: center !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+      }
+
+      #filterSetFac, #filterSetCat, #filterSetSearch {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        height: 36px !important;
+      }
+
+      #toast {
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
+        max-width: calc(100% - 20px);
+        text-align: center;
+        padding: 8px 12px;
+        font-size: 11.5px;
+      }
     }
   </style>
 </head>
@@ -750,12 +1054,16 @@
       </div>
     </div>
 
-    <div class="header-badges">
-      <span class="badge green" id="fbStatusBadge">🟢 Trạng thái: Đã Kết Nối</span>
-      <span class="badge" id="playerCountBadge">👥 Đang tải danh sách...</span>
-      <span class="badge" style="color:var(--gold)">👑 Admin: <b>admin</b></span>
-      <button class="btn-header" onclick="loadAllData()">🔄 Làm mới</button>
-      <button class="btn-header danger" onclick="handleLogout()">🚪 Đăng xuất</button>
+    <div class="header-right">
+      <div class="header-badges">
+        <span class="badge green" id="fbStatusBadge">🟢 Đã Kết Nối</span>
+        <span class="badge" id="playerCountBadge">👥 Đang tải...</span>
+        <span class="badge gold" id="adminUserBadge">👑 Admin: <b>admin</b></span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-header" onclick="loadAllData()">🔄 Làm mới</button>
+        <button class="btn-header danger" onclick="handleLogout()">🚪 Đăng xuất</button>
+      </div>
     </div>
   </header>
 
@@ -787,7 +1095,7 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gold);font-weight:600">
               <input type="checkbox" id="chkHideGhosts" checked onchange="filterPlayers();renderRankingsTable()"> Ẩn nick rác / chưa có TK
             </label>
-            <button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="cleanGhostRecords()" title="Xóa các bản ghi mồ côi không có tài khoản trên Firebase">🧹 Dọn nick rác</button>
+            <button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="cleanGhostRecords()" title="Xóa các bản ghi mồ côi không có tài khoản trên Firebase">Dọn Nick Rác</button>
           </div>
 
           <div class="player-list" id="playersContainer">
@@ -830,18 +1138,18 @@
             <div class="action-group">
               <div class="ag-header">📈 Cấp Độ & Kinh Nghiệm</div>
               <div class="ag-row">
-                <label style="font-size:12px;color:#aaa">Đặt cấp (1-200):</label>
+                <label style="font-size:12px;color:var(--text-dim)">Đặt cấp (1-200):</label>
                 <input type="number" id="inpSetLv" class="input-sm" style="width:70px" min="1" max="200" value="80">
                 <button class="btn primary" onclick="actSetLv()">Đặt Cấp</button>
-                <button class="btn" onclick="actIncLv(1)">🔺 +1 Cấp</button>
-                <button class="btn" onclick="actIncLv(10)">🔺 +10 Cấp</button>
-                <button class="btn danger" onclick="actIncLv(-1)">🔻 -1 Cấp</button>
+                <button class="btn" onclick="actIncLv(1)">+1 Cấp</button>
+                <button class="btn" onclick="actIncLv(10)">+10 Cấp</button>
+                <button class="btn danger" onclick="actIncLv(-1)">-1 Cấp</button>
               </div>
               <div class="ag-row">
-                <label style="font-size:12px;color:#aaa">EXP:</label>
+                <label style="font-size:12px;color:var(--text-dim)">EXP:</label>
                 <input type="number" id="inpExpVal" class="input-sm" style="width:110px" value="10000000">
-                <button class="btn primary" onclick="actAddExp(1)">➕ Cộng EXP</button>
-                <button class="btn danger" onclick="actAddExp(-1)">➖ Trừ EXP</button>
+                <button class="btn" onclick="actAddExp(1)">Cộng EXP</button>
+                <button class="btn danger" onclick="actAddExp(-1)">Trừ EXP</button>
               </div>
             </div>
 
@@ -849,11 +1157,11 @@
             <div class="action-group">
               <div class="ag-header">🔄 Chuyển Sinh (CS)</div>
               <div class="ag-row">
-                <label style="font-size:12px;color:#aaa">Chuyển sinh (0-20):</label>
+                <label style="font-size:12px;color:var(--text-dim)">Chuyển sinh (0-20):</label>
                 <input type="number" id="inpSetCs" class="input-sm" style="width:60px" min="0" max="20" value="0">
                 <button class="btn primary" onclick="actSetCs()">Đặt CS</button>
-                <button class="btn" onclick="actIncCs(1)">🔺 +1 CS</button>
-                <button class="btn danger" onclick="actIncCs(-1)">🔻 -1 CS</button>
+                <button class="btn" onclick="actIncCs(1)">+1 CS</button>
+                <button class="btn danger" onclick="actIncCs(-1)">-1 CS</button>
                 <button class="btn danger" onclick="actResetCs()">Về CS 0</button>
               </div>
             </div>
@@ -862,17 +1170,17 @@
             <div class="action-group">
               <div class="ag-header">💰 Ngân Lượng & Kim Nguyên Bảo (KNB)</div>
               <div class="ag-row">
-                <label style="font-size:12px;color:#aaa">Ngân lượng:</label>
-                <button class="btn success" onclick="actGold(10000000)">➕ 1.000 Vạn Lượng</button>
-                <button class="btn success" onclick="actGold(100000000)">➕ 10.000 Vạn Lượng</button>
-                <button class="btn danger" onclick="actGold(-50000000)">➖ 5.000 Vạn</button>
+                <label style="font-size:12px;color:var(--text-dim)">Ngân lượng:</label>
+                <button class="btn" onclick="actGold(10000000)">+1.000 Vạn Lượng</button>
+                <button class="btn" onclick="actGold(100000000)">+10.000 Vạn Lượng</button>
+                <button class="btn danger" onclick="actGold(-50000000)">-5.000 Vạn</button>
                 <button class="btn danger" onclick="actZeroGold()">Về 0 Lượng</button>
               </div>
               <div class="ag-row">
-                <label style="font-size:12px;color:#aaa">KNB:</label>
-                <button class="btn primary" onclick="actKnb(1000)">➕ 1.000 KNB</button>
-                <button class="btn primary" onclick="actKnb(5000)">➕ 5.000 KNB</button>
-                <button class="btn danger" onclick="actKnb(-1000)">➖ 1.000 KNB</button>
+                <label style="font-size:12px;color:var(--text-dim)">KNB:</label>
+                <button class="btn" onclick="actKnb(1000)">+1.000 KNB</button>
+                <button class="btn" onclick="actKnb(5000)">+5.000 KNB</button>
+                <button class="btn danger" onclick="actKnb(-1000)">-1.000 KNB</button>
                 <button class="btn danger" onclick="actZeroKnb()">Về 0 KNB</button>
               </div>
             </div>
@@ -895,12 +1203,12 @@
                 <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gold);white-space:nowrap">
                   <input type="checkbox" id="chkHaloPerm" checked> Vĩnh viễn
                 </label>
-                <button class="btn primary" onclick="actGiveHalo()">🎁 Tặng Vòng Sáng Này</button>
-                <button class="btn danger" onclick="actRevokeHalo()">🚫 Thu Hồi</button>
+                <button class="btn primary" onclick="actGiveHalo()">Tặng Vòng Sáng Này</button>
+                <button class="btn danger" onclick="actRevokeHalo()">Thu Hồi</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveAllHalos()">⚡ Tặng Toàn Bộ 9 Vòng Sáng Vĩnh Viễn</button>
-                <button class="btn danger" onclick="actRevokeAllHalos()">🧹 Thu Hồi Hết Vòng Sáng</button>
+                <button class="btn primary" onclick="actGiveAllHalos()">Tặng Đủ 9 Vòng Sáng Vĩnh Viễn</button>
+                <button class="btn danger" onclick="actRevokeAllHalos()">Thu Hồi Hết Vòng Sáng</button>
               </div>
             </div>
 
@@ -911,12 +1219,12 @@
                 <select id="selHorse" class="input-sm" style="flex:1;min-width:240px">
                   <option value="">Đang tải danh sách ngựa...</option>
                 </select>
-                <button class="btn primary" onclick="actGiveHorse()">🎁 Tặng Ngựa Này</button>
-                <button class="btn danger" onclick="actRevokeHorse()">🚫 Thu Hồi</button>
+                <button class="btn primary" onclick="actGiveHorse()">Tặng Ngựa Này</button>
+                <button class="btn danger" onclick="actRevokeHorse()">Thu Hồi</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveAllHorses()">⚡ Tặng Đủ Toàn Bộ Ngựa Vào Mã Trường</button>
-                <button class="btn danger" onclick="actRevokeAllHorses()">🧹 Dọn Sạch Mã Trường</button>
+                <button class="btn primary" onclick="actGiveAllHorses()">Tặng Đủ Toàn Bộ 68 Ngựa Vào Mã Trường</button>
+                <button class="btn danger" onclick="actRevokeAllHorses()">Dọn Sạch Mã Trường</button>
               </div>
             </div>
 
@@ -942,12 +1250,12 @@
                 <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gold);white-space:nowrap">
                   <input type="checkbox" id="chkMaskPerm" checked> Vĩnh viễn
                 </label>
-                <button class="btn primary" onclick="actGiveMask()">🎁 Tặng Mặt Nạ Này</button>
-                <button class="btn danger" onclick="actRevokeMask()">🚫 Thu Hồi</button>
+                <button class="btn primary" onclick="actGiveMask()">Tặng Mặt Nạ Này</button>
+                <button class="btn danger" onclick="actRevokeMask()">Thu Hồi</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveAllMasks()">⚡ Tặng Đủ 13 Mặt Nạ</button>
-                <button class="btn danger" onclick="actRevokeAllMasks()">🧹 Thu Hồi Hết Mặt Nạ</button>
+                <button class="btn primary" onclick="actGiveAllMasks()">Tặng Đủ 13 Mặt Nạ</button>
+                <button class="btn danger" onclick="actRevokeAllMasks()">Thu Hồi Hết Mặt Nạ</button>
               </div>
             </div>
 
@@ -961,13 +1269,13 @@
                   <option value="2">Thanh ấn (cấp 70 · 4 dòng)</option>
                   <option value="3">Bàn Long ấn (cấp 70 · 4 dòng · +1 tất cả kỹ năng)</option>
                 </select>
-                <button class="btn primary" onclick="actGiveCa()">🎁 Tặng Ấn Này</button>
-                <button class="btn danger" onclick="actRevokeCa()">🚫 Thu Hồi</button>
+                <button class="btn primary" onclick="actGiveCa()">Tặng Ấn Này</button>
+                <button class="btn danger" onclick="actRevokeCa()">Thu Hồi</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveAllCa()">⚡ Tặng Đủ 4 Ấn</button>
-                <button class="btn primary" onclick="actGiveCaMats()">💎 Tặng Gói Nguyên Liệu Ấn (Hồn Thạch, BNN, CAHT)</button>
-                <button class="btn danger" onclick="actRevokeAllCa()">🧹 Thu Hồi Hết Ấn</button>
+                <button class="btn primary" onclick="actGiveAllCa()">Tặng Đủ 4 Ấn</button>
+                <button class="btn primary" onclick="actGiveCaMats()">Tặng Gói Nguyên Liệu Ấn (Hồn Thạch, BNN, CAHT)</button>
+                <button class="btn danger" onclick="actRevokeAllCa()">Thu Hồi Hết Ấn</button>
               </div>
             </div>
 
@@ -979,7 +1287,7 @@
               </div>
 
               <!-- FILTER CONTROLS -->
-              <div class="ag-row" style="margin-bottom:8px;background:#151a28;padding:8px;border-radius:6px;border:1px solid #232a3d">
+              <div class="ag-row" style="margin-bottom:8px;background:#11100d;padding:8px;border-radius:2px;border:1px solid #3d3522">
                 <div style="display:flex;align-items:center;gap:6px">
                   <label style="font-size:12px;color:var(--gold);font-weight:600">Phái:</label>
                   <select id="filterSetFac" class="input-sm" onchange="renderFilteredSets()">
@@ -1016,20 +1324,20 @@
               <!-- SET SELECTOR & ACTIONS -->
               <div class="ag-row" style="margin-bottom:8px">
                 <select id="selSet" class="input-sm" style="flex:1 1 260px;min-width:240px;font-size:13px"></select>
-                <button class="btn primary" onclick="actGiveSet()">🎁 Gửi Bộ Này</button>
-                <button class="btn success" onclick="actGiveSetWear()" title="Gửi và tự động mặc nếu đủ điều kiện">Gửi & Mặc</button>
-                <button class="btn danger" onclick="actRevokeSet()">🚫 Thu Hồi Bộ Này</button>
+                <button class="btn primary" onclick="actGiveSet()">Gửi Bộ Này</button>
+                <button class="btn" onclick="actGiveSetWear()" title="Gửi và tự động mặc nếu đủ điều kiện">Gửi & Mặc</button>
+                <button class="btn danger" onclick="actRevokeSet()">Thu Hồi Bộ Này</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveHkmp()">⭐ Full HKMP Phái (10 món chuẩn)</button>
-                <button class="btn danger" onclick="actRevokeHkmp()">🚫 Thu Hồi HKMP</button>
-                <button class="btn primary" onclick="actGiveAb()">Tặng An Bang</button>
-                <button class="btn primary" onclick="actGiveDq()">Tặng Định Quốc</button>
+                <button class="btn primary" onclick="actGiveHkmp()">Full HKMP Phái (10 món chuẩn)</button>
+                <button class="btn danger" onclick="actRevokeHkmp()">Thu Hồi HKMP</button>
+                <button class="btn" onclick="actGiveAb()">Tặng An Bang</button>
+                <button class="btn" onclick="actGiveDq()">Tặng Định Quốc</button>
               </div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actEnhFull()">⚡ Full Cường Hóa +10 Toàn Thân</button>
-                <button class="btn danger" onclick="actEnhReset()">🔻 Về Cường Hóa +0</button>
-                <button class="btn danger" onclick="actStripWear()">🧹 Lột Sạch Đồ Đang Mặc</button>
+                <button class="btn primary" onclick="actEnhFull()">Full Cường Hóa +10 Toàn Thân</button>
+                <button class="btn danger" onclick="actEnhReset()">Về Cường Hóa +0</button>
+                <button class="btn danger" onclick="actStripWear()">Lột Sạch Đồ Đang Mặc</button>
               </div>
             </div>
 
@@ -1037,10 +1345,10 @@
             <div class="action-group">
               <div class="ag-header">💎 Gói Nguyên Liệu & Thuốc</div>
               <div class="ag-row">
-                <button class="btn primary" onclick="actGiveMatPack()">💎 Gói Nguyên Liệu (99 Huyền Tinh 10, Thủy Tinh, 30 Đá c6)</button>
-                <button class="btn danger" onclick="actRevokeMatPack()">🚫 Thu Hồi Nguyên Liệu</button>
-                <button class="btn success" onclick="actGivePots()">🧪 Bơm 500 Bình Máu & Mana</button>
-                <button class="btn danger" onclick="actRevokePots()">🚫 Rút Hết Thuốc</button>
+                <button class="btn primary" onclick="actGiveMatPack()">Gói Nguyên Liệu (99 Huyền Tinh 10, Thủy Tinh, 30 Đá c6)</button>
+                <button class="btn danger" onclick="actRevokeMatPack()">Thu Hồi Nguyên Liệu</button>
+                <button class="btn" onclick="actGivePots()">Bơm 500 Bình Máu & Mana</button>
+                <button class="btn danger" onclick="actRevokePots()">Rút Hết Thuốc</button>
               </div>
             </div>
 
@@ -1051,8 +1359,8 @@
                 <button class="btn" onclick="actResetAttrs()">Tẩy Tiềm Năng</button>
                 <button class="btn" onclick="actResetSkills()">Tẩy Kỹ Năng</button>
                 <button class="btn primary" onclick="actResetAll()">Tẩy Toàn Bộ</button>
-                <button class="btn primary" onclick="actGiveVlmc()">👑 Tặng VLMC</button>
-                <button class="btn danger" onclick="actRevokeVlmc()">🚫 Thu Hồi VLMC</button>
+                <button class="btn primary" onclick="actGiveVlmc()">Tặng Danh Hiệu VLMC</button>
+                <button class="btn danger" onclick="actRevokeVlmc()">Thu Hồi VLMC</button>
               </div>
             </div>
 
@@ -1505,6 +1813,14 @@
 
       document.getElementById("listCounter").innerText = `${filtered.length} người`;
 
+      const mobileSel = document.getElementById("mobilePlayerQuickSelect");
+      if (mobileSel) {
+        mobileSel.innerHTML = filtered.map(p => 
+          `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)} (${getFacName(p.fac)} · Lv ${p.lvl || 1})</option>`
+        ).join("");
+        if (selectedPlayerName) mobileSel.value = selectedPlayerName;
+      }
+
       if (!filtered.length) {
         container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Không tìm thấy người chơi phù hợp.</div>`;
         return;
@@ -1514,7 +1830,7 @@
         const isSel = p.name === selectedPlayerName;
         const facN = getFacName(p.fac);
         return `
-          <div class="player-item ${isSel ? 'active' : ''}" onclick="selectPlayer('${escapeHtml(p.name)}')">
+          <div class="player-item ${isSel ? 'active' : ''}" onclick="selectPlayer('${escapeHtml(p.name)}');">
             <div>
               <div class="pi-name">${escapeHtml(p.name)}</div>
               <div class="pi-sub">TK: <b style="color:${p.u ? '#7ee07e' : '#e74c3c'}">${escapeHtml(p.u || "N/A (Chưa tạo TK)")}</b> · ${facN}</div>
@@ -1558,6 +1874,9 @@
       document.getElementById("noPlayerSelected").style.display = "none";
       document.getElementById("playerControlBox").style.display = "block";
 
+      const mobileSel = document.getElementById("mobilePlayerQuickSelect");
+      if (mobileSel && mobileSel.value !== name) mobileSel.value = name;
+
       document.getElementById("selName").innerText = p.name;
       document.getElementById("selUsername").innerText = p.u || p.name;
       document.getElementById("selFac").innerText = getFacName(p.fac);
@@ -1581,6 +1900,11 @@
         if (n === name) el.classList.add("active");
         else el.classList.remove("active");
       });
+
+      // Smooth scroll on mobile screens so controls are immediately visible
+      if (window.innerWidth <= 992) {
+        document.getElementById("playerControlBox")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
 
     // 6. REMOTE COMMAND DISPATCHER
@@ -2095,6 +2419,15 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    // 12. PWA SERVICE WORKER REGISTRATION (Chạy ngầm, không hiện banner/nút)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('SW reg fail:', err);
+        });
+      });
     }
 
     // Run on startup
