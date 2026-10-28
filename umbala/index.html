@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Võ Lâm Web - Trung Tâm Quản Trị Server</title>
+  <link rel="icon" type="image/png" href="../icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="data_catalog.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b0d13;
+      --bg-card: #141824;
+      --bg-hover: #1c2235;
+      --border: #2c3349;
+      --gold: #f4c442;
+      --gold-dim: #b89228;
+      --gold-glow: rgba(244, 196, 66, 0.25);
+      --red: #e74c3c;
+      --red-hover: #c0392b;
+      --green: #2ecc71;
+      --blue: #3498db;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --font-title: 'Cinzel', serif;
+      --font-body: 'Be Vietnam Pro', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(244, 196, 66, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(52, 152, 219, 0.05) 0%, transparent 40%);
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+    /* AUTH SCREEN */
+    #authOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 12, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .login-box {
+      background: linear-gradient(145deg, #161b2a, #0f131f);
+      border: 1.5px solid var(--gold);
+      box-shadow: 0 0 35px var(--gold-glow), 0 20px 40px rgba(0,0,0,0.8);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      padding: 32px 28px;
+      text-align: center;
+      position: relative;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .login-icon {
+      font-size: 44px;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 10px var(--gold));
+    }
+
+    .login-box h2 {
+      font-family: var(--font-title);
+      color: var(--gold);
+      font-size: 20px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .login-box p {
+      color: var(--text-dim);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-control {
+      width: 100%;
+      padding: 11px 14px;
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .input-control:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(244, 196, 66, 0.3);
+      background: #0d121f;
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+
+    .remember-row input {
+      accent-color: var(--gold);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #f4c442, #b8860b);
+      color: #0b0d13;
+      border: none;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      font-family: var(--font-title);
+      box-shadow: 0 4px 15px rgba(244, 196, 66, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .btn-login:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-login:active {
+      transform: translateY(1px);
+    }
+
+    .login-err {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--red);
+      background: rgba(231, 76, 60, 0.1);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(231, 76, 60, 0.3);
+      display: none;
+    }
+
+    /* HEADER */
+    header {
+      background: #0e121d;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--gold);
+      padding: 2px;
+      background: #1a1e2d;
+    }
+
+    .brand-title {
+      font-family: var(--font-title);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+    }
+
+    .badge.green {
+      background: rgba(46, 204, 113, 0.12);
+      border-color: rgba(46, 204, 113, 0.4);
+      color: #2ecc71;
+    }
+
+    .btn-header {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-header:hover {
+      background: var(--bg-hover);
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+
+    .btn-header.danger:hover {
+      background: rgba(231, 76, 60, 0.15);
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    /* NAVIGATION TABS */
+    .tabs-bar {
+      background: #090c14;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      padding: 0 16px;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 12px 18px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+      background: linear-gradient(to top, rgba(244, 196, 66, 0.08), transparent);
+    }
+
+    /* MAIN CONTAINER */
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CARDS & GRIDS */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 992px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .panel-title {
+      font-family: var(--font-title);
+      font-size: 15px;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    /* PLAYER SELECTION LIST */
+    .search-box {
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 9px 12px 9px 34px;
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .search-box::before {
+      content: "🔍";
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .player-item {
+      background: #0d111c;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .player-item:hover {
+      background: var(--bg-hover);
+      border-color: var(--gold-dim);
+      transform: translateX(2px);
+    }
+
+    .player-item.active {
+      background: linear-gradient(135deg, rgba(244, 196, 66, 0.15), rgba(20, 24, 36, 0.9));
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(244, 196, 66, 0.2);
+    }
+
+    .pi-name {
+      font-weight: 700;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    .player-item.active .pi-name {
+      color: var(--gold);
+    }
+
+    .pi-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .pi-badges {
+      text-align: right;
+    }
+
+    .badge-lv {
+      background: #252d42;
+      color: #7ee07e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-cs {
+      background: rgba(244, 196, 66, 0.15);
+      color: var(--gold);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    /* PLAYER CONTROL HERO BANNER */
+    .player-card {
+      background: linear-gradient(135deg, #171d2c, #0e121d);
+      border: 1.5px solid var(--gold);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 15px rgba(244, 196, 66, 0.12);
+    }
+
+    .pc-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .pc-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background: #090c14;
+      border: 1px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      filter: drop-shadow(0 0 5px var(--gold));
+    }
+
+    .pc-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gold);
+      font-family: var(--font-title);
+    }
+
+    .pc-details {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 3px;
+      flex-wrap: wrap;
+    }
+
+    .pc-details b {
+      color: #fff;
+    }
+
+    /* ACTION SECTIONS */
+    .action-group {
+      background: #0e121d;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    .ag-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ag-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .ag-row:last-child {
+      margin-bottom: 0;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 7px 14px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #1c2336;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: #252f48;
+      border-color: #4a5568;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #f4c442, #d4a017);
+      color: #000;
+      font-weight: 700;
+      border-color: #ffd700;
+    }
+
+    .btn.primary:hover {
+      filter: brightness(1.1);
+    }
+
+    .btn.success {
+      background: #238636;
+      border-color: #2ea043;
+      color: #fff;
+    }
+
+    .btn.success:hover {
+      background: #2ea043;
+    }
+
+    .btn.danger {
+      background: rgba(231, 76, 60, 0.2);
+      border-color: rgba(231, 76, 60, 0.6);
+      color: #ff6b6b;
+    }
+
+    .btn.danger:hover {
+      background: #c0392b;
+      color: #fff;
+      border-color: #e74c3c;
+    }
+
+    select.input-sm, input.input-sm {
+      padding: 6px 10px;
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    select.input-sm:focus, input.input-sm:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    /* TABLE */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #090c14;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      background: #141824;
+      color: var(--gold-dim);
+      font-weight: 700;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* TOAST NOTIFICATION */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1a2030;
+      color: #fff;
+      border: 1px solid var(--gold);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 10000;
+      display: none;
+      animation: slideUp 0.25s ease;
+      max-width: 90vw;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- AUTH SCREEN -->
+  <div id="authOverlay">
+    <div class="login-box">
+      <div class="login-icon">👑</div>
+      <h2>Võ Lâm Web</h2>
+      <p>Quản Trị Server</p>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Tài khoản Quản trị</label>
+          <input type="text" id="loginUser" class="input-control" placeholder="Nhập tài khoản admin..." required autofocus autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label>Mật khẩu</label>
+          <input type="password" id="loginPass" class="input-control" placeholder="Nhập mật khẩu..." required autocomplete="current-password">
+        </div>
+
+        <label class="remember-row">
+          <input type="checkbox" id="rememberMe"> Ghi nhớ đăng nhập trên máy này
+        </label>
+
+        <button type="submit" class="btn-login">⚡ XÁC THỰC QUẢN TRỊ</button>
+
+        <div id="loginErr" class="login-err">
+          Tài khoản hoặc mật khẩu không chính xác! Vui lòng thử lại.
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <img src="../icon-192.png" alt="" class="brand-icon">
+      <div>
+        <div class="brand-title">Võ Lâm Web · Quản Trị</div>
+        <div class="brand-subtitle">QUẢN LÝ TÀI KHOẢN</div>
+      </div>
+    </div>
+
+    <div class="header-badges">
+      <span class="badge green" id="fbStatusBadge">🟢 Trạng thái: Đã Kết Nối</span>
+      <span class="badge" id="playerCountBadge">👥 Đang tải danh sách...</span>
+      <span class="badge" style="color:var(--gold)">👑 Admin: <b>admin</b></span>
+      <button class="btn-header" onclick="loadAllData()">🔄 Làm mới</button>
+      <button class="btn-header danger" onclick="handleLogout()">🚪 Đăng xuất</button>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="switchTab('tabPlayers')">👤 Quản Lý Người Chơi</button>
+    <button class="tab-btn" onclick="switchTab('tabAccounts')">🔑 Danh Sách Tài Khoản</button>
+    <button class="tab-btn" onclick="switchTab('tabChat')">💬 Giám Sát Chat & Server</button>
+    <button class="tab-btn" onclick="switchTab('tabRankings')">🏆 Bảng Xếp Hạng</button>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <main>
+    <!-- TAB 1: PLAYER MANAGEMENT -->
+    <div id="tabPlayers" class="tab-pane active">
+      <div class="grid-2">
+        <!-- LEFT: PLAYER LIST -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">👥 Danh Sách Người Chơi</span>
+            <small style="color:var(--text-dim)" id="listCounter">0 người</small>
+          </div>
+
+          <div class="search-box">
+            <input type="text" id="playerSearchInput" placeholder="Tìm tên hoặc tài khoản..." oninput="filterPlayers()">
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;font-size:12px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--gold);font-weight:600">
+              <input type="checkbox" id="chkHideGhosts" checked onchange="filterPlayers();renderRankingsTable()"> Ẩn nick rác / chưa có TK
+            </label>
+            <button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="cleanGhostRecords()" title="Xóa các bản ghi mồ côi không có tài khoản trên Firebase">🧹 Dọn nick rác</button>
+          </div>
+
+          <div class="player-list" id="playersContainer">
+            <div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">
+              Đang tải danh sách người chơi từ máy chủ...
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: SELECTED PLAYER CONTROLS -->
+        <div class="panel">
+          <div id="noPlayerSelected" style="padding:40px 20px;text-align:center;color:var(--text-dim)">
+            <div style="font-size:36px;margin-bottom:8px">👆</div>
+            Vui lòng chọn một người chơi ở cột bên trái để bắt đầu quản lý và can thiệp.
+          </div>
+
+          <div id="playerControlBox" style="display:none">
+            <!-- BANNER -->
+            <div class="player-card">
+              <div class="pc-info">
+                <div class="pc-avatar" id="selAvatar">⚔️</div>
+                <div>
+                  <div class="pc-name" id="selName">Tên Người Chơi</div>
+                  <div class="pc-details">
+                    <span>Tài khoản: <b id="selUsername" style="color:#7ee07e">admin</b></span>
+                    <span>Phái: <b id="selFac">Thiếu Lâm</b></span>
+                    <span>Cấp: <b id="selLvl">80</b></span>
+                    <span>CS: <b id="selReborn" style="color:var(--gold)">CS 0</b></span>
+                    <span>Lực chiến: <b id="selPower">150.000</b></span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <button class="btn danger" onclick="confirmDeleteSelectedAcc()">Xóa Tài Khoản</button>
+              </div>
+            </div>
+
+            <!-- CONTROLS -->
+            <!-- 1. LEVEL & EXP -->
+            <div class="action-group">
+              <div class="ag-header">📈 Cấp Độ & Kinh Nghiệm</div>
+              <div class="ag-row">
+                <label style="font-size:12px;color:#aaa">Đặt cấp (1-200):</label>
+                <input type="number" id="inpSetLv" class="input-sm" style="width:70px" min="1" max="200" value="80">
+                <button class="btn primary" onclick="actSetLv()">Đặt Cấp</button>
+                <button class="btn" onclick="actIncLv(1)">🔺 +1 Cấp</button>
+                <button class="btn" onclick="actIncLv(10)">🔺 +10 Cấp</button>
+                <button class="btn danger" onclick="actIncLv(-1)">🔻 -1 Cấp</button>
+              </div>
+              <div class="ag-row">
+                <label style="font-size:12px;color:#aaa">EXP:</label>
+                <input type="number" id="inpExpVal" class="input-sm" style="width:110px" value="10000000">
+                <button class="btn primary" onclick="actAddExp(1)">➕ Cộng EXP</button>
+                <button class="btn danger" onclick="actAddExp(-1)">➖ Trừ EXP</button>
+              </div>
+            </div>
+
+            <!-- 2. REBORN -->
+            <div class="action-group">
+              <div class="ag-header">🔄 Chuyển Sinh (CS)</div>
+              <div class="ag-row">
+                <label style="font-size:12px;color:#aaa">Chuyển sinh (0-20):</label>
+                <input type="number" id="inpSetCs" class="input-sm" style="width:60px" min="0" max="20" value="0">
+                <button class="btn primary" onclick="actSetCs()">Đặt CS</button>
+                <button class="btn" onclick="actIncCs(1)">🔺 +1 CS</button>
+                <button class="btn danger" onclick="actIncCs(-1)">🔻 -1 CS</button>
+                <button class="btn danger" onclick="actResetCs()">Về CS 0</button>
+              </div>
+            </div>
+
+            <!-- 3. CURRENCY -->
+            <div class="action-group">
+              <div class="ag-header">💰 Ngân Lượng & Kim Nguyên Bảo (KNB)</div>
+              <div class="ag-row">
+                <label style="font-size:12px;color:#aaa">Ngân lượng:</label>
+                <button class="btn success" onclick="actGold(10000000)">➕ 1.000 Vạn Lượng</button>
+                <button class="btn success" onclick="actGold(100000000)">➕ 10.000 Vạn Lượng</button>
+                <button class="btn danger" onclick="actGold(-50000000)">➖ 5.000 Vạn</button>
+                <button class="btn danger" onclick="actZeroGold()">Về 0 Lượng</button>
+              </div>
+              <div class="ag-row">
+                <label style="font-size:12px;color:#aaa">KNB:</label>
+                <button class="btn primary" onclick="actKnb(1000)">➕ 1.000 KNB</button>
+                <button class="btn primary" onclick="actKnb(5000)">➕ 5.000 KNB</button>
+                <button class="btn danger" onclick="actKnb(-1000)">➖ 1.000 KNB</button>
+                <button class="btn danger" onclick="actZeroKnb()">Về 0 KNB</button>
+              </div>
+            </div>
+
+            <!-- 4. HALOS -->
+            <div class="action-group">
+              <div class="ag-header">✨ Vòng Sáng (Tặng Vĩnh Viễn / Thu Hồi)</div>
+              <div class="ag-row">
+                <select id="selHalo" class="input-sm" style="flex:1;min-width:200px">
+                  <option value="ndg">Vòng sáng Thiên Lam Thần Quang (+15% HP, +15% May mắn)</option>
+                  <option value="nab">Vòng sáng Nguyệt Ảnh Hoàng Kim (+12% HP, +12% May mắn)</option>
+                  <option value="nbj">Vòng sáng Bích Hải Tinh Luân (+10% HP, +10% May mắn)</option>
+                  <option value="nyl">Vòng sáng Hoàng Kim Hoa Quan (+8% HP, +8% May mắn)</option>
+                  <option value="bj">Vòng sáng Bá Chủ Hoàng Kim (+15% HP, +15% May mắn)</option>
+                  <option value="yl">Vòng sáng Yến Lạc Lam Vũ (+10% HP, +10% May mắn)</option>
+                  <option value="ab">Vòng sáng Ám Dạ Bát Quái (+12% HP, +12% May mắn)</option>
+                  <option value="zw">Vòng sáng Tử Vân (TOP 1 Boss Thế Giới)</option>
+                  <option value="dg">Vòng sáng Đồ Long (Võ Lâm Minh Chủ)</option>
+                </select>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gold);white-space:nowrap">
+                  <input type="checkbox" id="chkHaloPerm" checked> Vĩnh viễn
+                </label>
+                <button class="btn primary" onclick="actGiveHalo()">🎁 Tặng Vòng Sáng Này</button>
+                <button class="btn danger" onclick="actRevokeHalo()">🚫 Thu Hồi</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveAllHalos()">⚡ Tặng Toàn Bộ 9 Vòng Sáng Vĩnh Viễn</button>
+                <button class="btn danger" onclick="actRevokeAllHalos()">🧹 Thu Hồi Hết Vòng Sáng</button>
+              </div>
+            </div>
+
+            <!-- 5. HORSES -->
+            <div class="action-group">
+              <div class="ag-header">🐎 Thú Cưỡi & Ngựa (Đủ 68 Loại Ngựa & Thú Cưỡi)</div>
+              <div class="ag-row">
+                <select id="selHorse" class="input-sm" style="flex:1;min-width:240px">
+                  <option value="">Đang tải danh sách ngựa...</option>
+                </select>
+                <button class="btn primary" onclick="actGiveHorse()">🎁 Tặng Ngựa Này</button>
+                <button class="btn danger" onclick="actRevokeHorse()">🚫 Thu Hồi</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveAllHorses()">⚡ Tặng Đủ Toàn Bộ Ngựa Vào Mã Trường</button>
+                <button class="btn danger" onclick="actRevokeAllHorses()">🧹 Dọn Sạch Mã Trường</button>
+              </div>
+            </div>
+
+            <!-- 6. MASKS -->
+            <div class="action-group">
+              <div class="ag-header">🎭 Mặt Nạ Ngoại Trang (13 Loại Mặt Nạ)</div>
+              <div class="ag-row">
+                <select id="selMask" class="input-sm" style="flex:1;min-width:200px">
+                  <option value="1">1. Mặt nạ Nguyệt Ca Đảo Chủ</option>
+                  <option value="2">2. Mặt nạ Đoạt Phách Vệ Sĩ</option>
+                  <option value="3">3. Mặt nạ Lam Y Nữ Hiệp</option>
+                  <option value="4">4. Mặt nạ Miêu Cương Thánh Nữ</option>
+                  <option value="5">5. Mặt nạ Hồng Y Nữ Hiệp</option>
+                  <option value="6">6. Mặt nạ Thúy Y Tiên Tử</option>
+                  <option value="7">7. Mặt nạ Tiêu Dao Phiến Khách</option>
+                  <option value="8">8. Mặt nạ Thi Nghi Sinh</option>
+                  <option value="9">9. Mặt nạ Phi Sa Cuồng Đao</option>
+                  <option value="10">10. Mặt nạ Lạc Quang Thiền Sư</option>
+                  <option value="11">11. Mặt nạ Boss Vân Tuyết Sơn</option>
+                  <option value="12">12. Mặt nạ Thừa Phong Kiếm Khách</option>
+                  <option value="13">13. Mặt nạ Chiến Tướng Liêu Định</option>
+                </select>
+                <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--gold);white-space:nowrap">
+                  <input type="checkbox" id="chkMaskPerm" checked> Vĩnh viễn
+                </label>
+                <button class="btn primary" onclick="actGiveMask()">🎁 Tặng Mặt Nạ Này</button>
+                <button class="btn danger" onclick="actRevokeMask()">🚫 Thu Hồi</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveAllMasks()">⚡ Tặng Đủ 13 Mặt Nạ</button>
+                <button class="btn danger" onclick="actRevokeAllMasks()">🧹 Thu Hồi Hết Mặt Nạ</button>
+              </div>
+            </div>
+
+            <!-- 7. SEALS -->
+            <div class="action-group">
+              <div class="ag-header">⚔️ Chiến Ấn & Nguyên Liệu Ấn</div>
+              <div class="ag-row">
+                <select id="selCa" class="input-sm" style="flex:1;min-width:200px">
+                  <option value="0">Bạch ấn (cấp 60 · 3 dòng)</option>
+                  <option value="1">Khiếu Hổ ấn (cấp 60 · 3 dòng · +1 tất cả kỹ năng)</option>
+                  <option value="2">Thanh ấn (cấp 70 · 4 dòng)</option>
+                  <option value="3">Bàn Long ấn (cấp 70 · 4 dòng · +1 tất cả kỹ năng)</option>
+                </select>
+                <button class="btn primary" onclick="actGiveCa()">🎁 Tặng Ấn Này</button>
+                <button class="btn danger" onclick="actRevokeCa()">🚫 Thu Hồi</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveAllCa()">⚡ Tặng Đủ 4 Ấn</button>
+                <button class="btn primary" onclick="actGiveCaMats()">💎 Tặng Gói Nguyên Liệu Ấn (Hồn Thạch, BNN, CAHT)</button>
+                <button class="btn danger" onclick="actRevokeAllCa()">🧹 Thu Hồi Hết Ấn</button>
+              </div>
+            </div>
+
+            <!-- 8. GEAR SETS -->
+            <div class="action-group">
+              <div class="ag-header" style="justify-content:space-between">
+                <span>🎁 Trang Bị & Bộ Hoàng Kim Môn Phái</span>
+                <small id="setCounter" style="font-weight:normal;color:var(--text-dim)">0 bộ</small>
+              </div>
+
+              <!-- FILTER CONTROLS -->
+              <div class="ag-row" style="margin-bottom:8px;background:#151a28;padding:8px;border-radius:6px;border:1px solid #232a3d">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <label style="font-size:12px;color:var(--gold);font-weight:600">Phái:</label>
+                  <select id="filterSetFac" class="input-sm" onchange="renderFilteredSets()">
+                    <option value="mine" selected>🎯 Phái nhân vật này</option>
+                    <option value="all">🌐 Tất cả phái</option>
+                    <option value="-1">🛡️ Bộ chung (An Bang, Định Quốc...)</option>
+                    <option value="0">Thiếu Lâm</option>
+                    <option value="1">Thiên Vương</option>
+                    <option value="2">Đường Môn</option>
+                    <option value="3">Ngũ Độc</option>
+                    <option value="4">Nga My</option>
+                    <option value="5">Thúy Yên</option>
+                    <option value="6">Cái Bang</option>
+                    <option value="7">Thiên Nhẫn</option>
+                    <option value="8">Võ Đang</option>
+                    <option value="9">Côn Lôn</option>
+                  </select>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:6px">
+                  <label style="font-size:12px;color:var(--gold);font-weight:600">Loại:</label>
+                  <select id="filterSetCat" class="input-sm" onchange="renderFilteredSets()">
+                    <option value="all" selected>Tất cả loại bộ</option>
+                    <option value="hkmp">⭐ HK Môn Phái (10 món chuẩn)</option>
+                    <option value="gold_gen">👑 Hoàng Kim Chung (An Bang, Định Quốc...)</option>
+                    <option value="gold_route">📜 Lộ Trình Cấp (Thanh Câu → Đằng Long)</option>
+                    <option value="platina">✨ Bộ Bạch Kim (Platina)</option>
+                  </select>
+                </div>
+
+                <input type="text" id="filterSetSearch" class="input-sm" style="flex:1;min-width:140px" placeholder="🔍 Tìm nhanh tên bộ..." oninput="renderFilteredSets()">
+              </div>
+
+              <!-- SET SELECTOR & ACTIONS -->
+              <div class="ag-row" style="margin-bottom:8px">
+                <select id="selSet" class="input-sm" style="flex:1 1 260px;min-width:240px;font-size:13px"></select>
+                <button class="btn primary" onclick="actGiveSet()">🎁 Gửi Bộ Này</button>
+                <button class="btn success" onclick="actGiveSetWear()" title="Gửi và tự động mặc nếu đủ điều kiện">Gửi & Mặc</button>
+                <button class="btn danger" onclick="actRevokeSet()">🚫 Thu Hồi Bộ Này</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveHkmp()">⭐ Full HKMP Phái (10 món chuẩn)</button>
+                <button class="btn danger" onclick="actRevokeHkmp()">🚫 Thu Hồi HKMP</button>
+                <button class="btn primary" onclick="actGiveAb()">Tặng An Bang</button>
+                <button class="btn primary" onclick="actGiveDq()">Tặng Định Quốc</button>
+              </div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actEnhFull()">⚡ Full Cường Hóa +10 Toàn Thân</button>
+                <button class="btn danger" onclick="actEnhReset()">🔻 Về Cường Hóa +0</button>
+                <button class="btn danger" onclick="actStripWear()">🧹 Lột Sạch Đồ Đang Mặc</button>
+              </div>
+            </div>
+
+            <!-- 9. MATERIALS & POTIONS -->
+            <div class="action-group">
+              <div class="ag-header">💎 Gói Nguyên Liệu & Thuốc</div>
+              <div class="ag-row">
+                <button class="btn primary" onclick="actGiveMatPack()">💎 Gói Nguyên Liệu (99 Huyền Tinh 10, Thủy Tinh, 30 Đá c6)</button>
+                <button class="btn danger" onclick="actRevokeMatPack()">🚫 Thu Hồi Nguyên Liệu</button>
+                <button class="btn success" onclick="actGivePots()">🧪 Bơm 500 Bình Máu & Mana</button>
+                <button class="btn danger" onclick="actRevokePots()">🚫 Rút Hết Thuốc</button>
+              </div>
+            </div>
+
+            <!-- 10. RESETS & TITLES -->
+            <div class="action-group">
+              <div class="ag-header">🌀 Tẩy Tủy & Danh Hiệu</div>
+              <div class="ag-row">
+                <button class="btn" onclick="actResetAttrs()">Tẩy Tiềm Năng</button>
+                <button class="btn" onclick="actResetSkills()">Tẩy Kỹ Năng</button>
+                <button class="btn primary" onclick="actResetAll()">Tẩy Toàn Bộ</button>
+                <button class="btn primary" onclick="actGiveVlmc()">👑 Tặng VLMC</button>
+                <button class="btn danger" onclick="actRevokeVlmc()">🚫 Thu Hồi VLMC</button>
+              </div>
+            </div>
+
+            <!-- 11. SEND MESSAGE -->
+            <div class="action-group">
+              <div class="ag-header">✉️ Gửi Tin Nhắn / Cảnh Báo Riêng (Popup)</div>
+              <div class="ag-row">
+                <input type="text" id="inpMsgText" class="input-sm" style="flex:1" placeholder="Nhập lời nhắn gửi riêng cho người chơi này...">
+                <button class="btn primary" onclick="actSendMsg()">Gửi Tin Nhắn</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ACCOUNTS LIST -->
+    <div id="tabAccounts" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔑 Quản Lý Tài Khoản Người Chơi</span>
+          <div class="search-box" style="margin-bottom:0">
+            <input type="text" id="accSearchInput" placeholder="Tìm tài khoản..." oninput="renderAccountsTable()">
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tên Đăng Nhập</th>
+                <th>Tên Nhân Vật</th>
+                <th>Mật Khẩu Hiện Tại</th>
+                <th>Lần Đăng Nhập Cuối</th>
+                <th>Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:24px">Đang tải danh sách tài khoản...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CHAT MONITOR -->
+    <div id="tabChat" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💬 Kênh Chat & Phát Thông Báo Server</span>
+          <button class="btn danger" onclick="confirmClearChat()">🧹 Xóa Sạch Kênh Chat</button>
+        </div>
+
+        <div class="action-group" style="margin-bottom:14px">
+          <div class="ag-header">📢 Phát Thông Báo Toàn Server (Hệ Thống)</div>
+          <div class="ag-row">
+            <input type="text" id="inpBroadcast" class="input-sm" style="flex:1" placeholder="Nhập thông báo gửi toàn server...">
+            <button class="btn primary" onclick="sendBroadcast()">Phát Thông Báo</button>
+          </div>
+        </div>
+
+        <div style="background:#090c14;border:1px solid var(--border);border-radius:6px;height:450px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px" id="chatContainer">
+          <div style="text-align:center;color:var(--text-dim);font-size:13px">Đang tải tin nhắn gần đây...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: RANKINGS -->
+    <div id="tabRankings" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🏆 Bảng Xếp Hạng Người Chơi</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn active" id="btnSortLv" onclick="sortRanking('lv')">Theo Cấp Độ</button>
+            <button class="btn" id="btnSortPower" onclick="sortRanking('power')">Theo Lực Chiến</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:60px">Hạng</th>
+                <th>Tên Nhân Vật</th>
+                <th>Tài Khoản</th>
+                <th>Môn Phái</th>
+                <th>Cấp Độ</th>
+                <th>Chuyển Sinh</th>
+                <th>Lực Chiến</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="rankingTableBody">
+              <tr><td colspan="8" style="text-align:center;padding:24px">Đang tính toán bảng xếp hạng...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast">Thông báo</div>
+
+  <script>
+    "use strict";
+
+    // 1. CONFIGURATION
+    const FIREBASE_URL = "https://vl-chat-2f4d0-default-rtdb.asia-southeast1.firebasedatabase.app";
+    const ADM_USER = "admin";
+    const ADM_PASS = "cocailztinnguoivcl";
+
+    let db = null;
+    let accountsMap = {};
+    let playersList = [];
+    let selectedPlayerName = "";
+    let rankingSortMode = "lv";
+
+    // Faction Names dictionary
+    const FAC_NAMES = {
+      shaolin: "Thiếu Lâm",
+      tianwang: "Thiên Vương",
+      tangmen: "Đường Môn",
+      wudu: "Ngũ Độc",
+      emei: "Nga My",
+      cuiyan: "Thúy Yên",
+      gaibang: "Cái Bang",
+      tianren: "Thiên Nhẫn",
+      wudang: "Võ Đang",
+      kunlun: "Côn Lôn"
+    };
+
+    function getFacName(k) {
+      return FAC_NAMES[k] || k || "Vô Môn Phái";
+    }
+
+    // 2. AUTHENTICATION
+    function checkAuth() {
+      const isAuth = sessionStorage.getItem("umbala_auth") === "1" || localStorage.getItem("umbala_auth") === "1";
+      const overlay = document.getElementById("authOverlay");
+      if (isAuth) {
+        overlay.style.display = "none";
+        initFirebase();
+      } else {
+        overlay.style.display = "flex";
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById("loginUser").value.trim();
+      const p = document.getElementById("loginPass").value.trim();
+      const remember = document.getElementById("rememberMe").checked;
+      const errBox = document.getElementById("loginErr");
+
+      if (u === ADM_USER && p === ADM_PASS) {
+        sessionStorage.setItem("umbala_auth", "1");
+        if (remember) {
+          localStorage.setItem("umbala_auth", "1");
+        }
+        errBox.style.display = "none";
+        document.getElementById("authOverlay").style.display = "none";
+        showToast("✨ Đăng nhập Quản Trị thành công!");
+        initFirebase();
+      } else {
+        errBox.style.display = "block";
+        document.getElementById("loginPass").value = "";
+        document.getElementById("loginPass").focus();
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi trang Quản Trị?")) {
+        sessionStorage.removeItem("umbala_auth");
+        localStorage.removeItem("umbala_auth");
+        location.reload();
+      }
+    }
+
+    // 3. FIREBASE INITIALIZATION
+    function initFirebase() {
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp({ databaseURL: FIREBASE_URL });
+        }
+        db = firebase.database();
+        loadAllData();
+        listenChat();
+      } catch (e) {
+        console.error("Firebase init err:", e);
+        showToast("Lỗi kết nối Firebase: " + e.message);
+      }
+    }
+
+    let ghostRkKeys = [];
+
+    const FAC_ID_MAP = {
+      shaolin: 0,
+      tianwang: 1,
+      tangmen: 2,
+      wudu: 3,
+      emei: 4,
+      cuiyan: 5,
+      gaibang: 6,
+      tianren: 7,
+      wudang: 8,
+      kunlun: 9
+    };
+
+    function populateHorses() {
+      const sel = document.getElementById("selHorse");
+      if (!sel) return;
+      const horses = window.UMBALA_HORSES || [];
+      if (!horses.length) return;
+
+      const groups = new Map();
+      for (const h of horses) {
+        const grp = h.group || "Ngựa Khác";
+        if (!groups.has(grp)) groups.set(grp, []);
+        groups.get(grp).push(h);
+      }
+
+      let out = "";
+      for (const [grpName, list] of groups) {
+        out += `<optgroup label="${escapeHtml(grpName)}">`;
+        for (const h of list) {
+          out += `<option value="${escapeHtml(h.id)}">${escapeHtml(h.n)}</option>`;
+        }
+        out += `</optgroup>`;
+      }
+      sel.innerHTML = out;
+    }
+
+    function renderFilteredSets() {
+      const sel = document.getElementById("selSet");
+      if (!sel) return;
+      const sets = window.UMBALA_SETS || [];
+      if (!sets.length) {
+        sel.innerHTML = `<option value="">Chưa tải dữ liệu bộ trang bị</option>`;
+        const cnt = document.getElementById("setCounter");
+        if (cnt) cnt.innerText = "0 bộ";
+        return;
+      }
+
+      const facVal = (document.getElementById("filterSetFac")?.value) || "mine";
+      const catVal = (document.getElementById("filterSetCat")?.value) || "all";
+      const searchQ = (document.getElementById("filterSetSearch")?.value || "").trim().toLowerCase();
+
+      const p = playersList.find(x => x.name === selectedPlayerName);
+      const playerFid = p ? (typeof p.fac === "number" ? p.fac : (FAC_ID_MAP[p.fac] != null ? FAC_ID_MAP[p.fac] : -1)) : -1;
+
+      // Filter sets according to criteria
+      const filtered = sets.filter(s => {
+        // 1. Partial sets: exclude _p1_ / _p2_ unless searching
+        if (!searchQ && (s.id.includes("_p1_") || s.id.includes("_p2_"))) return false;
+
+        // 2. Faction filter
+        if (facVal === "mine") {
+          const isMine = playerFid >= 0 && s.fac === playerFid;
+          const isNeutral = s.fac < 0 || s.fac == null;
+          if (catVal === "hkmp" || catVal === "platina" || catVal === "gold_route") {
+            if (!isMine) return false;
+          } else if (catVal === "gold_gen") {
+            if (!isNeutral) return false;
+          } else {
+            if (!isMine && !isNeutral) return false;
+          }
+        } else if (facVal === "-1") {
+          if (s.fac >= 0) return false;
+        } else if (facVal !== "all") {
+          if (String(s.fac) !== String(facVal)) return false;
+        }
+
+        // 3. Category filter
+        if (catVal !== "all" && s.cat !== catVal) return false;
+
+        // 4. Search text filter
+        if (searchQ) {
+          const matchName = s.n && s.n.toLowerCase().includes(searchQ);
+          const matchId = s.id && s.id.toLowerCase().includes(searchQ);
+          if (!matchName && !matchId) return false;
+        }
+
+        return true;
+      });
+
+      // Update counter
+      const counterEl = document.getElementById("setCounter");
+      if (counterEl) counterEl.innerText = `${filtered.length} bộ`;
+
+      if (!filtered.length) {
+        sel.innerHTML = `<option value="">(Không có bộ trang bị nào phù hợp tiêu chí lọc)</option>`;
+        return;
+      }
+
+      // Group into optgroups for clarity
+      const grpOrder = [
+        { key: "hkmp", label: "⭐ Hoàng Kim Môn Phái" },
+        { key: "gold_gen", label: "👑 Hoàng Kim Chung (An Bang, Định Quốc...)" },
+        { key: "gold_route", label: "📜 Lộ Trình Cấp (Thanh Câu → Đằng Long)" },
+        { key: "platina", label: "✨ Trang Bị Bạch Kim (Platina)" },
+        { key: "other", label: "🛡️ Bộ Trang Bị Khác" }
+      ];
+
+      let html = "";
+      for (const g of grpOrder) {
+        const sub = filtered.filter(s => {
+          if (g.key === "other") return !["hkmp", "gold_gen", "gold_route", "platina"].includes(s.cat);
+          return s.cat === g.key;
+        });
+        if (!sub.length) continue;
+        html += `<optgroup label="${escapeHtml(g.label)} (${sub.length} bộ)">`;
+        for (const s of sub) {
+          html += `<option value="${escapeHtml(s.id)}">${escapeHtml(s.n)}</option>`;
+        }
+        html += `</optgroup>`;
+      }
+      sel.innerHTML = html;
+    }
+
+    function populateSets(targetFacKey) {
+      renderFilteredSets();
+    }
+
+    // 4. DATA FETCHING & DEDUPLICATION
+    async function loadAllData() {
+      showToast("🔄 Đang tải dữ liệu người chơi...");
+      try {
+        const [accsRes, ranksRes] = await Promise.all([
+          fetch(`${FIREBASE_URL}/accounts.json`).then(r => r.json()).catch(() => null),
+          fetch(`${FIREBASE_URL}/ranking/players.json`).then(r => r.json()).catch(() => null)
+        ]);
+
+        accountsMap = accsRes || {};
+        ghostRkKeys = [];
+        
+        // 1. Build account lookup indices
+        const accByChar = new Map();
+        const accByU = new Map();
+        for (const [u, acc] of Object.entries(accountsMap)) {
+          if (!acc) continue;
+          const charN = (acc.charName || u).trim();
+          const obj = { u, ...acc, charName: charN };
+          accByChar.set(charN.toLowerCase(), obj);
+          accByU.set(u.toLowerCase(), obj);
+        }
+
+        // 2. Process ranking/players (deduplicate strictly by character name)
+        const pMap = new Map();
+        if (ranksRes) {
+          for (const [rkKey, p] of Object.entries(ranksRes)) {
+            if (!p || !p.name) continue;
+            const charName = String(p.name).trim();
+            const nameKey = charName.toLowerCase();
+
+            // Match account either by p.u or by charName
+            const matchedAcc = (p.u ? accByU.get(String(p.u).toLowerCase()) : null) || accByChar.get(nameKey);
+            const resolvedU = (matchedAcc && matchedAcc.u) || (p.u ? String(p.u).trim() : "");
+            const isGhost = !matchedAcc && !resolvedU;
+
+            if (isGhost) {
+              ghostRkKeys.push(rkKey);
+            }
+
+            const existing = pMap.get(nameKey);
+            const score = (p.reborn || 0) * 1e6 + (p.lvl || 0) * 1e3 + (p.power || 0);
+            const existingScore = existing ? ((existing.reborn || 0) * 1e6 + (existing.lvl || 0) * 1e3 + (existing.power || 0)) : -1;
+
+            if (!existing || score >= existingScore) {
+              pMap.set(nameKey, {
+                rkKey: rkKey,
+                name: charName,
+                u: resolvedU,
+                fac: (matchedAcc && matchedAcc.fac) || p.fac || (existing && existing.fac) || "shaolin",
+                lvl: p.lvl || (matchedAcc && matchedAcc.lvl) || (existing && existing.lvl) || 1,
+                reborn: p.reborn != null ? p.reborn : ((matchedAcc && matchedAcc.reborn) || 0),
+                power: p.power || (existing && existing.power) || 0,
+                lastLogin: (matchedAcc && matchedAcc.lastLogin) || p.lastLogin || (existing && existing.lastLogin) || 0,
+                isGhost: isGhost
+              });
+            } else {
+              if (!existing.u && resolvedU) {
+                existing.u = resolvedU;
+                existing.isGhost = false;
+              }
+            }
+          }
+        }
+
+        // 3. Process accounts that don't have a ranking entry yet
+        for (const [u, acc] of Object.entries(accountsMap)) {
+          if (!acc) continue;
+          const charN = (acc.charName || u).trim();
+          const nameKey = charN.toLowerCase();
+          const existing = pMap.get(nameKey);
+          if (existing) {
+            existing.u = u;
+            existing.isGhost = false;
+            if (acc.lastLogin && !existing.lastLogin) existing.lastLogin = acc.lastLogin;
+          } else {
+            pMap.set(nameKey, {
+              rkKey: "u_" + u.toLowerCase(),
+              name: charN,
+              u: u,
+              fac: "emei",
+              lvl: acc.lvl || 1,
+              reborn: acc.reborn || 0,
+              power: 0,
+              lastLogin: acc.lastLogin || 0,
+              isGhost: false
+            });
+          }
+        }
+
+        playersList = Array.from(pMap.values());
+        document.getElementById("playerCountBadge").innerText = `👥 ${playersList.length} Nhân vật`;
+
+        populateHorses();
+        renderFilteredSets();
+        filterPlayers();
+        renderAccountsTable();
+        renderRankingsTable();
+
+        if (selectedPlayerName) {
+          selectPlayer(selectedPlayerName);
+        } else if (playersList.length > 0) {
+          const firstReal = playersList.find(p => !p.isGhost) || playersList[0];
+          if (firstReal) selectPlayer(firstReal.name);
+        }
+
+        showToast("✅ Đã cập nhật toàn bộ dữ liệu mới nhất!");
+      } catch (e) {
+        console.error(e);
+        showToast("Lỗi khi tải dữ liệu: " + e.message);
+      }
+    }
+
+    // 5. PLAYER LIST FILTERING & RENDERING
+    function filterPlayers() {
+      const q = (document.getElementById("playerSearchInput").value || "").trim().toLowerCase();
+      const hideGhosts = document.getElementById("chkHideGhosts") ? document.getElementById("chkHideGhosts").checked : true;
+      const container = document.getElementById("playersContainer");
+
+      const filtered = playersList.filter(p => {
+        if (hideGhosts && p.isGhost) return false;
+        return (p.name && p.name.toLowerCase().includes(q)) || 
+               (p.u && p.u.toLowerCase().includes(q)) ||
+               getFacName(p.fac).toLowerCase().includes(q);
+      });
+
+      document.getElementById("listCounter").innerText = `${filtered.length} người`;
+
+      if (!filtered.length) {
+        container.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Không tìm thấy người chơi phù hợp.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(p => {
+        const isSel = p.name === selectedPlayerName;
+        const facN = getFacName(p.fac);
+        return `
+          <div class="player-item ${isSel ? 'active' : ''}" onclick="selectPlayer('${escapeHtml(p.name)}')">
+            <div>
+              <div class="pi-name">${escapeHtml(p.name)}</div>
+              <div class="pi-sub">TK: <b style="color:${p.u ? '#7ee07e' : '#e74c3c'}">${escapeHtml(p.u || "N/A (Chưa tạo TK)")}</b> · ${facN}</div>
+            </div>
+            <div class="pi-badges">
+              <span class="badge-lv">Lv ${p.lvl || 1}</span>
+              ${p.reborn ? `<span class="badge-cs">CS ${p.reborn}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function cleanGhostRecords() {
+      if (!ghostRkKeys.length) {
+        showToast("Không phát hiện nick rác nào cần dọn dẹp!");
+        return;
+      }
+      if (!confirm(`Phát hiện ${ghostRkKeys.length} bản ghi rác không thuộc tài khoản nào (dữ liệu lưu trữ cũ trên Firebase).\n\nBạn có muốn XÓA VĨNH VIỄN các bản ghi rác này khỏi Firebase không?`)) {
+        return;
+      }
+
+      showToast("🧹 Đang dọn dẹp dữ liệu rác trên Firebase...");
+      try {
+        if (!db) db = firebase.database();
+        for (const k of ghostRkKeys) {
+          await db.ref(`ranking/players/${k}`).remove();
+        }
+        showToast(`Đã dọn sạch ${ghostRkKeys.length} bản ghi rác thành công!`);
+        loadAllData();
+      } catch (e) {
+        showToast("Lỗi dọn dẹp: " + e.message);
+      }
+    }
+
+    function selectPlayer(name) {
+      selectedPlayerName = name;
+      const p = playersList.find(x => x.name === name);
+      if (!p) return;
+
+      document.getElementById("noPlayerSelected").style.display = "none";
+      document.getElementById("playerControlBox").style.display = "block";
+
+      document.getElementById("selName").innerText = p.name;
+      document.getElementById("selUsername").innerText = p.u || p.name;
+      document.getElementById("selFac").innerText = getFacName(p.fac);
+      document.getElementById("selLvl").innerText = p.lvl || 1;
+      document.getElementById("selReborn").innerText = `CS ${p.reborn || 0}`;
+      document.getElementById("selPower").innerText = (p.power || 0).toLocaleString();
+      document.getElementById("inpSetLv").value = p.lvl || 80;
+      document.getElementById("inpSetCs").value = p.reborn || 0;
+
+      // Update label in #filterSetFac option 0
+      const optMine = document.querySelector("#filterSetFac option[value='mine']");
+      if (optMine) optMine.innerText = `🎯 Phái nhân vật (${getFacName(p.fac)})`;
+
+      // Render filtered sets matching current selections
+      renderFilteredSets();
+
+      // Update active highlight in left list
+      const items = document.querySelectorAll(".player-item");
+      items.forEach(el => {
+        const n = el.querySelector(".pi-name")?.innerText;
+        if (n === name) el.classList.add("active");
+        else el.classList.remove("active");
+      });
+    }
+
+    // 6. REMOTE COMMAND DISPATCHER
+    async function sendRemoteCmd(cmd, successMsg) {
+      if (!selectedPlayerName) return showToast("Chưa chọn người chơi!");
+      cmd.id = "cmd_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+      cmd.t = Date.now();
+      cmd.by = "Admin_Web";
+
+      // Firebase throws if any property is undefined; clean payload cleanly
+      const cleanCmd = JSON.parse(JSON.stringify(cmd));
+
+      try {
+        if (!db) db = firebase.database();
+        await db.ref("player_commands/name/" + selectedPlayerName).push(cleanCmd);
+        showToast(successMsg || "Đã gửi lệnh can thiệp thành công!");
+      } catch (e) {
+        showToast("Lỗi gửi lệnh: " + e.message);
+      }
+    }
+
+    // 7. ACTIONS IMPLEMENTATION
+    function actSetLv() {
+      const v = +document.getElementById("inpSetLv").value || 80;
+      sendRemoteCmd({ op: "lvl", v: v }, `Đã đặt Cấp ${v} cho [${selectedPlayerName}]`);
+    }
+
+    function actIncLv(delta) {
+      sendRemoteCmd({ op: "lvl", delta: delta }, `Đã gửi lệnh ${delta > 0 ? "+" : ""}${delta} Cấp cho [${selectedPlayerName}]`);
+    }
+
+    function actAddExp(sign) {
+      const exp = (+document.getElementById("inpExpVal").value || 1000000) * sign;
+      sendRemoteCmd({ op: "xp", delta: exp }, `Đã gửi lệnh ${exp > 0 ? "+" : ""}${exp.toLocaleString()} EXP cho [${selectedPlayerName}]`);
+    }
+
+    function actSetCs() {
+      const cs = +document.getElementById("inpSetCs").value || 0;
+      sendRemoteCmd({ op: "reborn", v: cs }, `Đã đặt Chuyển Sinh CS ${cs} cho [${selectedPlayerName}]`);
+    }
+
+    function actIncCs(delta) {
+      sendRemoteCmd({ op: "reborn", delta: delta }, `Đã gửi lệnh ${delta > 0 ? "+" : ""}${delta} CS cho [${selectedPlayerName}]`);
+    }
+
+    function actResetCs() {
+      sendRemoteCmd({ op: "reborn", v: 0 }, `Đã đưa về CS 0 cho [${selectedPlayerName}]`);
+    }
+
+    function actGold(amt) {
+      sendRemoteCmd({ op: "gold", v: amt, delta: amt }, `Đã gửi ${amt > 0 ? "tặng" : "trừ"} ${(Math.abs(amt) / 10000).toLocaleString()} vạn lượng cho [${selectedPlayerName}]`);
+    }
+
+    function actZeroGold() {
+      sendRemoteCmd({ op: "gold", setZero: true, v: 0, delta: 0 }, `Đã đưa ngân lượng về 0 của [${selectedPlayerName}]`);
+    }
+
+    function actKnb(amt) {
+      sendRemoteCmd({ op: "knb", v: amt, delta: amt }, `Đã gửi ${amt > 0 ? "tặng" : "trừ"} ${Math.abs(amt)} KNB cho [${selectedPlayerName}]`);
+    }
+
+    function actZeroKnb() {
+      sendRemoteCmd({ op: "knb", setZero: true, v: 0, delta: 0 }, `Đã đưa KNB về 0 của [${selectedPlayerName}]`);
+    }
+
+    function actGiveSet() {
+      const sel = document.getElementById("selSet");
+      const setId = sel ? sel.value : "";
+      if (!setId) return showToast("Chưa chọn bộ trang bị!");
+      const sets = window.UMBALA_SETS || [];
+      const s = sets.find(x => String(x.id) === String(setId));
+      const text = s ? s.n : (sel.selectedOptions[0] ? sel.selectedOptions[0].text : setId);
+      const cmd = {
+        op: "give_set",
+        setId: setId,
+        setName: text,
+        kind: s && s.kind ? s.kind : "gold"
+      };
+      if (s && Array.isArray(s.rows)) cmd.rows = s.rows;
+      sendRemoteCmd(cmd, `Đã gửi [${text}] cho [${selectedPlayerName}]`);
+    }
+
+    function actGiveSetWear() {
+      const sel = document.getElementById("selSet");
+      const setId = sel ? sel.value : "";
+      if (!setId) return showToast("Chưa chọn bộ trang bị!");
+      const sets = window.UMBALA_SETS || [];
+      const s = sets.find(x => String(x.id) === String(setId));
+      const text = s ? s.n : (sel.selectedOptions[0] ? sel.selectedOptions[0].text : setId);
+      const cmd = {
+        op: "give_set",
+        setId: setId,
+        setName: text,
+        kind: s && s.kind ? s.kind : "gold",
+        wear: true
+      };
+      if (s && Array.isArray(s.rows)) cmd.rows = s.rows;
+      sendRemoteCmd(cmd, `Đã gửi & mặc [${text}] cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeSet() {
+      const sel = document.getElementById("selSet");
+      const setId = sel ? sel.value : "";
+      if (!setId) return showToast("Chưa chọn bộ trang bị!");
+      const sets = window.UMBALA_SETS || [];
+      const s = sets.find(x => String(x.id) === String(setId));
+      const text = s ? s.n : (sel.selectedOptions[0] ? sel.selectedOptions[0].text : setId);
+      const cmd = {
+        op: "revoke_set",
+        setId: setId,
+        setName: text
+      };
+      if (s && Array.isArray(s.rows)) cmd.rows = s.rows;
+      sendRemoteCmd(cmd, `Đã gửi lệnh thu hồi [${text}] của [${selectedPlayerName}]`);
+    }
+
+    function actGiveHalo() {
+      const k = document.getElementById("selHalo").value;
+      const perm = document.getElementById("chkHaloPerm").checked;
+      const text = document.getElementById("selHalo").selectedOptions[0].text;
+      sendRemoteCmd({ op: "give_halo", haloKey: k, haloName: text, perm: perm, days: 3 }, `Đã tặng [${text}${perm ? " - Vĩnh viễn" : " - 3 ngày"}] cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeHalo() {
+      const k = document.getElementById("selHalo").value;
+      sendRemoteCmd({ op: "revoke_halo", haloKey: k }, `Đã thu hồi vòng sáng của [${selectedPlayerName}]`);
+    }
+
+    function actGiveAllHalos() {
+      sendRemoteCmd({ op: "give_all_halos", perm: true }, `Đã tặng TRỌN BỘ Vòng Sáng Vĩnh Viễn cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeAllHalos() {
+      sendRemoteCmd({ op: "revoke_all_halos" }, `Đã thu hồi toàn bộ Vòng Sáng của [${selectedPlayerName}]`);
+    }
+
+    function actGiveHorse() {
+      const sel = document.getElementById("selHorse");
+      const hId = sel ? sel.value : "";
+      const hName = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : hId;
+      const horses = window.UMBALA_HORSES || [];
+      const h = horses.find(x => String(x.id) === String(hId)) || { id: hId, n: hName, isTm: String(hId).startsWith("tm_") };
+      const cmd = {
+        op: "horse",
+        horseId: h.id,
+        isTm: !!h.isTm,
+        n: h.n,
+        by: "Admin_Web"
+      };
+      if (h.isTm && h.tmId != null) cmd.tmId = h.tmId;
+      if (h.k != null) cmd.k = h.k;
+      if (h.lvl != null) cmd.lvl = h.lvl;
+      sendRemoteCmd(cmd, `Đã tặng thú cưỡi [${h.n}] cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeHorse() {
+      const sel = document.getElementById("selHorse");
+      const hId = sel ? sel.value : "";
+      const hName = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].text : hId;
+      const horses = window.UMBALA_HORSES || [];
+      const h = horses.find(x => String(x.id) === String(hId)) || { id: hId, n: hName, isTm: String(hId).startsWith("tm_") };
+      sendRemoteCmd({
+        op: "revoke_horse",
+        horseId: h.id,
+        n: h.n,
+        tmId: h.tmId,
+        by: "Admin_Web"
+      }, `Đã gửi lệnh thu hồi thú cưỡi [${h.n}] của [${selectedPlayerName}]`);
+    }
+
+    function actGiveAllHorses() {
+      sendRemoteCmd({ op: "give_all_horses" }, `Đã tặng trọn bộ 48 loài ngựa vào Mã Trường của [${selectedPlayerName}]`);
+    }
+
+    function actRevokeAllHorses() {
+      sendRemoteCmd({ op: "revoke_all_horses" }, `Đã dọn sạch Mã Trường của [${selectedPlayerName}]`);
+    }
+
+    function actGiveMask() {
+      const sel = document.getElementById("selMask");
+      const k = +sel.value;
+      const perm = document.getElementById("chkMaskPerm").checked;
+      sendRemoteCmd({ op: "give_mask", maskK: k, maskName: sel.selectedOptions[0].text, perm: perm }, `Đã tặng mặt nạ [${sel.selectedOptions[0].text}${perm ? " - Vĩnh viễn" : ""}] cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeMask() {
+      const sel = document.getElementById("selMask");
+      sendRemoteCmd({ op: "revoke_mask", maskK: +sel.value, maskName: sel.selectedOptions[0].text }, `Đã gửi lệnh thu hồi mặt nạ của [${selectedPlayerName}]`);
+    }
+
+    function actGiveAllMasks() {
+      sendRemoteCmd({ op: "give_all_masks", perm: true }, `Đã tặng trọn bộ 13 Mặt Nạ Vĩnh Viễn cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeAllMasks() {
+      sendRemoteCmd({ op: "revoke_all_masks" }, `Đã thu hồi toàn bộ Mặt Nạ của [${selectedPlayerName}]`);
+    }
+
+    function actGiveCa() {
+      const k = +document.getElementById("selCa").value;
+      sendRemoteCmd({ op: "give_ca", caKind: k }, `Đã tặng Chiến Ấn cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeCa() {
+      const k = +document.getElementById("selCa").value;
+      sendRemoteCmd({ op: "revoke_ca", caKind: k }, `Đã thu hồi Chiến Ấn của [${selectedPlayerName}]`);
+    }
+
+    function actGiveAllCa() {
+      sendRemoteCmd({ op: "give_all_ca" }, `Đã tặng đủ 4 loại Chiến Ấn cho [${selectedPlayerName}]`);
+    }
+
+    function actGiveCaMats() {
+      sendRemoteCmd({ op: "give_ca_mats" }, `Đã tặng gói nguyên liệu Chiến Ấn cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeAllCa() {
+      sendRemoteCmd({ op: "revoke_all_ca" }, `Đã thu hồi hết Chiến Ấn của [${selectedPlayerName}]`);
+    }
+
+    function actGiveHkmp() {
+      const p = playersList.find(x => x.name === selectedPlayerName);
+      sendRemoteCmd({ op: "give_set", special: "hkmp", fac: p ? p.fac : null }, `Đã gửi tặng trọn bộ HKMP theo phái cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeHkmp() {
+      sendRemoteCmd({ op: "revoke_set", special: "hkmp" }, `Đã thu hồi trang bị HKMP của [${selectedPlayerName}]`);
+    }
+
+    function actGiveAb() {
+      sendRemoteCmd({ op: "give_set", special: "ab" }, `Đã tặng bộ An Bang cho [${selectedPlayerName}]`);
+    }
+
+    function actGiveDq() {
+      sendRemoteCmd({ op: "give_set", special: "dq" }, `Đã tặng bộ Định Quốc cho [${selectedPlayerName}]`);
+    }
+
+    function actEnhFull() {
+      sendRemoteCmd({ op: "enhfull", maxEnh: 10 }, `Đã cường hóa +10 toàn thân cho [${selectedPlayerName}]`);
+    }
+
+    function actEnhReset() {
+      sendRemoteCmd({ op: "enh_reset" }, `Đã đưa cường hóa về +0 cho [${selectedPlayerName}]`);
+    }
+
+    function actStripWear() {
+      sendRemoteCmd({ op: "strip_wear" }, `Đã lột sạch trang bị trên người của [${selectedPlayerName}]`);
+    }
+
+    function actGiveMatPack() {
+      sendRemoteCmd({ op: "matpack" }, `Đã tặng gói Nguyên Liệu Ép Đồ cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeMatPack() {
+      sendRemoteCmd({ op: "revoke_matpack" }, `Đã thu hồi nguyên liệu của [${selectedPlayerName}]`);
+    }
+
+    function actGivePots() {
+      sendRemoteCmd({ op: "give_potions" }, `Đã bơm 500 bình máu & mana cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokePots() {
+      sendRemoteCmd({ op: "revoke_potions" }, `Đã rút hết dược phẩm của [${selectedPlayerName}]`);
+    }
+
+    function actResetAttrs() {
+      sendRemoteCmd({ op: "reset_attrs" }, `Đã tẩy điểm tiềm năng cho [${selectedPlayerName}]`);
+    }
+
+    function actResetSkills() {
+      sendRemoteCmd({ op: "reset_skills" }, `Đã tẩy điểm kỹ năng cho [${selectedPlayerName}]`);
+    }
+
+    function actResetAll() {
+      sendRemoteCmd({ op: "reset_all" }, `Đã tẩy toàn bộ điểm cho [${selectedPlayerName}]`);
+    }
+
+    function actGiveVlmc() {
+      sendRemoteCmd({ op: "give_vlmc" }, `Đã phong tặng danh hiệu Võ Lâm Minh Chủ cho [${selectedPlayerName}]`);
+    }
+
+    function actRevokeVlmc() {
+      sendRemoteCmd({ op: "revoke_vlmc" }, `Đã thu hồi danh hiệu Võ Lâm Minh Chủ của [${selectedPlayerName}]`);
+    }
+
+    function actSendMsg() {
+      const inp = document.getElementById("inpMsgText");
+      const txt = (inp.value || "").trim();
+      if (!txt) return showToast("Chưa nhập nội dung tin nhắn!");
+      inp.value = "";
+      sendRemoteCmd({ op: "msg", v: txt }, `Đã gửi tin nhắn riêng cho [${selectedPlayerName}]`);
+    }
+
+    // 8. ACCOUNTS TAB
+    function renderAccountsTable() {
+      const q = (document.getElementById("accSearchInput").value || "").trim().toLowerCase();
+      const tbody = document.getElementById("accountsTableBody");
+
+      const list = Object.entries(accountsMap).filter(([u, acc]) => {
+        return u.toLowerCase().includes(q) || (acc.charName && acc.charName.toLowerCase().includes(q));
+      });
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-dim)">Không có tài khoản nào phù hợp.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(([u, acc]) => {
+        const lastT = acc.lastLogin ? new Date(acc.lastLogin).toLocaleString("vi-VN") : "Chưa rõ";
+        const passText = acc.rawP ? escapeHtml(acc.rawP) : (acc.p ? "•••••••• (Đã băm)" : "Chưa đặt");
+        return `
+          <tr>
+            <td><b style="color:#7ee07e">${escapeHtml(u)}</b></td>
+            <td><b style="color:var(--gold)">${escapeHtml(acc.charName || u)}</b></td>
+            <td><code>${passText}</code></td>
+            <td style="color:var(--text-dim)">${lastT}</td>
+            <td>
+              <button class="btn" style="padding:4px 8px;font-size:11px" onclick="promptChangePass('${escapeHtml(u)}')">⚡ Đổi Pass</button>
+              <button class="btn danger" style="padding:4px 8px;font-size:11px" onclick="deleteAccount('${escapeHtml(u)}')">Xóa</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function promptChangePass(u) {
+      const cur = accountsMap[u] || {};
+      const newP = prompt(`Nhập mật khẩu mới cho tài khoản [${u}]:`);
+      if (newP === null) return;
+      if (!newP.trim()) return showToast("Mật khẩu không được để trống!");
+
+      try {
+        if (!db) db = firebase.database();
+        await db.ref(`accounts/${u}`).update({
+          p: newP.trim(),
+          rawP: newP.trim()
+        });
+        if (accountsMap[u]) {
+          accountsMap[u].p = newP.trim();
+          accountsMap[u].rawP = newP.trim();
+        }
+        renderAccountsTable();
+        showToast(`Đã đổi mật khẩu cho [${u}] thành công!`);
+      } catch (e) {
+        showToast("Lỗi đổi mật khẩu: " + e.message);
+      }
+    }
+
+    async function deleteAccount(u) {
+      if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản [${u}]?`)) return;
+
+      try {
+        if (!db) db = firebase.database();
+        await db.ref(`accounts/${u}`).remove();
+        await db.ref(`ranking/players/u_${u.toLowerCase()}`).remove();
+        delete accountsMap[u];
+        playersList = playersList.filter(p => p.u !== u);
+        renderAccountsTable();
+        filterPlayers();
+        showToast(`Đã xóa vĩnh viễn tài khoản [${u}]!`);
+      } catch (e) {
+        showToast("Lỗi khi xóa tài khoản: " + e.message);
+      }
+    }
+
+    function confirmDeleteSelectedAcc() {
+      const p = playersList.find(x => x.name === selectedPlayerName);
+      if (!p) return;
+      deleteAccount(p.u || p.name);
+    }
+
+    // 9. CHAT MONITOR & BROADCAST
+    function listenChat() {
+      if (!db) return;
+      const ref = db.ref("chat/msgs").limitToLast(50);
+      ref.on("value", snapshot => {
+        const val = snapshot.val();
+        const container = document.getElementById("chatContainer");
+        if (!val) {
+          container.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:20px">Chưa có tin nhắn nào gần đây.</div>`;
+          return;
+        }
+
+        const msgs = Object.entries(val).map(([k, m]) => ({ id: k, ...m }));
+        container.innerHTML = msgs.map(m => {
+          const time = m.ts ? new Date(m.ts).toLocaleTimeString("vi-VN") : "";
+          const isSys = m.sys || m.cid === "admin";
+          return `
+            <div style="background:#141926;border-radius:6px;padding:8px 12px;border:1px solid ${isSys ? 'var(--gold)' : 'var(--border)'}">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:2px">
+                <b style="color:${isSys ? 'var(--gold)' : '#3498db'}">${escapeHtml(m.name || "Vô Danh")}</b>
+                <span style="color:var(--text-dim)">${time}</span>
+              </div>
+              <div style="font-size:13px;color:${isSys ? '#ffd76a' : '#fff'}">${escapeHtml(m.msg || "")}</div>
+            </div>
+          `;
+        }).join("");
+
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+
+    async function sendBroadcast() {
+      const inp = document.getElementById("inpBroadcast");
+      const txt = (inp.value || "").trim();
+      if (!txt) return showToast("Chưa nhập nội dung thông báo!");
+      inp.value = "";
+
+      try {
+        if (!db) db = firebase.database();
+        await db.ref("chat/msgs").push({
+          cid: "admin",
+          sys: true,
+          name: "Hệ Thống",
+          msg: "📢 [THÔNG BÁO TỔNG QUẢN]: " + txt,
+          ts: Date.now()
+        });
+        showToast("Đã phát thông báo toàn server thành công!");
+      } catch (e) {
+        showToast("Lỗi phát thông báo: " + e.message);
+      }
+    }
+
+    async function confirmClearChat() {
+      if (!confirm("Bạn có chắc chắn muốn XÓA SẠCH toàn bộ tin nhắn kênh chat?")) return;
+      try {
+        if (!db) db = firebase.database();
+        await db.ref("chat/msgs").remove();
+        showToast("Đã dọn sạch kênh chat toàn server!");
+      } catch (e) {
+        showToast("Lỗi xóa chat: " + e.message);
+      }
+    }
+
+    // 10. RANKINGS TAB
+    function sortRanking(mode) {
+      rankingSortMode = mode;
+      document.getElementById("btnSortLv").classList.toggle("active", mode === "lv");
+      document.getElementById("btnSortPower").classList.toggle("active", mode === "power");
+      renderRankingsTable();
+    }
+
+    function renderRankingsTable() {
+      const tbody = document.getElementById("rankingTableBody");
+      const hideGhosts = document.getElementById("chkHideGhosts") ? document.getElementById("chkHideGhosts").checked : true;
+      const list = playersList.filter(p => !hideGhosts || !p.isGhost);
+
+      if (rankingSortMode === "lv") {
+        list.sort((a, b) => {
+          const scoreA = (a.reborn || 0) * 1e6 + (a.lvl || 0) * 1e3;
+          const scoreB = (b.reborn || 0) * 1e6 + (b.lvl || 0) * 1e3;
+          return scoreB - scoreA;
+        });
+      } else {
+        list.sort((a, b) => (b.power || 0) - (a.power || 0));
+      }
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-dim)">Chưa có dữ liệu xếp hạng.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map((p, idx) => {
+        const rankBadge = idx === 0 ? "🥇 TOP 1" : idx === 1 ? "🥈 TOP 2" : idx === 2 ? "🥉 TOP 3" : `#${idx + 1}`;
+        const rankColor = idx === 0 ? "var(--gold)" : idx === 1 ? "#bdc3c7" : idx === 2 ? "#cd7f32" : "var(--text-dim)";
+        return `
+          <tr>
+            <td><b style="color:${rankColor}">${rankBadge}</b></td>
+            <td><b style="color:var(--gold)">${escapeHtml(p.name)}</b></td>
+            <td><span style="color:#7ee07e">${escapeHtml(p.u || "N/A")}</span></td>
+            <td>${getFacName(p.fac)}</td>
+            <td><span class="badge-lv">Lv ${p.lvl || 1}</span></td>
+            <td><span class="badge-cs">CS ${p.reborn || 0}</span></td>
+            <td><b>${(p.power || 0).toLocaleString()}</b></td>
+            <td>
+              <button class="btn" style="padding:4px 8px;font-size:11px" onclick="switchTab('tabPlayers');selectPlayer('${escapeHtml(p.name)}')">Quản lý</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // 11. UTILITIES
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
+
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) targetPane.classList.add("active");
+
+      const idx = ["tabPlayers", "tabAccounts", "tabChat", "tabRankings"].indexOf(tabId);
+      if (idx >= 0) {
+        document.querySelectorAll(".tab-btn")[idx].classList.add("active");
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.innerText = msg;
+      t.style.display = "block";
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => {
+        t.style.display = "none";
+      }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Run on startup
+    window.addEventListener("DOMContentLoaded", checkAuth);
+  </script>
+</body>
+</html>

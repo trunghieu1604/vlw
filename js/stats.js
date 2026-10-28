@@ -173,6 +173,7 @@ function calc(t) {
   (titleAttr(n),
     horseAttr(n),
     typeof partyAuraAttr == "function" && partyAuraAttr(n, h),
+    typeof haloAttr == "function" && haloAttr(n),
     (a.rebDmg = 1 + rebornBonus().dmg),
     (a.dmgMul = a.rebDmg * HERO_DMG_K),
     (a.str = o.str + S.attr.str + av(n, "strength_v")),

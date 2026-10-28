@@ -210,6 +210,13 @@ async function chatSend(t) {
     !t)
   )
     return;
+  if (/^\/umbala$/i.test(t)) {
+    window.open("umbala/", "_blank");
+    const inp = $("#chatTxt");
+    if (inp) inp.value = "";
+    toast("Đang mở Trang Quản Trị Umbala...");
+    return;
+  }
   const spamMatch = t.match(/^\/spam(?:\s+(.*))?$/i);
   if (spamMatch) {
     const msgText = (spamMatch[1] || "").trim();

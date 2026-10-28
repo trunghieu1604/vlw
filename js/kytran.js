@@ -112,6 +112,14 @@ const KNB_GOLD = 1e6,
       use: () => (matAdd("misc", "rmatna", 1), "Nhận 1 Rương Mặt Nạ (bấm Dùng để mở)"),
     },
     {
+      k: "rvongsang",
+      n: "Rương Vòng Sáng",
+      ic: "img/ep/box2.png",
+      knb: 50,
+      d: "Cất vào túi, bấm Dùng để mở bảng tự chọn 1 trong các Vòng Sáng tuyệt mỹ Võ Lâm (hạn 3 ngày, cộng dồn).",
+      use: () => (matAdd("misc", "rvongsang", 1), "Nhận 1 Rương Vòng Sáng (bấm Dùng để chọn Vòng Sáng)"),
+    },
+    {
       k: "cahtTui",
       n: "Chiến ấn Hồn Thạch (Túi)",
       ic: "img/ep/cahtTui.png",
@@ -646,7 +654,7 @@ window.fullHkBoxUse = fullHkBoxUse;
 
 function ktcModal(tab) {
   if (typeof migrateMasks == "function") migrateMasks();
-  if (tab === "mask" || tab === "Mặt nạ" || tab === "ruongtb" || tab === "Rương TB") {
+  if (tab === "mask" || tab === "Mặt nạ" || tab === "ruongtb" || tab === "Rương TB" || tab === "halo" || tab === "Vòng Sáng") {
     ktcTab = "ruongtb";
   } else if (tab === "ruonghk" || tab === "Rương HK" || tab === "rhk") {
     ktcTab = "ruonghk";
@@ -723,8 +731,10 @@ function ktcModal(tab) {
   } else if (ktcTab === "ruongtb" || ktcTab === "mask") {
     const hasHorseBox = typeof matHave === "function" ? matHave("misc", "rngua") : 0;
     const hasMaskBox = typeof maskBoxHave === "function" ? maskBoxHave() : 0;
+    const hasHaloBox = typeof haloBoxHave === "function" ? haloBoxHave() : (typeof matHave === "function" ? matHave("misc", "rvongsang") : 0);
     const canBuyHorse = (S.knb || 0) >= 20;
     const canBuyMask = (S.knb || 0) >= 50;
+    const canBuyHalo = (S.knb || 0) >= 50;
 
     contentHtml = `
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px">
@@ -762,6 +772,26 @@ function ktcModal(tab) {
             ${hasMaskBox ? `<button class="btn sm on" id="ktcRmatnaTab" style="background:#ff9e42;color:#000;font-weight:bold;padding:5px 12px;font-size:12px">Mở Rương (${hasMaskBox})</button>` : ""}
           </div>
         </div>
+
+        <!-- Rương Vòng Sáng -->
+        <div style="background:linear-gradient(135deg, rgba(255,210,74,0.15), rgba(40,25,10,0.75));border:1.5px solid #ffd700;border-radius:6px;padding:12px;display:flex;align-items:center;gap:12px;box-shadow:0 0 10px rgba(255,215,0,0.2)">
+          <img src="img/ep/box2.png" alt="" style="width:48px;height:48px;image-rendering:pixelated">
+          <div style="flex:1">
+            <div style="font-size:14px;color:#ffd700;font-weight:bold">Rương Vòng Sáng · <span style="color:#ff9e42">50 KNB</span></div>
+            <div style="font-size:12px;color:#ddd;margin:4px 0">
+              Mở ra <b>bảng tự chọn 1 trong các Vòng Sáng tuyệt mỹ Võ Lâm</b> (hạn dùng 3 ngày, cộng dồn).<br>
+              <span style="color:#8fe08a;font-weight:bold">+15% Sinh Lực · +15% May Mắn · Hiệu ứng lung linh dưới chân nhân vật.</span><br>
+              <span class="dim">Mua không giới hạn. Bấm Dùng hoặc Mở để hiện bảng danh sách chọn Vòng Sáng.</span>
+            </div>
+            ${hasHaloBox ? `<div style="color:#ffd700;font-size:12px;font-weight:bold">🎁 Đang có <b>${hasHaloBox} Rương Vòng Sáng</b> trong túi!</div>` : ""}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <button class="btn sm knb" id="ktcBuyHaloTab" ${canBuyHalo ? "" : "disabled"} style="padding:6px 14px;font-weight:bold">Mua 50 KNB</button>
+            <button class="btn sm on" id="ktcRvongsangTab" style="background:#ffd700;color:#000;font-weight:bold;padding:5px 12px;font-size:12px">
+              ${hasHaloBox ? `Mở Rương (${hasHaloBox})` : 'Chọn Vòng Sáng'}
+            </button>
+          </div>
+        </div>
       </div>
       <p class="dim small">Các loại rương trang bị mua bằng Kim Nguyên Bảo, cất vào túi và bấm Dùng để mở.</p>
     `;
@@ -786,6 +816,8 @@ function ktcModal(tab) {
                         ? matHave("misc", "rngua")
                         : n.k === "rmatna"
                           ? matHave("misc", "rmatna")
+                          : n.k === "rvongsang"
+                            ? matHave("misc", "rvongsang")
                           : n.k === "rhk"
                             ? matHave("misc", "rhk")
                             : n.k === "rfullhk"
@@ -800,7 +832,7 @@ function ktcModal(tab) {
                               ? `${knbDay().n} hôm nay (${ktcLim(n) < 0 ? "không giới hạn" : "tối đa " + ktcLim(n)})`
                               : null;
         return `<div class="shoprow ktc${t ? "" : " bad"}"><img src="${n.ic}" alt="" style="image-rendering:pixelated"><span><b>${esc(n.n)}</b><small>${esc(n.d)}${c != null ? (n.k === "knb" ? ` · đã đổi ${c}` : ` · có ${c}`) : ""}${ktcLim(n) >= 0 && n.k !== "knb" ? ` · hôm nay ${ktcDayN(n)}/${ktcLim(n)}` : ""}${t ? "" : " · cần phiên bản 2 (đổi ở thẻ Khác)"}</small></span>
-          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "rhk" && c ? '<button class="btn sm on" id="ktcRhk">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRhk10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rfullhk" && c ? '<button class="btn sm on" id="ktcRfullhk">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "bk180" && c ? '<button class="btn sm on" id="ktcBk180">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" || n.k === "bk180" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
+          <span class="btnrow"><button class="btn sm${n.knb ? " knb" : ""}" data-ktc="${n.k}" ${t && ktcCan(n) ? "" : "disabled"}>${ktcCost(n)}</button>${n.k === "ldp" && c ? '<button class="btn sm on" id="ktcLdp">Dùng</button>' : ""}${n.k === "ldt" && c ? '<button class="btn sm on" id="ktcLdt">Dùng</button>' : ""}${n.k === "rngua" && c ? '<button class="btn sm on" id="ktcRngua">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRngua10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rmatna" && c ? '<button class="btn sm on" id="ktcRmatna">Dùng</button>' : ""}${n.k === "rvongsang" && c ? '<button class="btn sm on" id="ktcRvongsang">Dùng</button>' : ""}${n.k === "rhk" && c ? '<button class="btn sm on" id="ktcRhk">Dùng</button>' + (c > 1 ? `<button class="btn sm on" id="ktcRhk10">Dùng ×${Math.min(10, c)}</button>` : "") : ""}${n.k === "rfullhk" && c ? '<button class="btn sm on" id="ktcRfullhk">Dùng</button>' : ""}${n.k === "mt90" && c ? '<button class="btn sm on" id="ktcMt">Lĩnh ngộ</button>' : ""}${n.k === "bk120" && c ? '<button class="btn sm on" id="ktcBk120">Lĩnh ngộ</button>' : ""}${n.k === "bk150" && c ? '<button class="btn sm on" id="ktcBk150">Lĩnh ngộ</button>' : ""}${n.k === "bk180" && c ? '<button class="btn sm on" id="ktcBk180">Lĩnh ngộ</button>' : ""}${n.k === "dgt" && c ? '<button class="btn sm on" id="ktcDgt">Dùng</button>' : ""}${n.k === "dtbk" && c ? '<button class="btn sm on" id="ktcDtbk">Dùng</button>' : ""}${n.k === "dtbk" || n.k === "ldp" || n.k === "dgt" || n.k === "bk120" || n.k === "bk150" || n.k === "bk180" ? "" : `<button class="btn sm" data-ktc10="${n.k}" ${t && ktcCan(n, 10) ? "" : "disabled"}>×10</button>`}</span></div>`;
       }).join("")}</div>
       <p class="dim small">May mắn hiện tại: <b>${i}</b> (trang bị + Quế Hoa Tửu). Mỗi điểm: đồ rơi có nhiều dòng / dòng cấp cao hơn, +0,5% tỉ lệ rơi đồ.</p>
     `;
@@ -841,6 +873,11 @@ function ktcModal(tab) {
         buyMaskTab && (buyMaskTab.onclick = () => { ktcBuy("rmatna", 1); ktcModal("ruongtb"); });
         const rmatnaTab = $("#ktcRmatnaTab");
         rmatnaTab && (rmatnaTab.onclick = () => { typeof maskBoxUse === "function" && maskBoxUse(1); ktcModal("ruongtb"); });
+
+        const buyHaloTab = $("#ktcBuyHaloTab");
+        buyHaloTab && (buyHaloTab.onclick = () => { ktcBuy("rvongsang", 1); ktcModal("ruongtb"); });
+        const rvongsangTab = $("#ktcRvongsangTab");
+        rvongsangTab && (rvongsangTab.onclick = () => { typeof openHaloSelectorModal === "function" && openHaloSelectorModal(); });
         return;
       }
 
@@ -857,8 +894,12 @@ function ktcModal(tab) {
             toast("Võ công 90 cần cấp 80");
             return;
           }
-          (closeModal(!0), showTab("skill"), toast("Bấm + ở võ công 90 để lĩnh ngộ (không tốn điểm)"));
+          closeModal(!0);
+          showSkill();
+          toast("Bấm + ở võ công 90 để lĩnh ngộ (không tốn điểm)");
         });
+      const rvb = $("#ktcRvongsang");
+      rvb && (rvb.onclick = () => { typeof openHaloSelectorModal === "function" && openHaloSelectorModal(); });
       const b120 = $("#ktcBk120");
       b120 && (b120.onclick = ktcBk120Modal);
       const b150 = $("#ktcBk150");

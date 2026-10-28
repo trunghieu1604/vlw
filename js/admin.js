@@ -137,6 +137,7 @@ function admTabLv() {
   <div class="admh">Điểm</div><div class="btnrow"><button class="btn sm" data-a="ap:10">+10 tiềm năng</button><button class="btn sm" data-a="ap:100">+100 tiềm năng</button><button class="btn sm" data-a="sp:5">+5 kỹ năng</button><button class="btn sm" data-a="sp:50">+50 kỹ năng</button><button class="btn sm on" data-a="spend">Tự cộng hết điểm</button></div>
   <div class="admh">Chuyển Sinh (CS ${typeof rebGet == "function" ? rebGet() : (S && S.rw && S.rw.stat ? S.rw.stat.reborn : 0)})</div><div class="btnrow"><button class="btn sm" data-a="reb:1">+1 CS</button><button class="btn sm" data-a="reb:-1">-1 CS (Giảm CS)</button><button class="btn sm" data-a="reb:0">Về CS 0</button><button class="btn sm" data-a="reb:10">CS 10</button><button class="btn sm on" data-a="reb:20">CS 20 (Tối đa)</button></div>
   <div class="admh">Danh Hiệu Giang Hồ</div><div class="btnrow"><button class="btn sm on" data-a="titleall">🎖 Mở khóa mọi Danh Hiệu</button><button class="btn sm" data-a="titlemodal">Xem & Đeo Danh Hiệu</button></div>
+  <div class="admh">Vòng Sáng Tuyệt Mỹ</div><div class="btnrow"><button class="btn sm on" data-a="haloallperm">✨ Nhận Mọi Vòng Sáng Vĩnh Viễn</button><button class="btn sm" data-a="halomodal">Xem & Đeo Vòng Sáng</button></div>
   <div class="admh">Tiện Ích Nhanh</div><div class="btnrow"><button class="btn sm red" data-a="clearchat">💬 Xóa Sạch Kênh Chat</button><button class="btn sm" data-a="cd">Đặt lại hồi chiêu</button><button class="btn sm on" data-a="full">Hồi đầy máu/mana</button></div>
   ${typeof isNovice == "function" && isNovice() && S.lvl >= NOVICE_LV ? `<div class="btnrow"><button class="btn sm on" data-a="join">Gia nhập môn phái</button></div>` : ""}
   <p class="dim small">Lên cấp đi theo đường lên cấp của game (cộng tiềm năng / kỹ năng mỗi cấp, tự cộng điểm nếu bật, tự đổi bãi, mốc quà cấp).</p>`;
@@ -189,6 +190,23 @@ function admTitleAll() {
   save();
   typeof refresh == "function" && refresh();
   return `Đã mở khóa toàn bộ ${TITLES.length} Danh Hiệu (gồm cả «Vô Song Vương Giả»)!`;
+}
+function admHaloAllPerm() {
+  const halos = typeof HALO_DEFS !== "undefined" ? HALO_DEFS : {};
+  S.haloExp = S.haloExp || {};
+  S.haloPerm = S.haloPerm || {};
+  let count = 0;
+  for (const k in halos) {
+    S.haloPerm[k] = 1;
+    S.haloExp[k] = -1;
+    count++;
+  }
+  if (!S.halo) S.halo = "ndg";
+  R.dirty = true;
+  if (typeof recalc === "function") recalc();
+  if (typeof save === "function") save();
+  if (typeof refresh === "function") refresh();
+  return `Đã mở khóa vĩnh viễn toàn bộ ${count} Vòng Sáng Hoàng Kim Võ Lâm!`;
 }
 
 // ---------- Tiền ----------
@@ -922,6 +940,17 @@ let admPeSet = "";
 let admPeHorse = "";
 let admPeMask = 1;
 let admPeMaskPerm = false;
+let admPeHalo = "ndg";
+let admPeHaloPerm = true;
+
+function admHaloOpts(cur) {
+  const halos = typeof HALO_DEFS !== "undefined" ? HALO_DEFS : {};
+  return Object.keys(halos).map(k => {
+    const h = halos[k];
+    const name = h.name || k;
+    return `<option value="${k}" ${k === cur ? "selected" : ""}>${esc(name)} (+${h.life || 0}% HP, +${h.luck || 0}% May mắn)</option>`;
+  }).join("");
+}
 
 function admPeSetOptions(targetFac) {
   const all = typeof admAllCatalog === "function" ? admAllCatalog() : [];
@@ -1233,6 +1262,22 @@ function admTabPlayers() {
     <button class="btn sm red" data-a="pe_revokevlmc" title="Thu hồi danh hiệu Võ Lâm Minh Chủ">🚫 Thu Hồi VLMC</button>
   </div>
 
+  <div class="admh">✨ Vòng Sáng (Tặng Vĩnh Viễn / Thu Hồi)</div>
+  <div class="admf" style="margin-bottom:6px">
+    <select id="admPeHalo" style="flex:1 1 200px;min-width:180px;background:#111;color:#fff;border:1px solid #777;padding:5px;font-size:12px">
+      ${admHaloOpts(admPeHalo || "ndg")}
+    </select>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#ffd76a;white-space:nowrap;margin:0 4px">
+      <input type="checkbox" id="admPeHaloPerm" ${admPeHaloPerm ? "checked" : ""}> Vĩnh viễn
+    </label>
+    <button class="btn sm on" data-a="pe_givehalo">🎁 Tặng Vòng Sáng Này</button>
+    <button class="btn sm red" data-a="pe_revokehalo" title="Thu hồi vòng sáng đang chọn trong dropdown">🚫 Thu Hồi Vòng Sáng Này</button>
+  </div>
+  <div class="btnrow" style="margin-bottom:8px">
+    <button class="btn sm on" data-a="pe_giveallhalos" title="Tặng toàn bộ vòng sáng vĩnh viễn cho người chơi">⚡ Tặng Đủ Vòng Sáng</button>
+    <button class="btn sm red" data-a="pe_revokeallhalos" title="Thu hồi toàn bộ vòng sáng trên người">🧹 Thu Hồi Hết Vòng Sáng</button>
+  </div>
+
   <div class="admh">✉️ Gửi Tin Nhắn / Cảnh Báo Riêng (Popup)</div>
   <div style="display:flex;gap:4px;margin-bottom:8px">
     <input type="text" id="admPeMsgVal" placeholder="Nhập lời nhắn gửi riêng cho người này…" style="flex:1;background:#111;color:#fff;border:1px solid #555;padding:5px 8px;font-size:12px;border-radius:3px">
@@ -1243,57 +1288,13 @@ function admTabPlayers() {
 }
 
 function admModal() {
-  if (!admOk()) return toast(ADM_DENY);
-  const body0 = { lv: admTabLv, money: admTabMoney, item: admTabItem, eq: admTabEq, skill: admTabSkill, world: admTabWorld, players: admTabPlayers }[admTab] || admTabLv,
-    body = () => admInCh(admTab, body0),
-    old = $("#mBody .admbody"),
-    sc = old && $("#mBody .admbox") ? old.scrollTop : 0,
-    ls = $("#mBody .admlist"),
-    lsc = ls ? ls.scrollTop : 0;
-  modal(
-    `<div class="admbox"><h3 style="margin:0 0 6px"><img src="${ADM_IC}" alt="" class="admic"> ${ADM_NAME} <small>${admHostOk() ? "admin online" : "v3.0.6 Final"}</small></h3>
-    <div class="dtabs admtabs">${ADM_TABS.map(([k, n]) => `<button data-at="${k}" class="${k === admTab ? "on" : ""}">${n}</button>`).join("")}</div>
-    ${admChRow()}<div class="admbody">${body()}</div></div>`,
-    () => {
-      const b = $("#mBody .admbody");
-      b && (b.scrollTop = sc);
-      const l = $("#mBody .admlist");
-      l && (l.scrollTop = lsc);
-      document.querySelectorAll("#mBody [data-at]").forEach((e) => (e.onclick = () => ((admTab = e.dataset.at), admModal())));
-      document.querySelectorAll("#mBody [data-ach]").forEach((e) => (e.onclick = () => ((admCh = +e.dataset.ach), admModal())));
-      document.querySelectorAll("#mBody [data-a]").forEach((e) => (e.onclick = () => admAct(e.dataset.a)));
-      const v = (id) => $("#" + id);
-      v("admPeTarget") && (v("admPeTarget").onchange = (e) => {
-        admPeSelectedName = e.target.value;
-        admPeSet = "";
-        admModal();
-      });
-      v("admPeSet") && (v("admPeSet").onchange = () => (admPeSet = v("admPeSet").value));
-      v("admPeHorse") && (v("admPeHorse").onchange = () => (admPeHorse = v("admPeHorse").value));
-      v("admPeMask") && (v("admPeMask").onchange = () => (admPeMask = +v("admPeMask").value || 1));
-      v("admPeMaskPerm") && (v("admPeMaskPerm").onchange = () => (admPeMaskPerm = !!v("admPeMaskPerm").checked));
-      const eqSync = () => {
-        const g = (id, d) => (v(id) ? +v(id).value : d);
-        admEq = { d: g("admEqD", 0), k: g("admEqK", 0), lv: g("admEqL", 10), n: g("admEqN", 6), s: g("admEqS", -1), q: clamp(g("admEqQ", 1) | 0, 1, 20) };
-      };
-      v("admEqD") && (v("admEqD").onchange = () => (eqSync(), admModal()));
-      ["admEqK", "admEqL", "admEqN", "admEqS", "admEqQ"].forEach((id) => v(id) && (v(id).onchange = eqSync));
-      v("admSetCat") && (v("admSetCat").onchange = () => { admSetCat = v("admSetCat").value; admSet = ""; admModal(); });
-      v("admSetFac") && (v("admSetFac").onchange = () => { admSetFac = v("admSetFac").value; admSet = ""; admModal(); });
-      v("admSet") && (v("admSet").onchange = () => (admSet = v("admSet").value));
-      v("admHorse") && (v("admHorse").onchange = () => (admHorse = v("admHorse").value));
-      v("admMask") && (v("admMask").onchange = () => (admMask = +v("admMask").value || 1));
-      v("admThQ") &&
-        typeof thFilter == "function" &&
-        (v("admThQ").oninput = () => thFilter($("#mBody .admlist"), v("admThQ").value));
-    }
-  );
+  return;
 }
 function admAct(a) {
   const [k, x, y] = a.split(":"),
     v = (id) => ($("#" + id) || {}).value;
   const tab = {
-    lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv", reb: "lv",
+    lv: "lv", lvmax: "lv", lvset: "lv", xp: "lv", ap: "lv", sp: "lv", spend: "lv", titleall: "lv", titlemodal: "lv", reb: "lv", haloallperm: "lv", halomodal: "lv",
     eqmake: "eq", eqfull: "eq", set: "eq", setwear: "eq", horse: "eq", horseall: "eq", enhfull: "eq", matpack: "eq",
     mask: "eq", mask_all: "eq", mask_reset: "eq", mask_refresh: "eq",
     skmax: "skill", cd: "skill", full: "skill"
@@ -1494,6 +1495,10 @@ function admAct(a) {
         return admTitleAll();
       case "titlemodal":
         return (setTimeout(() => typeof titleModal == "function" && titleModal(), 50), "Mở bảng Danh Hiệu");
+      case "haloallperm":
+        return admHaloAllPerm();
+      case "halomodal":
+        return (setTimeout(() => typeof openHaloSelectorModal === "function" && openHaloSelectorModal(), 50), "Mở bảng chọn Vòng Sáng");
       case "skmax":
         return admMaxSkills();
       case "cd":
@@ -2083,6 +2088,52 @@ function admAct(a) {
         const pName = admPeSelectedName;
         if (!pName) return (toast("Chưa chọn người chơi"), "");
         return sendPlayerEditCmd(pName, { op: "revoke_vlmc", by: S.name || "Admin" }, `Đã gửi lệnh thu hồi danh hiệu Võ Lâm Minh Chủ của [${pName}]`);
+      }
+      case "pe_givehalo": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const haloK = ($("#admPeHalo") ? $("#admPeHalo").value : admPeHalo) || admPeHalo || "ndg";
+        const isPerm = $("#admPeHaloPerm") ? $("#admPeHaloPerm").checked : admPeHaloPerm;
+        const hDef = (typeof HALO_DEFS !== "undefined" && HALO_DEFS[haloK]) || { name: haloK };
+        const hName = hDef.name || haloK;
+        return sendPlayerEditCmd(pName, {
+          op: "give_halo",
+          haloKey: haloK,
+          haloName: hName,
+          perm: !!isPerm,
+          by: S.name || "Admin"
+        }, `Đã tặng [${hName}${isPerm ? " (Vĩnh viễn)" : " (3 ngày)"}] cho [${pName}]`);
+      }
+      case "pe_giveallhalos": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const isPerm = $("#admPeHaloPerm") ? $("#admPeHaloPerm").checked : admPeHaloPerm;
+        return sendPlayerEditCmd(pName, {
+          op: "give_all_halos",
+          perm: !!isPerm,
+          by: S.name || "Admin"
+        }, `Đã gửi tặng mọi Vòng Sáng${isPerm ? " (Vĩnh viễn)" : ""} cho [${pName}]`);
+      }
+      case "pe_revokehalo": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        const haloK = ($("#admPeHalo") ? $("#admPeHalo").value : admPeHalo) || admPeHalo || "ndg";
+        const hDef = (typeof HALO_DEFS !== "undefined" && HALO_DEFS[haloK]) || { name: haloK };
+        const hName = hDef.name || haloK;
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_halo",
+          haloKey: haloK,
+          haloName: hName,
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi [${hName}] của [${pName}]`);
+      }
+      case "pe_revokeallhalos": {
+        const pName = admPeSelectedName;
+        if (!pName) return (toast("Chưa chọn người chơi"), "");
+        return sendPlayerEditCmd(pName, {
+          op: "revoke_all_halos",
+          by: S.name || "Admin"
+        }, `Đã gửi lệnh thu hồi toàn bộ vòng sáng của [${pName}]`);
       }
       case "go":
         return admGo(a.slice(3));

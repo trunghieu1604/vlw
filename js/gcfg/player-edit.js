@@ -122,27 +122,52 @@
       case "xp":
         return inCh(g.ch, () => xpAdd(g.v));
       case "reset":
-        return inCh(g.ch, () => (resetPts(!!g.a, !!g.s), `${nm()}tẩy ${[g.a && "tiềm năng", g.s && "kỹ năng"].filter(Boolean).join(" + ")}: ${S.attrPts} tiềm năng, ${S.skPts} điểm kỹ năng`));
+      case "reset_attrs":
+      case "reset_skills":
+      case "reset_all": {
+        const resetA = g.op === "reset_attrs" || g.op === "reset_all" || !!g.a;
+        const resetS = g.op === "reset_skills" || g.op === "reset_all" || !!g.s;
+        return inCh(g.ch, () => {
+          resetPts(resetA, resetS);
+          typeof recalc === "function" && recalc();
+          typeof renderPad === "function" && renderPad();
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
+          return `${nm()}tẩy ${[resetA && "tiềm năng", resetS && "kỹ năng"].filter(Boolean).join(" + ")}: ${S.attrPts} tiềm năng, ${S.skPts} điểm kỹ năng`;
+        });
+      }
       case "move":
         return moveTo(g.uids, g.ch | 0);
-      case "gold":
+      case "gold": {
         if (g.setZero) {
           S.gold = 0;
           R.dirty = !0;
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
           return `${nm()}đưa ngân lượng về 0`;
         }
-        S.gold = Math.max(0, (S.gold || 0) + (+g.v || 0));
+        const val = g.v != null ? +g.v : (g.delta != null ? +g.delta : 0);
+        S.gold = Math.max(0, (S.gold || 0) + val);
         R.dirty = !0;
-        return `${nm()}${(+g.v >= 0 ? "+" : "") + fmtL(g.v)} ngân lượng`;
-      case "knb":
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}${(val >= 0 ? "+" : "") + fmtL(val)} ngân lượng`;
+      }
+      case "knb": {
         if (g.setZero) {
           S.knb = 0;
           R.dirty = !0;
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
           return `${nm()}đưa KNB về 0`;
         }
-        S.knb = Math.max(0, (S.knb || 0) + (+g.v || 0));
+        const val = g.v != null ? +g.v : (g.delta != null ? +g.delta : 0);
+        S.knb = Math.max(0, (S.knb || 0) + val);
         R.dirty = !0;
-        return `${nm()}${(+g.v >= 0 ? "+" : "") + (+g.v)} KNB`;
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}${(val >= 0 ? "+" : "") + val} KNB`;
+      }
       case "msg":
         setTimeout(() => {
           typeof modal === "function" && modal(
@@ -295,6 +320,56 @@
         typeof refresh === "function" && refresh();
         return `${nm()}nhận trọn bộ <b>${added} mặt nạ Võ Lâm</b>${perm ? " (Vĩnh viễn)" : ""}`;
       }
+      case "give_halo": {
+        const k = g.haloKey || "ndg";
+        const perm = !!g.perm;
+        const days = +g.days || 3;
+        if (typeof grantHalo === "function") {
+          grantHalo(k, perm, days);
+        } else {
+          S.haloExp = S.haloExp || {};
+          S.haloPerm = S.haloPerm || {};
+          if (perm) {
+            S.haloPerm[k] = 1;
+            S.haloExp[k] = -1;
+          } else {
+            const currentExp = S.haloExp[k] || 0;
+            const baseTime = (currentExp > Date.now()) ? currentExp : Date.now();
+            S.haloExp[k] = baseTime + days * 86400 * 1000;
+          }
+          S.halo = k;
+          R.dirty = !0;
+          typeof recalc === "function" && recalc();
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
+        }
+        const hDef = (typeof HALO_DEFS !== "undefined" && HALO_DEFS[k]) || { name: k };
+        return `${nm()}nhận được Vòng Sáng <b>${esc(hDef.name || k)}</b>${perm ? " (Vĩnh viễn)" : ` (${days} ngày)`}`;
+      }
+      case "give_all_halos": {
+        const perm = !!g.perm;
+        const halos = typeof HALO_DEFS !== "undefined" ? HALO_DEFS : {};
+        let added = 0;
+        S.haloExp = S.haloExp || {};
+        S.haloPerm = S.haloPerm || {};
+        for (const k in halos) {
+          if (perm) {
+            S.haloPerm[k] = 1;
+            S.haloExp[k] = -1;
+          } else {
+            const currentExp = S.haloExp[k] || 0;
+            const baseTime = (currentExp > Date.now()) ? currentExp : Date.now();
+            S.haloExp[k] = baseTime + 3 * 86400 * 1000;
+          }
+          added++;
+        }
+        if (!S.halo) S.halo = "ndg";
+        R.dirty = !0;
+        typeof recalc === "function" && recalc();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}nhận trọn bộ <b>${added} Vòng Sáng Hoàng Kim Võ Lâm</b>${perm ? " (Vĩnh viễn)" : " (3 ngày)"}`;
+      }
       case "give_ca": {
         const k = g.caKind != null ? +g.caKind : 0;
         const it = typeof generateChienAnItem === "function" ? generateChienAnItem(k) : null;
@@ -365,6 +440,11 @@
             setName = found.n;
           }
         }
+        if (!setRows && Array.isArray(g.rows) && g.rows.length) {
+          setRows = g.rows;
+          setKind = g.kind || "gold";
+          setName = g.setName || "Trang bị";
+        }
         if (!setRows && g.special === "hkmp") {
           const myFid = S.fac != null && typeof FAC !== "undefined" && FAC[S.fac] ? FAC[S.fac].id : -1;
           const targetFac = g.fac != null && g.fac >= 0 ? g.fac : myFid;
@@ -408,9 +488,14 @@
         }
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof recalc === "function" && recalc();
+        typeof renderPad === "function" && renderPad();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}nhận ${added}/${its.length} món bộ <b>${esc(setName || "Trang bị")}</b>`;
       }
-      case "matpack": {
+      case "matpack":
+      case "give_matpack": {
         const addMat = typeof matAdd === "function" ? matAdd : (k, t, n) => {
           const m = S.mats || (S.mats = {});
           m[k] = m[k] || {};
@@ -431,32 +516,52 @@
           oreCount += 5;
         }
         R.dirty = !0;
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}nhận <b>Gói Nguyên Liệu (99 HT10, 99 Thủy Tinh, Đá c6, +10.000 Phúc Duyên)</b>`;
       }
-      case "enhfull": {
+      case "enhfull":
+      case "enhance_full": {
         let count = 0;
         const maxEnh = typeof ENH_MAX !== "undefined" ? ENH_MAX : 10;
         for (const k in S.eq || {}) {
           const it = S.eq[k];
           if (it && (typeof isHorse !== "function" || !isHorse(it))) {
             it.enh = maxEnh;
+            typeof recEnh === "function" && recEnh(it);
             count++;
           }
         }
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof recalc === "function" && recalc();
+        typeof renderPad === "function" && renderPad();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}cường hóa <b>+${maxEnh} toàn thân</b> (${count} món trang bị)`;
       }
       case "give_potions": {
+        const ps = (typeof J !== "undefined" && J.potions) ? J.potions : [];
         if (typeof potStock === "function") {
-          for (const kind of ["life", "mana"]) {
-            const arr = potStock(kind);
-            if (Array.isArray(arr)) {
-              for (let i = 0; i < arr.length; i++) arr[i] = (arr[i] || 0) + 500;
+          if (ps && ps.length) {
+            for (const p of ps) {
+              if (p && p.kind) {
+                const stock = potStock(p.kind);
+                stock[p.tier] = (stock[p.tier] || 0) + 500;
+              }
+            }
+          } else {
+            for (const kind of ["life", "mana"]) {
+              const stock = potStock(kind);
+              for (let tier = 0; tier <= 5; tier++) {
+                stock[tier] = (stock[tier] || 0) + 500;
+              }
             }
           }
         }
         R.dirty = !0;
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}nhận <b>+500 mọi loại bình dược phẩm (máu & nội lực)</b>`;
       }
       case "revoke_vlmc": {
@@ -592,6 +697,32 @@
         typeof refresh === "function" && refresh();
         return `${nm()}thu hồi toàn bộ mặt nạ (${count} chiếc)`;
       }
+      case "revoke_halo": {
+        const k = g.haloKey || "ndg";
+        if (typeof revokeHalo === "function") {
+          revokeHalo(k);
+        } else {
+          if (S.haloPerm) delete S.haloPerm[k];
+          if (S.haloExp) delete S.haloExp[k];
+          if (S.halo === k) S.halo = "";
+          R.dirty = !0;
+          typeof recalc === "function" && recalc();
+          typeof save === "function" && save();
+          typeof refresh === "function" && refresh();
+        }
+        const hDef = (typeof HALO_DEFS !== "undefined" && HALO_DEFS[k]) || { name: k };
+        return `${nm()}đã bị thu hồi Vòng Sáng <b>${esc(hDef.name || k)}</b>`;
+      }
+      case "revoke_all_halos": {
+        S.haloPerm = {};
+        S.haloExp = {};
+        S.halo = "";
+        R.dirty = !0;
+        typeof recalc === "function" && recalc();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
+        return `${nm()}đã bị thu hồi toàn bộ Vòng Sáng trên người`;
+      }
       case "revoke_ca": {
         const k = g.caKind != null ? +g.caKind : null;
         const caName = g.caName;
@@ -654,6 +785,9 @@
             setNames = found.rows.map((r) => r.n || r[1] || "").filter(Boolean);
           }
         }
+        if (!setNames.length && Array.isArray(g.rows) && g.rows.length) {
+          setNames = g.rows.map((r) => r.n || r[1] || "").filter(Boolean);
+        }
         if (g.special === "hkmp") {
           all.filter((x) => x.cat === "hkmp").forEach((s) => {
             if (Array.isArray(s.rows)) s.rows.forEach((r) => setNames.push(r.n || r[1] || ""));
@@ -685,6 +819,10 @@
         }
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof recalc === "function" && recalc();
+        typeof renderPad === "function" && renderPad();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}thu hồi ${removed} món trang bị [${esc(g.setName || g.special || "set")}]`;
       }
       case "strip_wear": {
@@ -697,37 +835,55 @@
         }
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof recalc === "function" && recalc();
+        typeof renderPad === "function" && renderPad();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}lột toàn bộ ${count} món trang bị đang mặc trên người`;
       }
-      case "enh_reset": {
+      case "enh_reset":
+      case "enhance_reset": {
         let count = 0;
         for (const k in S.eq || {}) {
           const it = S.eq[k];
           if (it && (typeof isHorse !== "function" || !isHorse(it))) {
             it.enh = 0;
+            typeof recEnh === "function" && recEnh(it);
             count++;
           }
         }
         R.dirty = !0;
         typeof invDirty !== "undefined" && (invDirty = !0);
+        typeof recalc === "function" && recalc();
+        typeof renderPad === "function" && renderPad();
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}giảm cường hóa về +0 toàn thân (${count} món)`;
       }
       case "revoke_matpack": {
         S.mats = { ht: {}, ore: {}, shard: {}, misc: {} };
         if (typeof RW === "function") RW().fd = 0;
         R.dirty = !0;
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}thu hồi toàn bộ kho nguyên liệu ép đồ (Huyền Tinh, Thủy Tinh, Đá c6, Phúc Duyên)`;
       }
       case "revoke_potions": {
         if (typeof potStock === "function") {
           for (const kind of ["life", "mana"]) {
-            const arr = potStock(kind);
-            if (Array.isArray(arr)) {
-              for (let i = 0; i < arr.length; i++) arr[i] = 0;
+            const stock = potStock(kind);
+            if (stock && typeof stock === "object") {
+              for (const k in stock) stock[k] = 0;
             }
           }
         }
+        if (typeof S !== "undefined" && S && S.potStock) {
+          S.potStock.life = {};
+          S.potStock.mana = {};
+        }
         R.dirty = !0;
+        typeof save === "function" && save();
+        typeof refresh === "function" && refresh();
         return `${nm()}rút toàn bộ dược phẩm (máu & mana về 0)`;
       }
     }

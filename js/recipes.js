@@ -796,12 +796,20 @@ const PLAT_MAKE = RCP_R["platina_make:0"],
   PLAT_MAX = 10,
   platCost = (n) => Math.round(n * VAN * PLAT_COST_SCALE),
   platByBase = (() => {
-    const n = new Map(),
-      t = new Set(J.sets.gold.filter((e) => e.fixed).map((e) => e.n));
-    for (const e of J.sets.platina) {
-      if (e.fixed || t.has(e.n.replace(/^\[[^\]]*\]\s*/, ""))) continue;
+    const n = new Map();
+    for (const e of (typeof J !== "undefined" && J.sets && J.sets.platina) || []) {
       const o = e.n.replace(/^\[[^\]]*\]\s*/, "");
       (n.get(o) || n.set(o, []).get(o)).push(e);
+    }
+    const platByGrpSlot = new Map();
+    for (const e of (typeof J !== "undefined" && J.sets && J.sets.platina) || []) {
+      platByGrpSlot.set(e.grp + "_" + e.d, e);
+    }
+    for (const g of (typeof J !== "undefined" && J.sets && J.sets.gold) || []) {
+      if (!n.has(g.n)) {
+        const p = platByGrpSlot.get(g.grp + "_" + g.d);
+        if (p) n.set(g.n, [p]);
+      }
     }
     return n;
   })(),

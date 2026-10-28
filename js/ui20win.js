@@ -608,15 +608,15 @@ const KTC_CAT = [
   ["Tiện ích", ["knb", "tt", "qht", "ldt"]],
   ["Quý hiếm", ["rht", "rda", "mt90", "bk120", "bk150", "bk180", "dtbk"]],
   ["Đặc biệt", ["ldp", "dgt"]],
-  ["Rương Thần Bí", ["rngua", "rmatna"]],
+  ["Rương Thần Bí", ["rngua", "rmatna", "rvongsang"]],
   ["Rương Hoàng Kim", ["rfullhk", "rhk"]],
   ["Chiến Ấn", ["hthTc", "cahtTui", "bnnTui", "caht"]],
 ];
 let u2KtcCat = 0;
 function ktcModal20(cat) {
   if (typeof migrateMasks == "function") migrateMasks();
-  if (cat === "mask" || cat === "Mặt nạ" || cat === "ruongthanbi" || cat === "Rương Thần Bí" || cat === "Thú cưỡi") {
-    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Thần Bí" || (Array.isArray(val) && (val.includes("rmatna") || val.includes("rngua"))));
+  if (cat === "mask" || cat === "Mặt nạ" || cat === "ruongthanbi" || cat === "Rương Thần Bí" || cat === "Thú cưỡi" || cat === "halo" || cat === "Vòng Sáng" || cat === "vongsang") {
+    const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Thần Bí" || (Array.isArray(val) && (val.includes("rmatna") || val.includes("rngua") || val.includes("rvongsang"))));
     if (idx >= 0) u2KtcCat = idx;
   } else if (cat === "ruonghoankim" || cat === "Rương Hoàng Kim" || cat === "rhk" || cat === "rfullhk") {
     const idx = KTC_CAT.findIndex(([t, val]) => t === "Rương Hoàng Kim" || (Array.isArray(val) && (val.includes("rhk") || val.includes("rfullhk"))));
@@ -630,15 +630,16 @@ function ktcModal20(cat) {
   const isRuongTb = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Rương Thần Bí";
   const isRuongHk = KTC_CAT[u2KtcCat] && (KTC_CAT[u2KtcCat][0] === "Rương Hoàng Kim" || KTC_CAT[u2KtcCat][0] === "Rương Hoàn Kim");
   const isChienAn = KTC_CAT[u2KtcCat] && KTC_CAT[u2KtcCat][0] === "Chiến Ấn";
+  const isHalo = !1;
   const n = (t) =>
       t === "mt90"
         ? matHave("misc", "bk90")
-        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rhk", "rfullhk", "bk120", "bk150", "bk180", "hthTc", "cahtTui", "bnnTui", "caht"].includes(t)
+        : ["dtbk", "ldp", "ldt", "dgt", "rngua", "rmatna", "rvongsang", "rhk", "rfullhk", "bk120", "bk150", "bk180", "hthTc", "cahtTui", "bnnTui", "caht"].includes(t)
           ? matHave("misc", t)
           : null,
-    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", bk180: "ktcBk180", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rhk: "ktcRhk", rfullhk: "ktcRfullhk", hthTc: "ktcHthTc", cahtTui: "ktcCahtTui", bnnTui: "ktcBnnTui", caht: "ktcCaht" },
+    a = { ldp: "ktcLdp", ldt: "ktcLdt", mt90: "ktcMt", bk120: "ktcBk120", bk150: "ktcBk150", bk180: "ktcBk180", dgt: "ktcDgt", dtbk: "ktcDtbk", rngua: "ktcRngua", rmatna: "ktcRmatna", rvongsang: "ktcRvongsang", rhk: "ktcRhk", rfullhk: "ktcRfullhk", hthTc: "ktcHthTc", cahtTui: "ktcCahtTui", bnnTui: "ktcBnnTui", caht: "ktcCaht" },
     c = !1,
-    s = c ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
+    s = (c || isHalo) ? [] : KTC_CAT[u2KtcCat][1].map((t) => KTC.find((o) => o.k === t)).filter(Boolean),
     i = (t) => {
       const o = ktcOk(t),
         d = n(t.k);
@@ -652,7 +653,7 @@ function ktcModal20(cat) {
   (modal(
     `<h3>Kỳ Trân Các</h3><div class="u2shop"><div class="u2cat">${KTC_CAT.map(([t], o) => `<button data-kc="${o}" class="${o === u2KtcCat ? "on" : ""}">${t}</button>`).join("")}</div>
     <div><div class="u2sh"><img src="img/ep/knb.png" alt=""> <span>Kim Nguyên Bảo:</span> <b class="gold">${S.knb || 0}</b> <span>· Ngân lượng:</span> <b>${fmtVan(S.gold)}</b></div>${c ? `<div class="u2tm">${thanMaBody().replace('<p class="desc">không', '<p class="desc">Thần Mã không')}</div>` : `<div class="u2cards">${cardsHtml}</div>`}
-    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• <b style="color:#ffd24a">Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% TRỌN BỘ CÁC MÓN Hoàng Kim theo đúng môn phái (gồm cả bộ Tống Kim, phẩm cấp 10/10), tự do chọn bộ phù hợp.<br>• <b style="color:#ffd24a">Rương Hoàng Kim (500 KNB)</b>: Mở 100% nhận ngẫu nhiên 1 trang bị Hoàng Kim Lộ Trình Cấp (cấp 120–180), tỷ lệ 0.5% ra trọn bộ.<br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB) mở ngẫu nhiên 1 trong 48 loài thú cưỡi. Rương Mặt Nạ (50 KNB) mở ngẫu nhiên 1 trong 13 ngoại trang hạn dùng 3 ngày (có tỷ lệ 3% mở ra VĨNH VIỄN). Cất vào túi, bấm Dùng để mở.</p>` : isChienAn ? `<p class="dim small">Nguyên liệu chế tạo và khắc Chiến ấn: Túi Chiến ấn Hồn Thạch (mở ra đủ 5 hệ), Bạch Nguyệt Ngọc (nguyên liệu khắc ấn). Bấm vào Lò Rèn → <b>Thợ Khắc Ấn</b> để chế tạo và cường hóa Chiến ấn.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
+    ${c ? "" : isRuongHk ? `<div style="margin-top:6px;padding:8px 10px;background:rgba(255,210,74,0.08);border:1px solid rgba(255,210,74,0.3);border-radius:4px"><div style="color:#ffd24a;font-weight:bold;font-size:12px;margin-bottom:3px">★ Rương Hoàng Kim ${FAC[S.fac] ? FAC[S.fac].n : "Môn Phái"}:</div><div style="font-size:11px;color:#ddd;line-height:1.4">• <b style="color:#ffd24a">Rương Trọn Bộ HKMP (1500 KNB)</b>: Nhận 100% TRỌN BỘ CÁC MÓN Hoàng Kim theo đúng môn phái (gồm cả bộ Tống Kim, phẩm cấp 10/10), tự do chọn bộ phù hợp.<br>• <b style="color:#ffd24a">Rương Hoàng Kim (500 KNB)</b>: Mở 100% nhận ngẫu nhiên 1 trang bị Hoàng Kim Lộ Trình Cấp (cấp 120–180), tỷ lệ 0.5% ra trọn bộ.<br>• Cất vào túi, bấm <b>Dùng</b> để mở hoặc mở ngay tại đây. ${(typeof isNovice === "function" && isNovice()) ? '<b class="bad">Bạn chưa gia nhập môn phái!</b>' : ''}</div></div>` : isRuongTb ? `<p class="dim small">Rương Ngựa (20 KNB), Rương Mặt Nạ (50 KNB), Rương Vòng Sáng (50 KNB: tự do chọn 1 trong các Vòng Sáng tuyệt mỹ Võ Lâm 3 ngày). Cất vào túi, bấm Dùng để mở.</p>` : isChienAn ? `<p class="dim small">Nguyên liệu chế tạo và khắc Chiến ấn: Túi Chiến ấn Hồn Thạch (mở ra đủ 5 hệ), Bạch Nguyệt Ngọc (nguyên liệu khắc ấn). Bấm vào Lò Rèn → <b>Thợ Khắc Ấn</b> để chế tạo và cường hóa Chiến ấn.</p>` : `${buffText() ? `<div class="small u2buf">Đang có: ${buffText()}</div>` : ""}<p class="dim small">Kim Nguyên Bảo rơi từ trùm (10%), trùm Hoàng Kim / boss tuần (50%). Rương Huyền Tinh / Đá mở ngay khi mua; Rương Ngựa / Rương Mặt Nạ / Rương Hoàng Kim cất vào túi, bấm Dùng để mở. Rê chuột lên vật phẩm để xem công dụng.</p>`}</div></div>`,
     () => {
       (document.querySelectorAll("#mBody [data-kc]").forEach(
         (o) =>
@@ -700,6 +701,9 @@ function ktcModal20(cat) {
         }),
         t("ktcRmatna", () => {
           (maskBoxUse(1), ktcModal());
+        }),
+        t("ktcRvongsang", () => {
+          typeof openHaloSelectorModal === "function" && openHaloSelectorModal();
         }),
         t("ktcRhk", () => {
           (hkBoxUse(1), ktcModal());
