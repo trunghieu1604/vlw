@@ -1,5 +1,5 @@
 // Service Worker for Umbala Admin PWA
-const CACHE_NAME = 'umbala-admin-v1';
+const CACHE_NAME = 'umbala-admin-v2';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

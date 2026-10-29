@@ -73,31 +73,55 @@ function wbFormatTime(sec) {
   return `${m} phút ${String(s).padStart(2, "0")} giây`;
 }
 
+function wbFormatNextDate(ts) {
+  if (!ts || isNaN(ts) || ts <= 0) return "19:00 ngày mai";
+  const d = new Date(ts);
+  const hours = String(d.getHours()).padStart(2, "0");
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${hours}:${mins} ngày ${day}/${month}/${year}`;
+}
+
+function initBossObj(customHp) {
+  WB.boss = {
+    name: WB_BOSS_CONFIG.name,
+    title: WB_BOSS_CONFIG.title,
+    mapName: WB_BOSS_CONFIG.mapName,
+    mapImg: WB_BOSS_CONFIG.mapImg,
+    lvl: WB_BOSS_CONFIG.lvl,
+    hp: customHp != null ? customHp : WB_BOSS_CONFIG.hpMax,
+    hpMax: WB_BOSS_CONFIG.hpMax,
+    series: WB_BOSS_CONFIG.series,
+    heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
+  };
+}
+
 /**
  * 7:00 PM (19:00) Schedule calculation (Vietnam UTC+7)
  */
 function getWbSchedule() {
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
-  const todayKey = `${y}-${m + 1}-${d}`;
+  const todayKey = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const startToday = new Date(y, m, d, 19, 0, 0, 0).getTime();
   const endToday = startToday + 10 * 60 * 1000; // 19:10 (10 mins duration)
+  const startTomorrow = new Date(y, m, d + 1, 19, 0, 0, 0).getTime();
   const nowMs = now.getTime();
 
   const killedToday = !!(S && S.rw && S.rw.wbKilledDate === todayKey);
 
   if (killedToday) {
-    const startTomorrow = new Date(y, m, d + 1, 19, 0, 0, 0).getTime();
-    return { st: "dead", next: startTomorrow, end: 0, killedToday: true, todayKey: todayKey };
+    return { st: "dead", next: startTomorrow, start: startToday, end: endToday, killedToday: true, todayKey: todayKey };
   }
 
   if (nowMs >= startToday && nowMs <= endToday) {
-    return { st: "up", next: 0, end: endToday, killedToday: false, todayKey: todayKey };
+    return { st: "up", next: startTomorrow, start: startToday, end: endToday, killedToday: false, todayKey: todayKey };
   } else if (nowMs < startToday) {
-    return { st: "soon", next: startToday, end: 0, killedToday: false, todayKey: todayKey };
+    return { st: "soon", next: startToday, start: startToday, end: endToday, killedToday: false, todayKey: todayKey };
   } else {
-    const startTomorrow = new Date(y, m, d + 1, 19, 0, 0, 0).getTime();
-    return { st: "gone", next: startTomorrow, end: 0, killedToday: false, todayKey: todayKey };
+    return { st: "gone", next: startTomorrow, start: startToday, end: endToday, killedToday: false, todayKey: todayKey };
   }
 }
 
@@ -108,37 +132,26 @@ function spawnWorldBoss(isSummon = false) {
   const sched = getWbSchedule();
   WB.isSummon = !!isSummon;
 
-  WB.boss = {
-    name: WB_BOSS_CONFIG.name,
-    title: WB_BOSS_CONFIG.title,
-    mapName: WB_BOSS_CONFIG.mapName,
-    mapImg: WB_BOSS_CONFIG.mapImg,
-    lvl: WB_BOSS_CONFIG.lvl,
-    hp: WB_BOSS_CONFIG.hpMax,
-    hpMax: WB_BOSS_CONFIG.hpMax,
-    series: WB_BOSS_CONFIG.series,
-    heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-  };
+  initBossObj();
 
   WB.st = "up";
-  if (!WB.end || WB.end <= Date.now()) {
-    WB.end = Date.now() + 10 * 60 * 1000;
-  }
+  WB.end = isSummon ? (Date.now() + 10 * 60 * 1000) : (sched.end || (Date.now() + 10 * 60 * 1000));
   WB.playerDmg = 0;
   WB.defeatDone = false;
   WB.defeatedHandled = false;
   WB.rewardClaimed = false;
   WB.resultModalShown = false;
 
-  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : null;
+  const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
   if (db && (isSummon || sched.st === "up")) {
     try {
       db.ref("worldboss/state").set({
         st: "up",
         isSummon: !!isSummon,
         name: WB_BOSS_CONFIG.name,
-        startedAt: Date.now(),
+        startedAt: isSummon ? Date.now() : sched.start,
         end: WB.end,
+        todayKey: sched.todayKey,
         killer: ""
       });
       db.ref("worldboss/damage").remove();
@@ -269,37 +282,55 @@ function wbInitFirebase() {
     wbFbInitialized = true;
     db.ref("worldboss/state").on("value", (snap) => {
       const val = snap.val();
-      if (!val) return;
+      const sched = getWbSchedule();
+      if (!val) {
+        WB.st = sched.st;
+        WB.next = sched.next;
+        updateWbButtonState();
+        return;
+      }
+
+      // Check whether this Firebase state is relevant to TODAY's scheduled session or an active summon:
+      const isSummonActive = !!val.isSummon && val.st === "up" && val.end && (Date.now() < val.end);
+      const isTodaySession = (val.todayKey === sched.todayKey) || 
+                             (val.startedAt && val.startedAt >= sched.start && val.startedAt <= sched.end);
 
       if (wbFbFirstLoad) {
         wbFbFirstLoad = false;
-        WB.st = val.st || "dead";
-        if (val.isSummon !== undefined) WB.isSummon = !!val.isSummon;
-        if (val.end) WB.end = val.end;
 
-        // If boss in DB is dead OR already expired: mark it done, NEVER trigger defeat / rewards on F5!
-        if (val.st === "dead" || (val.end && Date.now() >= val.end)) {
-          WB.st = "dead";
-          WB.defeatDone = true;
-          WB.defeatedHandled = true;
-          WB.rewardClaimed = true;
-        } else if (val.st === "up" && val.end && Date.now() < val.end) {
+        if (isSummonActive) {
           WB.st = "up";
+          WB.isSummon = true;
+          WB.end = val.end;
           WB.defeatDone = false;
           WB.defeatedHandled = false;
           WB.rewardClaimed = false;
-          if (!WB.boss) {
-            WB.boss = {
-              name: WB_BOSS_CONFIG.name,
-              title: WB_BOSS_CONFIG.title,
-              mapName: WB_BOSS_CONFIG.mapName,
-              mapImg: WB_BOSS_CONFIG.mapImg,
-              lvl: WB_BOSS_CONFIG.lvl,
-              hp: val.hp != null ? val.hp : WB_BOSS_CONFIG.hpMax,
-              hpMax: WB_BOSS_CONFIG.hpMax,
-              series: WB_BOSS_CONFIG.series,
-              heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-            };
+          if (!WB.boss) initBossObj(val.hp);
+        } else if (isTodaySession) {
+          if (val.st === "up" && val.end && Date.now() < val.end) {
+            WB.st = "up";
+            WB.isSummon = false;
+            WB.end = val.end;
+            WB.defeatDone = false;
+            WB.defeatedHandled = false;
+            WB.rewardClaimed = false;
+            if (!WB.boss) initBossObj(val.hp);
+          } else {
+            WB.st = "dead";
+            WB.defeatDone = true;
+            WB.defeatedHandled = true;
+            WB.rewardClaimed = true;
+          }
+        } else {
+          // Record was from yesterday or past days! Ignore old dead state!
+          WB.st = sched.st;
+          WB.next = sched.next;
+          WB.defeatDone = (sched.st === "dead");
+          WB.defeatedHandled = (sched.st === "dead");
+          WB.rewardClaimed = (sched.st === "dead");
+          if (sched.st === "up") {
+            WB.end = sched.end;
+            if (!WB.boss) initBossObj();
           }
         }
         updateWbButtonState();
@@ -307,41 +338,35 @@ function wbInitFirebase() {
         return;
       }
 
-      if (val.st) {
-        const prevSt = WB.st;
-        if (val.isSummon !== undefined) {
+      if (val.st === "up") {
+        const isUpNow = val.end ? (Date.now() < val.end) : true;
+        if (isUpNow) {
+          const prevSt = WB.st;
+          WB.st = "up";
           WB.isSummon = !!val.isSummon;
-        }
-        WB.st = val.st;
-        if (val.end) WB.end = val.end;
-
-        if (val.st === "up" && prevSt !== "up" && (!val.end || Date.now() < val.end) && !WB.arena.on) {
-          spawnWorldBoss(!!val.isSummon);
-        }
-        if (val.st === "up" && prevSt !== "up") {
-          WB.defeatedHandled = false;
+          if (val.end) WB.end = val.end;
           WB.defeatDone = false;
+          WB.defeatedHandled = false;
           WB.rewardClaimed = false;
           WB.resultModalShown = false;
+          if (!WB.boss) initBossObj(val.hp);
+
+          if (prevSt !== "up" && !WB.arena.on) {
+            showWbBanner(`⚔ Boss thế giới <b>Trung Hiếu</b> đã xuất hiện tại <b>Phong Lăng Độ</b>!`);
+            if (typeof toast === "function") toast("⚔ BOSS THẾ GIỚI TRUNG HIẾU ĐÃ XUẤT HIỆN TẠI PHONG LĂNG ĐỘ!");
+            if (typeof uiSfx === "function") uiSfx("gold");
+          }
+        }
+      } else if (val.st === "dead") {
+        if (WB.st === "up" && !WB.defeatDone && !WB.isSummon) {
+          WB.defeatedHandled = true;
+          handleBossDefeated(true, val.killer);
+        } else {
+          WB.st = "dead";
+          WB.defeatDone = true;
         }
       }
-      if (!WB.boss) {
-        WB.boss = {
-          name: WB_BOSS_CONFIG.name,
-          title: WB_BOSS_CONFIG.title,
-          mapName: WB_BOSS_CONFIG.mapName,
-          mapImg: WB_BOSS_CONFIG.mapImg,
-          lvl: WB_BOSS_CONFIG.lvl,
-          hp: WB_BOSS_CONFIG.hpMax,
-          hpMax: WB_BOSS_CONFIG.hpMax,
-          series: WB_BOSS_CONFIG.series,
-          heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-        };
-      }
-      if (val.st === "dead" && !WB.defeatDone && !WB.isSummon) {
-        WB.defeatedHandled = true;
-        handleBossDefeated(true, val.killer);
-      }
+
       updateWbButtonState();
       renderWbDpsMeter();
     });
@@ -411,18 +436,37 @@ function updateWbLeaderboard() {
  * Main Tick for World Boss & simulated combat
  */
 function wbTick() {
-  if (!WB.isSummon && (WB.st === "dead" || WB.defeatDone)) {
-    updateWbButtonState();
-    return;
-  }
   const sched = getWbSchedule();
 
-  // If not manually forced 'up' and not in arena, sync with schedule
-  if (!WB.isSummon && !WB.arena.on && WB.st !== "up") {
-    if (sched.st === "up" && WB.st !== "up") {
-      spawnWorldBoss(false);
-    } else if (sched.st !== "up" && WB.st !== "up") {
-      WB.st = sched.st;
+  if (!WB.isSummon) {
+    if (sched.killedToday) {
+      WB.st = "dead";
+      WB.defeatDone = true;
+      WB.next = sched.next;
+      updateWbButtonState();
+      updateWbDialogLive();
+      return;
+    }
+
+    if (sched.st === "up") {
+      if (WB.st !== "up" && !WB.defeatDone) {
+        spawnWorldBoss(false);
+      }
+    } else if (sched.st === "soon") {
+      if (WB.st !== "soon") {
+        WB.st = "soon";
+        WB.defeatDone = false;
+        WB.defeatedHandled = false;
+      }
+      WB.next = sched.next;
+    } else if (sched.st === "gone") {
+      if (WB.st === "up") {
+        handleBossDefeated(true);
+        return;
+      } else {
+        WB.st = "gone";
+        WB.defeatDone = true;
+      }
       WB.next = sched.next;
     }
   }
@@ -975,15 +1019,23 @@ function isWbHeroVlmc() {
 function openWorldBossModal() {
   hideWbBanner();
   const sched = getWbSchedule();
+
+  if (sched.st === "up" && !sched.killedToday && (WB.st !== "up" || !WB.boss)) {
+    spawnWorldBoss(false);
+  }
+
+  const isUp = (WB.st === "up" || (sched.st === "up" && !sched.killedToday)) && WB.boss;
+  const remSec = isUp
+    ? Math.max(0, ((WB.end || sched.end) - Date.now()) / 1000)
+    : Math.max(0, (sched.next - Date.now()) / 1000);
   const b = WB.boss;
-  const remSec = WB.st === "up" ? Math.max(0, (WB.end - Date.now()) / 1000) : Math.max(0, (sched.next - Date.now()) / 1000);
   const me = (WB.top || []).find(t => t.isPlayer) || { rank: 1, dmg: WB.playerDmg, share: 0 };
 
   const content = `
     <div id="wbBox" class="wbbox" style="padding:10px;color:#f3e2b3;font-size:14px;line-height:1.5">
       <h3 style="color:#ffd700;text-align:center;margin:0 0 8px">⚔ Boss Thế Giới: Trung Hiếu ⚔</h3>
       <div id="wbIn">
-        ${WB.st === "up" && b ? `
+        ${isUp && b ? `
           <div style="background:rgba(255,100,0,0.12);border:1px solid #c96d1a;border-radius:6px;padding:10px 12px;margin-bottom:10px;text-align:center">
             <div style="font-size:15px;color:#ffd700;font-weight:bold">⚔ ${b.name} (${b.title})</div>
             <div style="font-size:12px;color:#bbb;margin:4px 0">Chiến trường độc quyền: <b>${b.mapName}</b></div>
@@ -1011,7 +1063,7 @@ function openWorldBossModal() {
               ${sched.killedToday ? "🏆 Boss hôm nay đã kết thúc thời gian khiêu chiến!" : "⏰ Giờ xuất hiện: <b>19:00 (7h tối)</b> mỗi ngày (1 lần duy nhất)."}
             </p>
             <p style="margin:0;color:#aaa;font-size:13px">
-              Lần tiếp theo: <b>${new Date(sched.next).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</b> (còn <b class="wbt" style="color:#ffd700">${wbFormatTime(remSec)}</b>)
+              Lần tiếp theo: <b>${wbFormatNextDate(sched.next)}</b> (còn <b class="wbt" style="color:#ffd700">${wbFormatTime(remSec)}</b>)
             </p>
           </div>
           ${(WB.arena.on || (typeof R === "object" && R && R.dg && R.dg.kind === "worldboss")) ? `
@@ -1040,7 +1092,10 @@ function updateWbDialogLive() {
   const timeTxt = wbIn.querySelector(".wbt");
   if (timeTxt) {
     const sched = getWbSchedule();
-    const remSec = WB.st === "up" ? Math.max(0, (WB.end - Date.now()) / 1000) : Math.max(0, (sched.next - Date.now()) / 1000);
+    const isUp = (WB.st === "up" || (sched.st === "up" && !sched.killedToday)) && WB.boss;
+    const remSec = isUp
+      ? Math.max(0, ((WB.end || sched.end) - Date.now()) / 1000)
+      : Math.max(0, (sched.next - Date.now()) / 1000);
     timeTxt.textContent = wbFormatTime(remSec);
   }
 }
