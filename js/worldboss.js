@@ -130,13 +130,33 @@ function getWbSchedule() {
  */
 function spawnWorldBoss(isSummon = false) {
   const sched = getWbSchedule();
-  WB.isSummon = !!isSummon;
 
+  // If already active in memory and not an explicit summon, keep running
+  if (!isSummon && WB.st === "up" && WB.boss) {
+    return;
+  }
+
+  WB.isSummon = !!isSummon;
   initBossObj();
 
   WB.st = "up";
   WB.end = isSummon ? (Date.now() + 10 * 60 * 1000) : (sched.end || (Date.now() + 10 * 60 * 1000));
-  WB.playerDmg = 0;
+  
+  if (isSummon) {
+    WB.playerDmg = 0;
+    if (typeof S !== "undefined" && S) {
+      if (!S.wb) S.wb = {};
+      S.wb.sessionKey = "summon_" + WB.end;
+      S.wb.dmg = 0;
+    }
+  } else {
+    // Restore damage from local save if for today's session
+    const sessionKey = sched.todayKey;
+    if (typeof S !== "undefined" && S && S.wb && S.wb.sessionKey === sessionKey && S.wb.dmg > 0) {
+      WB.playerDmg = Math.max(WB.playerDmg || 0, S.wb.dmg);
+    }
+  }
+
   WB.defeatDone = false;
   WB.defeatedHandled = false;
   WB.rewardClaimed = false;
@@ -145,16 +165,27 @@ function spawnWorldBoss(isSummon = false) {
   const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
   if (db && (isSummon || sched.st === "up")) {
     try {
-      db.ref("worldboss/state").set({
-        st: "up",
-        isSummon: !!isSummon,
-        name: WB_BOSS_CONFIG.name,
-        startedAt: isSummon ? Date.now() : sched.start,
-        end: WB.end,
-        todayKey: sched.todayKey,
-        killer: ""
-      });
-      db.ref("worldboss/damage").remove();
+      db.ref("worldboss/state").once("value").then((snap) => {
+        const val = snap.val();
+        const isAlreadyUp = val && val.st === "up" && val.end && (Date.now() < val.end) && (val.todayKey === sched.todayKey);
+        
+        // Only wipe damage if this is a brand new summon OR if Firebase has NO active session for today
+        if (isSummon || !isAlreadyUp) {
+          db.ref("worldboss/state").set({
+            st: "up",
+            isSummon: !!isSummon,
+            name: WB_BOSS_CONFIG.name,
+            startedAt: isSummon ? Date.now() : sched.start,
+            end: WB.end,
+            todayKey: sched.todayKey,
+            killer: ""
+          });
+          db.ref("worldboss/damage").remove();
+        } else if (val) {
+          WB.end = val.end;
+          if (val.hp != null && WB.boss) WB.boss.hp = val.hp;
+        }
+      }).catch(() => {});
     } catch (e) {
       console.warn("spawnWorldBoss fb err:", e);
     }
@@ -230,11 +261,14 @@ function wbSyncHitFirebase() {
     const db = typeof getFirebaseDb === "function" ? getFirebaseDb() : (typeof firebase !== "undefined" && firebase.apps && firebase.apps.length ? firebase.database() : null);
     if (!db) return;
     const cid = typeof chatCid === "function" ? chatCid() : "anon";
+    if (typeof S !== "undefined" && S && S.wb && S.wb.dmg > WB.playerDmg) {
+      WB.playerDmg = S.wb.dmg;
+    }
     db.ref("worldboss/damage/" + cid).set({
       cid: cid,
-      name: S.name || "Hiệp Sĩ",
-      fac: S.fac || "",
-      lvl: S.lvl || 1,
+      name: (S && S.name) || "Hiệp Sĩ",
+      fac: (S && S.fac) || "",
+      lvl: (S && S.lvl) || 1,
       dmg: WB.playerDmg,
       updated: Date.now()
     });
@@ -374,6 +408,24 @@ function wbInitFirebase() {
     db.ref("worldboss/damage").on("value", (snap) => {
       const val = snap.val();
       WB.realPlayers = val ? Object.values(val) : [];
+
+      // Restore WB.playerDmg from Firebase damage record!
+      try {
+        const myCid = typeof chatCid === "function" ? chatCid() : "";
+        const myRec = WB.realPlayers.find(rp => rp.cid === myCid || (typeof S !== "undefined" && S && rp.name === S.name));
+        if (myRec && myRec.dmg > 0) {
+          WB.playerDmg = Math.max(WB.playerDmg || 0, myRec.dmg);
+          if (typeof S !== "undefined" && S) {
+            if (!S.wb) S.wb = {};
+            const sched = getWbSchedule();
+            S.wb.sessionKey = WB.isSummon ? ("summon_" + (WB.end || "")) : sched.todayKey;
+            S.wb.dmg = WB.playerDmg;
+          }
+        }
+      } catch (e) {
+        console.warn("restore wb playerDmg err:", e);
+      }
+
       updateWbLeaderboard();
       renderWbDpsMeter();
     });
@@ -813,24 +865,31 @@ function hideWbBanner() {
  */
 function joinWorldBoss() {
   const sched = getWbSchedule();
-  if (WB.st !== "up" || !WB.boss) {
-    spawnWorldBoss(sched.st !== "up");
-  }
   if (!WB.boss) {
-    WB.boss = {
-      name: WB_BOSS_CONFIG.name,
-      title: WB_BOSS_CONFIG.title,
-      mapName: WB_BOSS_CONFIG.mapName,
-      mapImg: WB_BOSS_CONFIG.mapImg,
-      lvl: WB_BOSS_CONFIG.lvl,
-      hp: WB_BOSS_CONFIG.hpMax,
-      hpMax: WB_BOSS_CONFIG.hpMax,
-      series: WB_BOSS_CONFIG.series,
-      heroLook: Object.assign({}, WB_BOSS_CONFIG.heroLook)
-    };
-    WB.st = "up";
-    WB.defeatDone = false;
+    initBossObj();
   }
+  if (WB.st !== "up") {
+    if (sched.st === "up") {
+      WB.st = "up";
+      WB.end = sched.end;
+    } else if (WB.end && Date.now() < WB.end) {
+      WB.st = "up";
+    }
+  }
+
+  // Restore damage if not yet in memory
+  if (!WB.playerDmg || WB.playerDmg <= 0) {
+    const myCid = typeof chatCid === "function" ? chatCid() : "";
+    const myRec = (WB.realPlayers || []).find(rp => rp.cid === myCid || (typeof S !== "undefined" && S && rp.name === S.name));
+    if (myRec && myRec.dmg > 0) {
+      WB.playerDmg = myRec.dmg;
+    } else if (typeof S !== "undefined" && S && S.wb && S.wb.dmg > 0) {
+      WB.playerDmg = S.wb.dmg;
+    }
+  }
+  updateWbLeaderboard();
+  renderWbDpsMeter();
+
   if (typeof closeModal === "function") closeModal(true);
 
   WB.arena.on = true;
@@ -984,8 +1043,22 @@ window.exitWorldBoss = exitWorldBoss;
  */
 function onHeroHitWb(dmg) {
   if (!WB.arena.on || WB.st !== "up" || !WB.boss) return;
+  if (!dmg || isNaN(dmg) || dmg <= 0) return;
+
+  if (typeof S !== "undefined" && S && S.wb && S.wb.dmg > WB.playerDmg) {
+    WB.playerDmg = S.wb.dmg;
+  }
+
   WB.playerDmg += dmg;
   wbPendingDmg += dmg;
+
+  if (typeof S !== "undefined" && S) {
+    if (!S.wb) S.wb = {};
+    const sched = getWbSchedule();
+    S.wb.sessionKey = WB.isSummon ? ("summon_" + (WB.end || "")) : sched.todayKey;
+    S.wb.dmg = WB.playerDmg;
+  }
+
   if (WB.arena.bossInst) {
     WB.arena.bossInst.hp = WB.arena.bossInst.max || 999999999;
   }
@@ -1021,7 +1094,9 @@ function openWorldBossModal() {
   const sched = getWbSchedule();
 
   if (sched.st === "up" && !sched.killedToday && (WB.st !== "up" || !WB.boss)) {
-    spawnWorldBoss(false);
+    if (!WB.boss) initBossObj();
+    WB.st = "up";
+    WB.end = sched.end;
   }
 
   const isUp = (WB.st === "up" || (sched.st === "up" && !sched.killedToday)) && WB.boss;
@@ -1653,6 +1728,15 @@ function initWorldBoss() {
   const sched = getWbSchedule();
   WB.st = sched.st;
   WB.next = sched.next;
+
+  // Restore damage from local save if session matches
+  try {
+    const sessionKey = sched.todayKey;
+    if (typeof S !== "undefined" && S && S.wb && S.wb.sessionKey === sessionKey && S.wb.dmg > 0) {
+      WB.playerDmg = Math.max(WB.playerDmg || 0, S.wb.dmg);
+    }
+  } catch (e) {}
+
   updateWbButtonState();
   setInterval(wbTick, 1000);
   if (typeof wbInitFirebase === "function") {

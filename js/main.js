@@ -417,7 +417,7 @@ function init() {
   "serviceWorker" in navigator &&
     location.protocol.startsWith("http") &&
     navigator.serviceWorker.register("sw.js").catch(() => {}));
-let APP_V = 492;
+let APP_V = 498;
 function getAppV() {
   try {
     const s = document.querySelector('script[src*="main.js"]');
@@ -426,7 +426,7 @@ function getAppV() {
       if (v) APP_V = v;
     }
   } catch {}
-  return APP_V || 492;
+  return APP_V || 498;
 }
 function appVerCheck() {
   if (location.hostname === "localhost" || location.hostname === "127.0.0.1") return;
@@ -442,6 +442,15 @@ function appVerCheck() {
           sessionStorage.setItem("jxidle_seen_ver", String(n.v));
           localStorage.setItem("jxidle_seen_ver", String(n.v));
         } catch {}
+        return;
+      }
+      // Never auto-reload while fighting World Boss or active combat instance
+      if (typeof WB !== "undefined" && WB.arena && WB.arena.on) {
+        console.warn("appVerCheck: postpone reload while fighting World Boss");
+        return;
+      }
+      if (typeof R !== "undefined" && R && R.dg && R.dg.kind === "worldboss") {
+        console.warn("appVerCheck: postpone reload while fighting World Boss");
         return;
       }
       // Anti-loop reload lock: never reload for the exact same target version more than once per tab session

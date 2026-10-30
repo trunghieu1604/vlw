@@ -254,6 +254,7 @@
         }
         return `${nm()}lỗi khi tạo thú cưỡi`;
       }
+      case "give_all_horses":
       case "horse_all": {
         const all = typeof hcAll === "function" ? hcAll() : null;
         if (!all) return `${nm()}lỗi dữ liệu Mã Trường`;
